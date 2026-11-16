@@ -2385,7 +2385,7 @@ int main(void)
         for(int o=0;o<MAX_ORE_NODES;o++)
         {
             if(!gOreActive[o])continue;
-            float dx=gOrePositions[o].x-aimOrigin.x, dy=0.25f-aimOrigin.y, dz=gOrePositions[o].z-aimOrigin.z;
+            float dx=gOrePositions[o].x-aimOrigin.x, dy=0.0f, dz=gOrePositions[o].z-aimOrigin.z;
             float d=sqrtf(dx*dx+dy*dy+dz*dz);
             if(d<0.1f||d>2.6f)continue;
             float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;
