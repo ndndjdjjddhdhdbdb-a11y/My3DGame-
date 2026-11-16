@@ -2396,7 +2396,8 @@ int main(void)
         {
             if (treeChopped[t]) continue;
             Vector3 treeCenter = {treePositions[t].x, 1.45f, treePositions[t].z};
-            float playerDistance = Vector3Distance(aimOrigin, treeCenter);
+            float pdx = aimOrigin.x-treeCenter.x, pdy = aimOrigin.y-treeCenter.y, pdz = aimOrigin.z-treeCenter.z;
+            float playerDistance = sqrtf(pdx*pdx+pdy*pdy+pdz*pdz);
             if (playerDistance > 3.2f) continue;
             RayCollision hit = GetRayCollisionSphere(centerAimRay, treeCenter, 0.95f);
             if (hit.hit && hit.distance < closestTreeDistance)
@@ -2410,7 +2411,8 @@ int main(void)
         {
             if (!gOreActive[o]) continue;
             Vector3 oreCenter = {gOrePositions[o].x, 0.38f, gOrePositions[o].z};
-            float playerDistance = Vector3Distance(aimOrigin, oreCenter);
+            float pdx = aimOrigin.x-oreCenter.x, pdy = aimOrigin.y-oreCenter.y, pdz = aimOrigin.z-oreCenter.z;
+            float playerDistance = sqrtf(pdx*pdx+pdy*pdy+pdz*pdz);
             if (playerDistance > 2.6f) continue;
             RayCollision hit = GetRayCollisionSphere(centerAimRay, oreCenter, 0.58f);
             if (hit.hit && hit.distance < closestOreDistance)
