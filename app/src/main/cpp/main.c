@@ -9,6 +9,19 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
+// Увеличенная невидимая область нажатия кнопки настроек.
+// Это облегчает нажатие на маленьких экранах.
+static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
+{
+    Rectangle hitArea = {
+        button.x - 38,
+        button.y - 30,
+        button.width + 76,
+        button.height + 60
+    };
+    return CheckCollisionPointRec(point, hitArea);
+}
+
 static void DrawTree(float x, float z, float scale)
 {
     DrawCylinder((Vector3){x, 0.85f*scale, z},
@@ -166,7 +179,7 @@ int main(void)
                         dragOffset = (Vector2){joystickPosition.x-pos.x,
                                                joystickPosition.y-pos.y};
                     }
-                    else if (CheckCollisionPointRec(pos, settingsButton))
+                    else if (IsSettingsButtonHit(pos, settingsButton))
                     {
                         dragTarget = 2; dragTouchId = id;
                         dragOffset = (Vector2){settingsButton.x-pos.x,
@@ -180,7 +193,7 @@ int main(void)
                     }
                 }
             }
-            else if (CheckCollisionPointRec(pos, settingsButton))
+            else if (IsSettingsButtonHit(pos, settingsButton))
             {
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
@@ -202,8 +215,7 @@ int main(void)
                     joystickRadius += 15;
                     if (joystickRadius > 180) joystickRadius = 90;
                     knobRadius = joystickRadius*0.42f;
-                }
-                else if (CheckCollisionPointRec(pos, lowButton))
+                }   else if (CheckCollisionPointRec(pos, lowButton))
                 {
                     graphicsQuality = 0;
                     SetTargetFPS(30);
@@ -263,7 +275,7 @@ int main(void)
         if (touchCount == 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             Vector2 pos = GetMousePosition();
-            if (!editControls && CheckCollisionPointRec(pos, settingsButton))
+            if (!editControls && IsSettingsButtonHit(pos, settingsButton))
             {
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
@@ -420,8 +432,7 @@ int main(void)
         float dirX = sinf(playerAngle)*cosf(cameraPitch);
         float dirY = sinf(cameraPitch);
         float dirZ = -cosf(playerAngle)*cosf(cameraPitch);
-
-        if (firstPerson)
+   if (firstPerson)
         {
             camera.position = (Vector3){player.x, player.y+1.6f, player.z};
             camera.target = (Vector3){player.x+dirX*10,
