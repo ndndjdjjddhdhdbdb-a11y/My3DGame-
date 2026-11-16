@@ -764,7 +764,7 @@ int main(void)
         sprintButton = (Rectangle){screenWidth-190, screenHeight-230, 170, 62};
         if (sprintButton.x < screenWidth*0.55f) sprintButton.x = screenWidth*0.55f;
         inventoryButton = (Rectangle){screenWidth-64, screenHeight-82, 52, 52};
-        float slotSize = fminf(54.0f, (screenWidth-110.0f)/4.0f);
+        float slotSize = fminf(54.0f, (screenWidth-165.0f)/4.0f);
         float slotGap = 6.0f;
         float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
         float hotbarX = (screenWidth-hotbarWidth)/2.0f;
