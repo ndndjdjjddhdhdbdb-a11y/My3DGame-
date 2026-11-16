@@ -618,119 +618,118 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
 static void DrawPlayer(Vector3 player, float angle,
                        float walkPhase, bool moving, float attackProgress)
 {
-    float swing = moving ? sinf(walkPhase) * 0.34f : 0.0f;
+    float swing = moving ? sinf(walkPhase)*0.30f : sinf(walkPhase)*0.025f;
+    float bob = moving ? fabsf(cosf(walkPhase))*0.035f : 0.0f;
 
-    Color skin = C(225, 183, 143, 255);
-    Color shirt = C(40, 112, 205, 255);
-    Color pants = C(48, 55, 82, 255);
-    Color shoes = C(35, 38, 43, 255);
+    Color skin = C(211, 164, 125, 255);
+    Color skinLight = C(231, 190, 151, 255);
+    Color shirt = C(67, 104, 83, 255);
+    Color shirtLight = C(91, 132, 102, 255);
+    Color vest = C(139, 103, 62, 255);
+    Color pants = C(48, 59, 57, 255);
+    Color pantsLight = C(67, 77, 70, 255);
+    Color boots = C(48, 43, 36, 255);
+    Color dark = C(37, 42, 37, 255);
+    Color strap = C(184, 151, 99, 255);
 
-    Vector3 hipL = PlayerPoint(player, angle, -0.17f, 0.66f, 0.0f);
-    Vector3 hipR = PlayerPoint(player, angle,  0.17f, 0.66f, 0.0f);
+    // Ноги: отдельные бёдра, голени и колени создают читаемый силуэт.
+    Vector3 hipL = PlayerPoint(player, angle, -0.17f, 0.73f, 0.0f);
+    Vector3 hipR = PlayerPoint(player, angle,  0.17f, 0.73f, 0.0f);
+    Vector3 kneeL = PlayerPoint(player, angle, -0.18f, 0.39f, swing*0.55f);
+    Vector3 kneeR = PlayerPoint(player, angle,  0.18f, 0.39f, -swing*0.55f);
+    Vector3 ankleL = PlayerPoint(player, angle, -0.18f, 0.13f, swing);
+    Vector3 ankleR = PlayerPoint(player, angle,  0.18f, 0.13f, -swing);
 
-    Vector3 kneeL = PlayerPoint(player, angle, -0.18f, 0.34f, swing*0.55f);
-    Vector3 kneeR = PlayerPoint(player, angle,  0.18f, 0.34f, -swing*0.55f);
+    DrawCylinderEx(hipL, kneeL, 0.155f, 0.125f, 10, pants);
+    DrawCylinderEx(kneeL, ankleL, 0.125f, 0.095f, 10, pants);
+    DrawCylinderEx(hipR, kneeR, 0.155f, 0.125f, 10, pants);
+    DrawCylinderEx(kneeR, ankleR, 0.125f, 0.095f, 10, pants);
+    DrawSphere(kneeL, 0.12f, pantsLight);
+    DrawSphere(kneeR, 0.12f, pantsLight);
 
-    Vector3 footL = PlayerPoint(player, angle, -0.18f, 0.10f, swing);
-    Vector3 footR = PlayerPoint(player, angle,  0.18f, 0.10f, -swing);
+    // Ботинки направлены вперёд, а не выглядят круглыми шариками.
+    DrawCube(PlayerPoint(player, angle, -0.18f, 0.095f, -0.105f+swing),
+             0.25f, 0.17f, 0.39f, boots);
+    DrawCube(PlayerPoint(player, angle, 0.18f, 0.095f, -0.105f-swing),
+             0.25f, 0.17f, 0.39f, boots);
+    DrawCube(PlayerPoint(player, angle, -0.18f, 0.025f, -0.105f+swing),
+             0.26f, 0.045f, 0.40f, dark);
+    DrawCube(PlayerPoint(player, angle, 0.18f, 0.025f, -0.105f-swing),
+             0.26f, 0.045f, 0.40f, dark);
 
-    DrawCylinderEx(hipL, kneeL, 0.14f, 0.12f, 8, pants);
-    DrawCylinderEx(kneeL, footL, 0.11f, 0.10f, 8, pants);
-    DrawCylinderEx(hipR, kneeR, 0.14f, 0.12f, 8, pants);
-    DrawCylinderEx(kneeR, footR, 0.11f, 0.10f, 8, pants);
+    // Торс и походный жилет.
+    DrawCube(PlayerPoint(player, angle, 0, 1.17f+bob, 0),
+             0.62f, 0.76f, 0.39f, shirt);
+    DrawCube(PlayerPoint(player, angle, 0, 1.18f+bob, -0.207f),
+             0.49f, 0.53f, 0.055f, vest);
+    DrawCube(PlayerPoint(player, angle, 0, 0.79f+bob, 0),
+             0.61f, 0.13f, 0.42f, pants);
+    DrawCube(PlayerPoint(player, angle, 0, 0.80f+bob, -0.235f),
+             0.58f, 0.075f, 0.035f, strap);
+    DrawCube(PlayerPoint(player, angle, 0, 1.00f+bob, -0.244f),
+             0.12f, 0.16f, 0.035f, C(76, 55, 35, 255));
+    DrawCube(PlayerPoint(player, angle, -0.17f, 1.25f+bob, -0.244f),
+             0.15f, 0.18f, 0.045f, C(91, 68, 43, 255));
+    DrawCube(PlayerPoint(player, angle, 0.17f, 1.25f+bob, -0.244f),
+             0.15f, 0.18f, 0.045f, C(91, 68, 43, 255));
 
-    DrawSphere(footL, 0.12f, shoes);
-    DrawSphere(footR, 0.12f, shoes);
+    // Рюкзак и широкие лямки.
+    DrawCube(PlayerPoint(player, angle, 0, 1.16f+bob, 0.265f),
+             0.47f, 0.59f, 0.29f, C(55, 83, 59, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 1.12f+bob, 0.425f),
+             0.29f, 0.25f, 0.055f, C(75, 105, 69, 255));
+    DrawCube(PlayerPoint(player, angle, -0.225f, 1.18f+bob, -0.205f),
+             0.065f, 0.53f, 0.055f, strap);
+    DrawCube(PlayerPoint(player, angle, 0.225f, 1.18f+bob, -0.205f),
+             0.065f, 0.53f, 0.055f, strap);
 
-    // Небольшой походный рюкзак за спиной персонажа.
-    DrawCube(
-        PlayerPoint(player, angle, 0, 1.12f, 0.235f),
-        0.43f, 0.55f, 0.25f, C(48, 82, 65, 255)
-    );
-    DrawCube(
-        PlayerPoint(player, angle, 0, 1.12f, 0.37f),
-        0.25f, 0.22f, 0.06f, C(72, 105, 76, 255)
-    );
+    // Шея, плечи и руки с выраженными локтями.
+    DrawCylinder(PlayerPoint(player, angle, 0, 1.60f+bob, 0),
+                 0.105f, 0.105f, 0.20f, 10, skin);
+    Vector3 shoulderL = PlayerPoint(player, angle, -0.39f, 1.43f+bob, 0);
+    Vector3 elbowL = PlayerPoint(player, angle, -0.48f, 1.05f+bob, -swing*0.65f);
+    Vector3 wristL = PlayerPoint(player, angle, -0.46f, 0.82f+bob, -swing*0.9f);
+    Vector3 shoulderR = PlayerPoint(player, angle, 0.39f, 1.43f+bob, 0);
+    Vector3 elbowR = PlayerPoint(player, angle, 0.48f, 1.05f+bob,
+                                 swing*0.65f-attackProgress*0.24f);
+    Vector3 wristR = PlayerPoint(player, angle, 0.46f, 0.82f+bob,
+                                 swing*0.9f-attackProgress*0.72f);
 
-    DrawCylinder(PlayerPoint(player, angle, 0, 1.05f, 0),
-                 0.31f, 0.36f, 0.78f, 12, shirt);
+    DrawSphere(shoulderL, 0.17f, shirtLight);
+    DrawSphere(shoulderR, 0.17f, shirtLight);
+    DrawCylinderEx(shoulderL, elbowL, 0.135f, 0.105f, 10, shirt);
+    DrawCylinderEx(shoulderR, elbowR, 0.135f, 0.105f, 10, shirt);
+    DrawSphere(elbowL, 0.105f, shirt);
+    DrawSphere(elbowR, 0.105f, shirt);
+    DrawCylinderEx(elbowL, wristL, 0.092f, 0.075f, 10, skin);
+    DrawCylinderEx(elbowR, wristR, 0.092f, 0.075f, 10, skin);
+    DrawSphere(wristL, 0.078f, skinLight);
+    DrawSphere(wristR, 0.078f, skinLight);
 
-    // Передняя панель жилета и пояс.
-    DrawCube(
-        PlayerPoint(player, angle, 0, 1.12f, -0.185f),
-        0.34f, 0.34f, 0.035f, C(31, 91, 132, 255)
-    );
-    DrawCube(
-        PlayerPoint(player, angle, 0, 0.69f, 0),
-        0.56f, 0.10f, 0.40f, C(91, 75, 52, 255)
-    );
-    DrawCube(
-        PlayerPoint(player, angle, 0, 0.69f, -0.215f),
-        0.13f, 0.11f, 0.035f, C(190, 157, 91, 255)
-    );
+    // Голова с ушами, лицом и короткими волосами — без второй лишней сферы.
+    DrawSphere(PlayerPoint(player, angle, 0, 1.86f+bob, 0),
+               0.265f, skin);
+    DrawSphere(PlayerPoint(player, angle, -0.265f, 1.86f+bob, 0),
+               0.065f, skin);
+    DrawSphere(PlayerPoint(player, angle, 0.265f, 1.86f+bob, 0),
+               0.065f, skin);
+    DrawSphere(PlayerPoint(player, angle, 0, 2.045f+bob, 0.035f),
+               0.205f, C(65, 48, 35, 255));
 
-    DrawCylinder(PlayerPoint(player, angle, 0, 1.48f, 0),
-                 0.11f, 0.11f, 0.18f, 8, skin);
+    // Кепка с козырьком.
+    DrawCube(PlayerPoint(player, angle, 0, 2.075f+bob, 0.005f),
+             0.48f, 0.105f, 0.43f, C(49, 77, 55, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 2.035f+bob, -0.205f),
+             0.47f, 0.045f, 0.25f, C(35, 59, 42, 255));
 
-    Vector3 shoulderL = PlayerPoint(player, angle, -0.39f, 1.35f, 0);
-    Vector3 elbowL = PlayerPoint(player, angle, -0.48f, 0.98f, -swing*0.65f);
-    Vector3 handL = PlayerPoint(player, angle, -0.47f, 0.76f, -swing*0.9f);
-
-    Vector3 shoulderR = PlayerPoint(player, angle, 0.39f, 1.35f, 0);
-    Vector3 elbowR = PlayerPoint(player, angle, 0.48f, 0.98f, swing*0.65f-attackProgress*0.30f);
-    Vector3 handR = PlayerPoint(player, angle, 0.47f, 0.76f, swing*0.9f-attackProgress*0.85f);
-
-    DrawCylinderEx(shoulderL, elbowL, 0.12f, 0.095f, 8, shirt);
-    DrawCylinderEx(elbowL, handL, 0.09f, 0.075f, 8, skin);
-
-    DrawCylinderEx(shoulderR, elbowR, 0.12f, 0.095f, 8, shirt);
-    DrawCylinderEx(elbowR, handR, 0.09f, 0.075f, 8, skin);
-
-    DrawSphere(handL, 0.085f, skin);
-    DrawSphere(handR, 0.085f, skin);
-
-    DrawSphere(PlayerPoint(player, angle, 0, 1.78f, 0),
-               0.29f, skin);
-
-    DrawSphere(PlayerPoint(player, angle, 0, 1.94f, 0.015f),
-               0.255f, C(65, 43, 30, 255));
-
-    // Небольшой нос вместо крупной лишней лицевой сферы,
-    // которая визуально выглядела как второй человечек/голова.
-    DrawSphere(PlayerPoint(player, angle, 0, 1.80f, -0.285f),
-               0.055f, skin);
-
-    // Походная кепка и козырёк персонажа.
-    DrawCube(
-        PlayerPoint(player, angle, 0, 2.035f, 0.005f),
-        0.49f, 0.12f, 0.48f, C(47, 77, 57, 255)
-    );
-    DrawCube(
-        PlayerPoint(player, angle, 0, 1.99f, -0.22f),
-        0.46f, 0.045f, 0.24f, C(35, 61, 45, 255)
-    );
-
-    // Ремни рюкзака и небольшие плечевые накладки.
-    DrawCube(
-        PlayerPoint(player, angle, -0.19f, 1.20f, -0.205f),
-        0.075f, 0.48f, 0.045f, C(177, 148, 91, 255)
-    );
-    DrawCube(
-        PlayerPoint(player, angle, 0.19f, 1.20f, -0.205f),
-        0.075f, 0.48f, 0.045f, C(177, 148, 91, 255)
-    );
-    DrawSphere(PlayerPoint(player, angle, -0.39f, 1.34f, -0.015f),
-               0.145f, C(52, 91, 76, 255));
-    DrawSphere(PlayerPoint(player, angle, 0.39f, 1.34f, -0.015f),
-               0.145f, C(52, 91, 76, 255));
-
-    DrawSphere(PlayerPoint(player, angle, -0.095f, 1.83f, -0.365f),
-               0.035f, C(30, 35, 42, 255));
-
-    DrawSphere(PlayerPoint(player, angle, 0.095f, 1.83f, -0.365f),
-               0.035f, C(30, 35, 42, 255));
+    // Глаза и нос расположены на передней стороне лица.
+    DrawSphere(PlayerPoint(player, angle, -0.092f, 1.88f+bob, -0.245f),
+               0.027f, dark);
+    DrawSphere(PlayerPoint(player, angle, 0.092f, 1.88f+bob, -0.245f),
+               0.027f, dark);
+    DrawSphere(PlayerPoint(player, angle, 0, 1.81f+bob, -0.275f),
+               0.045f, skinLight);
 }
-
 static void DrawCloud(float x, float y, float z, float s)
 {
     Color cloud = C(245, 250, 255, 255);
