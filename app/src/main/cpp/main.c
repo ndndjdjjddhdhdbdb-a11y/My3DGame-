@@ -781,7 +781,7 @@ int main(void)
         if (actionButtonCenters[0].x == 0)
         {
             actionButtonCenters[0] = (Vector2){screenWidth-105.0f, screenHeight-119.0f};
-            actionButtonCenters[1] = (Vector2){screenWidth-105.0f, screenHeight-230.0f};
+            actionButtonCenters[1] = (Vector2){screenWidth-105.0f, screenHeight-199.0f};
             actionButtonCenters[2] = (Vector2){screenWidth-38.0f, screenHeight-56.0f};
         }
 
@@ -1118,6 +1118,11 @@ int main(void)
                 {
                     joystickRadius = 120;
                     knobRadius = 50;
+                    actionButtonScale[0] = actionButtonScale[1] = actionButtonScale[2] = 1.0f;
+                    actionButtonAlpha[0] = actionButtonAlpha[1] = actionButtonAlpha[2] = 245;
+                    actionButtonCenters[0] = (Vector2){screenWidth-105.0f, screenHeight-119.0f};
+                    actionButtonCenters[1] = (Vector2){screenWidth-105.0f, screenHeight-199.0f};
+                    actionButtonCenters[2] = (Vector2){screenWidth-38.0f, screenHeight-56.0f};
 
                     joystickPosition = (Vector2){
                         150, screenHeight-160
@@ -1328,6 +1333,11 @@ int main(void)
                 {
                     joystickRadius = 120;
                     knobRadius = 50;
+                    actionButtonScale[0] = actionButtonScale[1] = actionButtonScale[2] = 1.0f;
+                    actionButtonAlpha[0] = actionButtonAlpha[1] = actionButtonAlpha[2] = 245;
+                    actionButtonCenters[0] = (Vector2){screenWidth-105.0f, screenHeight-119.0f};
+                    actionButtonCenters[1] = (Vector2){screenWidth-105.0f, screenHeight-199.0f};
+                    actionButtonCenters[2] = (Vector2){screenWidth-38.0f, screenHeight-56.0f};
 
                     joystickPosition = (Vector2){
                         150, screenHeight-160
