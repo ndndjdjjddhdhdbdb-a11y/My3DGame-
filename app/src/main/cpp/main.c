@@ -3158,7 +3158,7 @@ int main(void)
                 int maxOreHp = (oreType == 2) ? 10 : ((oreType == 3) ? 30 : 15);
                 const char *oreLabel = TextFormat("%s ORE", GetOreName(oreType));
                 float hudX = screenWidth/2.0f-145.0f;
-                Rectangle oreHud = {hudX, 105, 290, 82};
+                Rectangle oreHud = {hudX, 105, 290, 105};
                 DrawRectangleRounded(oreHud, 0.18f, 12, C(15, 27, 40, 238));
                 DrawRectangleRoundedLinesEx(oreHud, 0.18f, 12, 2.2f, GetOreColor(oreType));
                 DrawText(oreLabel, (int)hudX+16, 114, 19, RAYWHITE);
