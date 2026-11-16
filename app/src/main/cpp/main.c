@@ -23,17 +23,19 @@ static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
     return CheckCollisionPointRec(point, hitArea);
 }
 
-static void DrawTree(float x, float z, float scale)
+static void DrawTree(float x, float z, float scale, int quality)
 {
     DrawCylinder((Vector3){x, 0.85f*scale, z},
                  0.18f*scale, 0.23f*scale, 1.7f*scale,
                  8, C(112, 75, 45, 255));
     DrawSphere((Vector3){x, 2.0f*scale, z},
                0.95f*scale, C(44, 132, 69, 255));
-    DrawSphere((Vector3){x-0.48f*scale, 1.85f*scale, z+0.08f*scale},
-               0.62f*scale, C(57, 153, 77, 255));
-    DrawSphere((Vector3){x+0.48f*scale, 1.88f*scale, z-0.08f*scale},
-               0.62f*scale, C(35, 117, 61, 255));
+    if (quality >= 1)
+        DrawSphere((Vector3){x-0.48f*scale, 1.85f*scale, z+0.08f*scale},
+                   0.62f*scale, C(57, 153, 77, 255));
+    if (quality >= 2)
+        DrawSphere((Vector3){x+0.48f*scale, 1.88f*scale, z-0.08f*scale},
+                   0.62f*scale, C(35, 117, 61, 255));
 }
 
 
@@ -240,12 +242,13 @@ int main(void)
     bool settingsOpen = false;
     bool editControls = false;
     // 0 = low, 1 = medium, 2 = high
-    int graphicsQuality = 1;
+    int graphicsQuality = 0;  // Low graphics by default
+    int targetFps = 30;
     // 0 = more details, 1 = some details removed, 2 = fewer details
-    int detailLevel = 1;
+    int detailLevel = 2;
     // 0 = full resolution, 1 = 85%, 2 = 70%
-    int resolutionLevel = 0;
-    SetTargetFPS(45);
+    int resolutionLevel = 2;
+    SetTargetFPS(30);
 
     int renderWidth = (int)(screenWidth * 1.0f);
     int renderHeight = (int)(screenHeight * 1.0f);
@@ -276,6 +279,8 @@ int main(void)
 
     Rectangle panel, moveButtonsButton, sizeButton, slider;
     Rectangle lowButton, mediumButton, highButton;
+    Rectangle fpsButtons[5];
+    const int fpsValues[5] = {30, 60, 90, 120, 144};
     Rectangle detailMoreButton, detailSomeButton, detailFewButton;
     Rectangle resolutionFullButton, resolution85Button, resolution70Button;
     Rectangle resetButton, closeButton, doneButton;
@@ -299,7 +304,7 @@ int main(void)
         screenHeight = GetScreenHeight();
 
         panelWidth = fminf(540, screenWidth - 30);
-        panelHeight = fminf(540, screenHeight - 20);
+        panelHeight = fminf(590, screenHeight - 20);
         panelY = (screenWidth - panelWidth)/2;
         panelY = (screenHeight - panelHeight)/2;
 
@@ -321,16 +326,20 @@ int main(void)
         lowButton = (Rectangle){panelX+20, panelY+184, qualityW, 46};
         mediumButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+184, qualityW, 46};
         highButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+184, qualityW, 46};
-        detailMoreButton = (Rectangle){panelX+20, panelY+260, qualityW, 42};
-        detailSomeButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+260, qualityW, 42};
-        detailFewButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+260, qualityW, 42};
-        resolutionFullButton = (Rectangle){panelX+20, panelY+336, qualityW, 42};
-        resolution85Button = (Rectangle){panelX+20+qualityW+qualityGap, panelY+336, qualityW, 42};
-        resolution70Button = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+336, qualityW, 42};
-        slider = (Rectangle){panelX+40, panelY+440, panelWidth-80, 12};
-        resetButton = (Rectangle){panelX+20, panelY+478, (panelWidth-48)/2, 46};
-        closeButton = (Rectangle){panelX+28+(panelWidth-48)/2, panelY+478,
-                                  (panelWidth-48)/2, 46};
+        float fpsGap = 5;
+        float fpsW = (panelWidth-40-fpsGap*4)/5;
+        for (int fi = 0; fi < 5; fi++)
+            fpsButtons[fi] = (Rectangle){panelX+20+fi*(fpsW+fpsGap), panelY+260, fpsW, 42};
+        detailMoreButton = (Rectangle){panelX+20, panelY+340, qualityW, 42};
+        detailSomeButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+340, qualityW, 42};
+        detailFewButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+340, qualityW, 42};
+        resolutionFullButton = (Rectangle){panelX+20, panelY+420, qualityW, 42};
+        resolution85Button = (Rectangle){panelX+20+qualityW+qualityGap, panelY+420, qualityW, 42};
+        resolution70Button = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+420, qualityW, 42};
+        slider = (Rectangle){panelX+40, panelY+505, panelWidth-80, 12};
+        resetButton = (Rectangle){panelX+20, panelY+540, (panelWidth-48)/2, 42};
+        closeButton = (Rectangle){panelX+28+(panelWidth-48)/2, panelY+540,
+                                  (panelWidth-48)/2, 42};
         doneButton = (Rectangle){screenWidth/2-105, screenHeight-100, 210, 62};
 
         int touchCount = GetTouchPointCount();
@@ -411,18 +420,24 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, lowButton))
                 {
                     graphicsQuality = 0;
-                    SetTargetFPS(30);
+                    detailLevel = 2;
+                    resolutionLevel = 2;
                 }
                 else if (CheckCollisionPointRec(pos, mediumButton))
                 {
                     graphicsQuality = 1;
-                    SetTargetFPS(45);
+                    detailLevel = 1;
+                    resolutionLevel = 1;
                 }
                 else if (CheckCollisionPointRec(pos, highButton))
                 {
                     graphicsQuality = 2;
-                    SetTargetFPS(60);
                 }
+                else if (CheckCollisionPointRec(pos, fpsButtons[0])) { targetFps=30; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[1])) { targetFps=60; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[2])) { targetFps=90; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[3])) { targetFps=120; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[4])) { targetFps=144; SetTargetFPS(targetFps); }
                 else if (CheckCollisionPointRec(pos, detailMoreButton)) detailLevel = 0;
                 else if (CheckCollisionPointRec(pos, detailSomeButton)) detailLevel = 1;
                 else if (CheckCollisionPointRec(pos, detailFewButton)) detailLevel = 2;
@@ -444,7 +459,7 @@ int main(void)
                     cameraButton = (Rectangle){screenWidth-190, 92, 170, 64};
                     lookSensitivity = 3.0f;
                     graphicsQuality = 1; detailLevel = 1; resolutionLevel = 0;
-                    SetTargetFPS(45);
+                    targetFps = 30; SetTargetFPS(targetFps);
                 }
                 else if (CheckCollisionPointRec(pos, closeButton))
                 {
@@ -493,11 +508,16 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, sizeButton))
                 { joystickRadius += 15; if (joystickRadius > 180) joystickRadius = 90; knobRadius = joystickRadius*0.42f; }
                 else if (CheckCollisionPointRec(pos, lowButton))
-                { graphicsQuality = 0; SetTargetFPS(30); }
+                { graphicsQuality = 0; detailLevel = 2; resolutionLevel = 2; }
                 else if (CheckCollisionPointRec(pos, mediumButton))
-                { graphicsQuality = 1; SetTargetFPS(45); }
+                { graphicsQuality = 1; detailLevel = 1; resolutionLevel = 1; }
                 else if (CheckCollisionPointRec(pos, highButton))
-                { graphicsQuality = 2; SetTargetFPS(60); }
+                { graphicsQuality = 2; }
+                else if (CheckCollisionPointRec(pos, fpsButtons[0])) { targetFps=30; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[1])) { targetFps=60; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[2])) { targetFps=90; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[3])) { targetFps=120; SetTargetFPS(targetFps); }
+                else if (CheckCollisionPointRec(pos, fpsButtons[4])) { targetFps=144; SetTargetFPS(targetFps); }
                 else if (CheckCollisionPointRec(pos, detailMoreButton)) detailLevel=0;
                 else if (CheckCollisionPointRec(pos, detailSomeButton)) detailLevel=1;
                 else if (CheckCollisionPointRec(pos, detailFewButton)) detailLevel=2;
@@ -512,7 +532,7 @@ int main(void)
                     joystickPosition=(Vector2){150,screenHeight-160}; joystickKnob=joystickPosition;
                     settingsButton=(Rectangle){screenWidth-190,18,170,64};
                     cameraButton=(Rectangle){screenWidth-190,92,170,64};
-                    lookSensitivity=3.0f; graphicsQuality=1; detailLevel=1; resolutionLevel=0; SetTargetFPS(45);
+                    lookSensitivity=3.0f; graphicsQuality=1; detailLevel=1; resolutionLevel=0; targetFps=30; SetTargetFPS(targetFps);
                 }
                 else if (CheckCollisionPointRec(pos, closeButton)) settingsOpen=false;
             }
@@ -721,17 +741,30 @@ int main(void)
         {
             float hz = i*55.0f;
             float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
-            DrawRustHouse(-18.0f, hz, sc, i+4);
-            if (graphicsQuality >= 1)
+            float hx1 = -18.0f - player.x;
+            float hz1 = hz - player.z;
+            if (hx1*hx1 + hz1*hz1 < 190.0f*190.0f)
+                DrawRustHouse(-18.0f, hz, sc, i+4);
+            float hx2 = 18.0f - player.x;
+            float hz2 = hz + 22.0f - player.z;
+            if (graphicsQuality >= 1 && hx2*hx2 + hz2*hz2 < 190.0f*190.0f)
                 DrawRustHouse(18.0f, hz+22.0f, sc*0.92f, i+7);
         }
 
         // Несколько дальних домиков у боковых дорог.
         if (graphicsQuality >= 1 && detailLevel == 0)
         {
-            DrawRustHouse(-42.0f, -120.0f, 0.78f, 2);
-            DrawRustHouse(48.0f, 120.0f, 0.84f, 1);
-            DrawRustHouse(42.0f, -120.0f, 0.80f, 0);
+            const Vector3 extraHouses[3] = {{-42.0f,0,-120.0f},
+                                            {48.0f,0,120.0f},
+                                            {42.0f,0,-120.0f}};
+            for (int h = 0; h < 3; h++)
+            {
+                float dx = extraHouses[h].x-player.x;
+                float dz = extraHouses[h].z-player.z;
+                if (dx*dx+dz*dz < 190.0f*190.0f)
+                    DrawRustHouse(extraHouses[h].x, extraHouses[h].z,
+                                  (h == 1) ? 0.84f : 0.80f, h);
+            }
         }
 
         // Дальний холмистый горизонт
@@ -757,16 +790,21 @@ int main(void)
         if (graphicsQuality >= 2) DrawCloud(32, 17, 12, 2.1f);
 
         // Деревья вокруг поляны
-        int treeStep = (graphicsQuality == 0) ? 28 : ((graphicsQuality == 1) ? 21 : 16);
-        treeStep += detailLevel * 3;
+        int treeStep = (graphicsQuality == 0) ? 46 : ((graphicsQuality == 1) ? 34 : 27);
+        treeStep += detailLevel * 5;
         int treeLimit = 245;
+        float treeView = (graphicsQuality == 0 || detailLevel == 2) ? 105.0f : 135.0f;
+        float treeView2 = treeView*treeView;
         for (int x = -treeLimit; x <= treeLimit; x += treeStep)
         {
             for (int z = -treeLimit; z <= treeLimit; z += treeStep)
             {
+                float tx = (float)x - player.x;
+                float tz = (float)z - player.z;
+                if (tx*tx + tz*tz > treeView2) continue;
                 if (!IsVillageClear((float)x, (float)z)) continue;
                 float scale = 0.85f + (float)((x*x+z*z)%5)*0.07f;
-                DrawTree((float)x, (float)z, scale);
+                DrawTree((float)x, (float)z, scale, graphicsQuality);
             }
         }
 
@@ -782,9 +820,9 @@ int main(void)
         if (graphicsQuality >= 2) DrawRock(-10, 0.25f, 9, 0.42f);
 
         // Цветы по краям дорожки
-        if (graphicsQuality >= 1)
+        if (graphicsQuality >= 1 && detailLevel < 2)
         {
-            int flowerStep = (graphicsQuality == 1) ? 6 : 3;
+            int flowerStep = (graphicsQuality == 1) ? 9 : 6;
             flowerStep += detailLevel * 3;
             for (int i = -12; i <= 12; i += flowerStep)
             {
@@ -878,7 +916,16 @@ int main(void)
             DrawText("MEDIUM", mediumButton.x+mediumButton.width/2-34, mediumButton.y+14, 16, RAYWHITE);
             DrawText("HIGH", highButton.x+highButton.width/2-19, highButton.y+14, 16, RAYWHITE);
 
-            DrawText("WORLD DETAILS", panelX+25, panelY+240, 16, RAYWHITE);
+            DrawText("FPS LIMIT", panelX+25, panelY+240, 16, RAYWHITE);
+            for (int fi = 0; fi < 5; fi++) {
+                Color fpsColor = (targetFps == fpsValues[fi]) ? C(42,150,100,255) : C(42,65,91,255);
+                DrawRectangleRounded(fpsButtons[fi], 0.22f, 12, fpsColor);
+                const char *fpsLabel = (fi == 0) ? "30" : (fi == 1) ? "60" : (fi == 2) ? "90" : (fi == 3) ? "120" : "144";
+                int tw = MeasureText(fpsLabel, 16);
+                DrawText(fpsLabel, fpsButtons[fi].x+fpsButtons[fi].width/2-tw/2, fpsButtons[fi].y+13, 16, RAYWHITE);
+            }
+
+            DrawText("WORLD DETAILS", panelX+25, panelY+320, 16, RAYWHITE);
             Color moreColor = detailLevel == 0 ? C(42,150,100,255) : C(42,65,91,255);
             Color someColor = detailLevel == 1 ? C(42,150,100,255) : C(42,65,91,255);
             Color fewColor = detailLevel == 2 ? C(42,150,100,255) : C(42,65,91,255);
@@ -889,7 +936,7 @@ int main(void)
             DrawText("SOME", detailSomeButton.x+detailSomeButton.width/2-24, detailSomeButton.y+13, 15, RAYWHITE);
             DrawText("LESS", detailFewButton.x+detailFewButton.width/2-20, detailFewButton.y+13, 15, RAYWHITE);
 
-            DrawText("RENDER RESOLUTION", panelX+25, panelY+316, 16, RAYWHITE);
+            DrawText("RENDER RESOLUTION", panelX+25, panelY+400, 16, RAYWHITE);
             Color fullColor = resolutionLevel == 0 ? C(42,150,100,255) : C(42,65,91,255);
             Color midResColor = resolutionLevel == 1 ? C(42,150,100,255) : C(42,65,91,255);
             Color lowResColor = resolutionLevel == 2 ? C(42,150,100,255) : C(42,65,91,255);
@@ -900,10 +947,10 @@ int main(void)
             DrawText("85%", resolution85Button.x+resolution85Button.width/2-17, resolution85Button.y+13, 15, RAYWHITE);
             DrawText("70%", resolution70Button.x+resolution70Button.width/2-17, resolution70Button.y+13, 15, RAYWHITE);
 
-            DrawText("CAMERA SENSITIVITY", panelX+25, panelY+402,
+            DrawText("CAMERA SENSITIVITY", panelX+25, panelY+472,
                      16, RAYWHITE);
             DrawText(TextFormat("%.1f", lookSensitivity),
-                     panelX+panelWidth-70, panelY+402, 20,
+                     panelX+panelWidth-70, panelY+472, 20,
                      C(95, 195, 255, 255));
 
             float sliderValue = (lookSensitivity-0.1f)/9.9f;
@@ -952,4 +999,3 @@ int main(void)
     UnloadRenderTexture(sceneTexture);
     CloseWindow();
     return 0;
-}
