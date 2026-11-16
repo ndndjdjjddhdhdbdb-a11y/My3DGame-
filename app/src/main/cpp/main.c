@@ -452,13 +452,15 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
 // Более крупные залежи с хорошо заметными цветными вкраплениями.
 static void DrawOreNode(float x, float z, int type)
 {
+    // Увеличиваем всю модель залежи ровно в 2 раза от основания.
+    const float s = 2.0f;
     Color ore = GetOreColor(type);
-    DrawSphere((Vector3){x, 0.34f, z}, 0.53f, C(79, 84, 87, 255));
-    DrawSphere((Vector3){x-0.30f, 0.25f, z+0.19f}, 0.32f, C(103, 108, 108, 255));
-    DrawSphere((Vector3){x+0.29f, 0.23f, z-0.20f}, 0.28f, C(91, 97, 98, 255));
-    DrawCube((Vector3){x-0.15f, 0.67f, z-0.14f}, 0.23f, 0.20f, 0.21f, ore);
-    DrawCube((Vector3){x+0.22f, 0.49f, z+0.18f}, 0.20f, 0.17f, 0.19f, ore);
-    DrawCube((Vector3){x+0.02f, 0.78f, z+0.16f}, 0.15f, 0.14f, 0.15f, ore);
+    DrawSphere((Vector3){x, 0.34f*s, z}, 0.53f*s, C(79, 84, 87, 255));
+    DrawSphere((Vector3){x-0.30f*s, 0.25f*s, z+0.19f*s}, 0.32f*s, C(103, 108, 108, 255));
+    DrawSphere((Vector3){x+0.29f*s, 0.23f*s, z-0.20f*s}, 0.28f*s, C(91, 97, 98, 255));
+    DrawCube((Vector3){x-0.15f*s, 0.67f*s, z-0.14f*s}, 0.23f*s, 0.20f*s, 0.21f*s, ore);
+    DrawCube((Vector3){x+0.22f*s, 0.49f*s, z+0.18f*s}, 0.20f*s, 0.17f*s, 0.19f*s, ore);
+    DrawCube((Vector3){x+0.02f*s, 0.78f*s, z+0.16f*s}, 0.15f*s, 0.14f*s, 0.15f*s, ore);
 }
 
 static void DrawOreDrop(Vector3 p, int type)
@@ -920,6 +922,8 @@ int main(void)
     float lookSensitivity = 3.0f;
     float playerSpeed = 0.08f;
     float walkPhase = 0.0f;
+    float thirdPersonBobPhase = 0.0f;
+    float thirdPersonBobBlend = 0.0f;
 
     // Система выживания: запас еды и воды постепенно уменьшается.
     float foodLevel = 100.0f;
@@ -2176,7 +2180,7 @@ int main(void)
                     float survivalSpeed = playerSpeed;
                     if (foodLevel < 20.0f || waterLevel < 20.0f)
                         survivalSpeed *= 0.72f;
-                    if (sprintEnabled) survivalSpeed *= 1.65f;
+                    if (sprintEnabled) survivalSpeed *= 1.80f;
 
                     float nextX = player.x + worldMoveX*survivalSpeed;
                     float nextZ = player.z + worldMoveZ*survivalSpeed;
@@ -2351,6 +2355,18 @@ int main(void)
             thirdPersonCameraPosition.z += (safeCamera.z-thirdPersonCameraPosition.z)*cameraSmooth;
             camera.position = thirdPersonCameraPosition;
 
+            // Небольшое плавное покачивание камеры в третьем лице при движении.
+            // При остановке амплитуда мягко затухает, без резкого скачка.
+            float bobTarget = (playerMoving && !mainMenuOpen && !settingsOpen &&
+                               !editControls && !inventoryOpen) ? 1.0f : 0.0f;
+            float bobBlendSpeed = 1.0f-expf(-GetFrameTime()*7.0f);
+            thirdPersonBobBlend += (bobTarget-thirdPersonBobBlend)*bobBlendSpeed;
+            if (bobTarget > 0.0f)
+                thirdPersonBobPhase += GetFrameTime()*(sprintEnabled ? 12.0f : 8.5f);
+            float bobAmplitude = thirdPersonBobBlend;
+            camera.position.y += fabsf(sinf(thirdPersonBobPhase))*0.055f*bobAmplitude;
+            camera.position.x += sinf(thirdPersonBobPhase*0.5f)*0.025f*bobAmplitude;
+
             // Камера смотрит вперёд по направлению прицела, а не прямо в игрока.
             camera.target = (Vector3){
                 player.x+dirX*10.0f,
@@ -2410,11 +2426,11 @@ int main(void)
         for (int o=0; o<MAX_ORE_NODES; o++)
         {
             if (!gOreActive[o]) continue;
-            Vector3 oreCenter = {gOrePositions[o].x, 0.38f, gOrePositions[o].z};
+            Vector3 oreCenter = {gOrePositions[o].x, 0.76f, gOrePositions[o].z};
             float pdx = aimOrigin.x-oreCenter.x, pdy = aimOrigin.y-oreCenter.y, pdz = aimOrigin.z-oreCenter.z;
             float playerDistance = sqrtf(pdx*pdx+pdy*pdy+pdz*pdz);
             if (playerDistance > 2.6f) continue;
-            RayCollision hit = GetRayCollisionSphere(centerAimRay, oreCenter, 0.58f);
+            RayCollision hit = GetRayCollisionSphere(centerAimRay, oreCenter, 1.16f);
             if (hit.hit && hit.distance < closestOreDistance)
             {
                 closestOreDistance = hit.distance;
