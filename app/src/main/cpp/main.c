@@ -2056,6 +2056,8 @@ int main(void)
                     int lootAmount = 2 + (targetedBarrel % 3);
                     itemCounts[lootType] += lootAmount;
                     if (itemCounts[lootType] > 99) itemCounts[lootType] = 99;
+                    SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                                  buildPieceCount, itemCounts[4]);
                     targetedBarrel = -1;
                 }
             }
