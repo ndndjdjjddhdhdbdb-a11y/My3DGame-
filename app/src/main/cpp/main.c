@@ -594,7 +594,7 @@ static void DrawLootBarrel(Vector3 p)
                  0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
 }
 
-static bool IsBlockedAt(float x, float z,
+static bool IsBlockedAt(float x, float z, float playerY,
                            Vector3 *barrels, bool *barrelDestroyed)
 {
     const float playerRadius = 0.42f;
@@ -611,7 +611,7 @@ static bool IsBlockedAt(float x, float z,
         if (dx*dx+dz*dz < radius*radius) return true;
     }
 
-    if(IsGasStationBlocked(x,z,playerRadius,player.y)) return true;
+    if(IsGasStationBlocked(x,z,playerRadius,playerY)) return true;
 
     // Стены небольших пещер: центр входа оставлен свободным.
     const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
@@ -741,7 +741,7 @@ static bool PlaceBuildPiece(Vector3 player, float angle, int type,
                       &x, &z, &storedType);
     if (storedType < 0) return false;
     if (fabsf(x-player.x) < 2.0f && fabsf(z-player.z) < 2.0f) return false;
-    if (IsBlockedAt(x, z, barrels, barrelDestroyed)) return false;
+    if (IsBlockedAt(x, z, player.y, barrels, barrelDestroyed)) return false;
     for (int i = 0; i < *pieceCount; i++)
     {
         float dx = pieces[i].x-x, dz = pieces[i].z-z;
@@ -2206,9 +2206,9 @@ int main(void)
                     }
 
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
-                    if (!IsBlockedAt(nextX, player.z,barrelPositions,barrelDestroyed))
+                    if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed))
                         player.x = nextX;
-                    if (!IsBlockedAt(player.x, nextZ,barrelPositions,barrelDestroyed))
+                    if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed))
                         player.z = nextZ;
 
                     if (playerMoving)
@@ -2662,7 +2662,7 @@ int main(void)
             bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
             if(previewStoredType<0)previewValid=false;
             if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
-            if(IsBlockedAt(previewX,previewZ,barrelPositions,barrelDestroyed))previewValid=false;
+            if(IsBlockedAt(previewX,previewZ,player.y,barrelPositions,barrelDestroyed))previewValid=false;
             for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==previewStoredType)previewValid=false;
             Color ghost=previewValid?C(90,230,140,115):C(240,75,65,115);
             float gy=selectedBuildType==0?0.14f:(selectedBuildType==1?1.25f:(selectedBuildType==3?2.55f:1.1f));
