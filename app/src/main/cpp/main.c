@@ -69,7 +69,18 @@ int main(void)
     bool editControls = false;
     // 0 = low, 1 = medium, 2 = high
     int graphicsQuality = 1;
+    // 0 = more details, 1 = some details removed, 2 = fewer details
+    int detailLevel = 1;
+    // 0 = full resolution, 1 = 85%, 2 = 70%
+    int resolutionLevel = 0;
     SetTargetFPS(45);
+
+    int renderWidth = (int)(screenWidth * 1.0f);
+    int renderHeight = (int)(screenHeight * 1.0f);
+    if (renderWidth < 320) renderWidth = 320;
+    if (renderHeight < 240) renderHeight = 240;
+    RenderTexture2D sceneTexture = LoadRenderTexture(renderWidth, renderHeight);
+    SetTextureFilter(sceneTexture.texture, TEXTURE_FILTER_BILINEAR);
 
     Camera3D camera = {0};
     camera.up = (Vector3){0, 1, 0};
@@ -87,12 +98,14 @@ int main(void)
     Rectangle cameraButton = {screenWidth - 190, 92, 170, 64};
 
     float panelWidth = fminf(540, screenWidth - 30);
-    float panelHeight = 430;
+    float panelHeight = 540;
     float panelX = (screenWidth - panelWidth)/2;
     float panelY = (screenHeight - panelHeight)/2;
 
     Rectangle panel, moveButtonsButton, sizeButton, slider;
     Rectangle lowButton, mediumButton, highButton;
+    Rectangle detailMoreButton, detailSomeButton, detailFewButton;
+    Rectangle resolutionFullButton, resolution85Button, resolution70Button;
     Rectangle resetButton, closeButton, doneButton;
 
     int dragTarget = 0;
@@ -114,7 +127,8 @@ int main(void)
         screenHeight = GetScreenHeight();
 
         panelWidth = fminf(540, screenWidth - 30);
-        panelX = (screenWidth - panelWidth)/2;
+        panelHeight = fminf(540, screenHeight - 20);
+        panelY = (screenWidth - panelWidth)/2;
         panelY = (screenHeight - panelHeight)/2;
 
         // Keep the menu controls on-screen, even after changing orientation.
@@ -135,10 +149,16 @@ int main(void)
         lowButton = (Rectangle){panelX+20, panelY+184, qualityW, 46};
         mediumButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+184, qualityW, 46};
         highButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+184, qualityW, 46};
-        slider = (Rectangle){panelX+40, panelY+292, panelWidth-80, 12};
-        resetButton = (Rectangle){panelX+20, panelY+355, (panelWidth-48)/2, 48};
-        closeButton = (Rectangle){panelX+28+(panelWidth-48)/2, panelY+355,
-                                  (panelWidth-48)/2, 48};
+        detailMoreButton = (Rectangle){panelX+20, panelY+260, qualityW, 42};
+        detailSomeButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+260, qualityW, 42};
+        detailFewButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+260, qualityW, 42};
+        resolutionFullButton = (Rectangle){panelX+20, panelY+336, qualityW, 42};
+        resolution85Button = (Rectangle){panelX+20+qualityW+qualityGap, panelY+336, qualityW, 42};
+        resolution70Button = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+336, qualityW, 42};
+        slider = (Rectangle){panelX+40, panelY+440, panelWidth-80, 12};
+        resetButton = (Rectangle){panelX+20, panelY+478, (panelWidth-48)/2, 46};
+        closeButton = (Rectangle){panelX+28+(panelWidth-48)/2, panelY+478,
+                                  (panelWidth-48)/2, 46};
         doneButton = (Rectangle){screenWidth/2-105, screenHeight-100, 210, 62};
 
         int touchCount = GetTouchPointCount();
@@ -215,7 +235,8 @@ int main(void)
                     joystickRadius += 15;
                     if (joystickRadius > 180) joystickRadius = 90;
                     knobRadius = joystickRadius*0.42f;
-                }   else if (CheckCollisionPointRec(pos, lowButton))
+                }
+                else if (CheckCollisionPointRec(pos, lowButton))
                 {
                     graphicsQuality = 0;
                     SetTargetFPS(30);
@@ -230,6 +251,12 @@ int main(void)
                     graphicsQuality = 2;
                     SetTargetFPS(60);
                 }
+                else if (CheckCollisionPointRec(pos, detailMoreButton)) detailLevel = 0;
+                else if (CheckCollisionPointRec(pos, detailSomeButton)) detailLevel = 1;
+                else if (CheckCollisionPointRec(pos, detailFewButton)) detailLevel = 2;
+                else if (CheckCollisionPointRec(pos, resolutionFullButton)) resolutionLevel = 0;
+                else if (CheckCollisionPointRec(pos, resolution85Button)) resolutionLevel = 1;
+                else if (CheckCollisionPointRec(pos, resolution70Button)) resolutionLevel = 2;
                 else if (CheckCollisionPointRec(pos, slider))
                 {
                     draggingSlider = true;
@@ -244,6 +271,8 @@ int main(void)
                     settingsButton = (Rectangle){screenWidth-190, 18, 170, 64};
                     cameraButton = (Rectangle){screenWidth-190, 92, 170, 64};
                     lookSensitivity = 3.0f;
+                    graphicsQuality = 1; detailLevel = 1; resolutionLevel = 0;
+                    SetTargetFPS(45);
                 }
                 else if (CheckCollisionPointRec(pos, closeButton))
                 {
@@ -297,6 +326,12 @@ int main(void)
                 { graphicsQuality = 1; SetTargetFPS(45); }
                 else if (CheckCollisionPointRec(pos, highButton))
                 { graphicsQuality = 2; SetTargetFPS(60); }
+                else if (CheckCollisionPointRec(pos, detailMoreButton)) detailLevel=0;
+                else if (CheckCollisionPointRec(pos, detailSomeButton)) detailLevel=1;
+                else if (CheckCollisionPointRec(pos, detailFewButton)) detailLevel=2;
+                else if (CheckCollisionPointRec(pos, resolutionFullButton)) resolutionLevel=0;
+                else if (CheckCollisionPointRec(pos, resolution85Button)) resolutionLevel=1;
+                else if (CheckCollisionPointRec(pos, resolution70Button)) resolutionLevel=2;
                 else if (CheckCollisionPointRec(pos, slider))
                 { float v = (pos.x-slider.x)/slider.width; if(v<0)v=0; if(v>1)v=1; lookSensitivity=0.1f+v*9.9f; }
                 else if (CheckCollisionPointRec(pos, resetButton))
@@ -305,7 +340,7 @@ int main(void)
                     joystickPosition=(Vector2){150,screenHeight-160}; joystickKnob=joystickPosition;
                     settingsButton=(Rectangle){screenWidth-190,18,170,64};
                     cameraButton=(Rectangle){screenWidth-190,92,170,64};
-                    lookSensitivity=3.0f; graphicsQuality=1; SetTargetFPS(45);
+                    lookSensitivity=3.0f; graphicsQuality=1; detailLevel=1; resolutionLevel=0; SetTargetFPS(45);
                 }
                 else if (CheckCollisionPointRec(pos, closeButton)) settingsOpen=false;
             }
@@ -432,7 +467,8 @@ int main(void)
         float dirX = sinf(playerAngle)*cosf(cameraPitch);
         float dirY = sinf(cameraPitch);
         float dirZ = -cosf(playerAngle)*cosf(cameraPitch);
-   if (firstPerson)
+
+        if (firstPerson)
         {
             camera.position = (Vector3){player.x, player.y+1.6f, player.z};
             camera.target = (Vector3){player.x+dirX*10,
@@ -447,9 +483,21 @@ int main(void)
             camera.target = (Vector3){player.x, player.y+1.4f, player.z};
         }
 
-        BeginDrawing();
-        ClearBackground(C(135, 194, 235, 255));
+        float renderScale = (resolutionLevel == 0) ? 1.0f : ((resolutionLevel == 1) ? 0.85f : 0.70f);
+        int wantedWidth = (int)(screenWidth * renderScale);
+        int wantedHeight = (int)(screenHeight * renderScale);
+        if (wantedWidth < 320) wantedWidth = 320;
+        if (wantedHeight < 240) wantedHeight = 240;
+        if (wantedWidth != renderWidth || wantedHeight != renderHeight)
+        {
+            UnloadRenderTexture(sceneTexture);
+            renderWidth = wantedWidth; renderHeight = wantedHeight;
+            sceneTexture = LoadRenderTexture(renderWidth, renderHeight);
+            SetTextureFilter(sceneTexture.texture, TEXTURE_FILTER_BILINEAR);
+        }
 
+        BeginTextureMode(sceneTexture);
+        ClearBackground(C(135, 194, 235, 255));
         BeginMode3D(camera);
 
         // Большая зелёная поляна и светлая дорожка
@@ -480,6 +528,7 @@ int main(void)
 
         // Деревья вокруг поляны
         int treeStep = (graphicsQuality == 0) ? 16 : ((graphicsQuality == 1) ? 10 : 7);
+        treeStep += detailLevel * 2;
         int treeLimit = (graphicsQuality == 0) ? 24 : 35;
         for (int x = -treeLimit; x <= treeLimit; x += treeStep)
         {
@@ -499,7 +548,8 @@ int main(void)
             DrawRock(-5, 0.35f, -8, 0.65f);
             DrawRock(7, 0.28f, 5, 0.48f);
             DrawSphere((Vector3){-7, 0.45f, 3}, 0.65f, C(48, 137, 67, 255));
-            DrawSphere((Vector3){9, 0.42f, -7}, 0.58f, C(58, 147, 72, 255));
+            if (detailLevel < 2)
+                DrawSphere((Vector3){9, 0.42f, -7}, 0.58f, C(58, 147, 72, 255));
         }
         if (graphicsQuality >= 2) DrawRock(-10, 0.25f, 9, 0.42f);
 
@@ -507,6 +557,7 @@ int main(void)
         if (graphicsQuality >= 1)
         {
             int flowerStep = (graphicsQuality == 1) ? 6 : 3;
+            flowerStep += detailLevel * 3;
             for (int i = -12; i <= 12; i += flowerStep)
             {
                 DrawCylinder((Vector3){-3.6f, 0.18f, i*2.0f},
@@ -534,6 +585,14 @@ int main(void)
         }
 
         EndMode3D();
+        EndTextureMode();
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        DrawTexturePro(sceneTexture.texture,
+                       (Rectangle){0, 0, (float)sceneTexture.texture.width, -(float)sceneTexture.texture.height},
+                       (Rectangle){0, 0, (float)screenWidth, (float)screenHeight},
+                       (Vector2){0, 0}, 0.0f, WHITE);
 
         // Небольшая верхняя информационная панель
         DrawRectangleRounded((Rectangle){18, 16, 210, 48}, 0.35f, 12,
@@ -598,10 +657,32 @@ int main(void)
             DrawText("MEDIUM", mediumButton.x+mediumButton.width/2-34, mediumButton.y+14, 16, RAYWHITE);
             DrawText("HIGH", highButton.x+highButton.width/2-19, highButton.y+14, 16, RAYWHITE);
 
-            DrawText("CAMERA SENSITIVITY", panelX+25, panelY+246,
+            DrawText("WORLD DETAILS", panelX+25, panelY+240, 16, RAYWHITE);
+            Color moreColor = detailLevel == 0 ? C(42,150,100,255) : C(42,65,91,255);
+            Color someColor = detailLevel == 1 ? C(42,150,100,255) : C(42,65,91,255);
+            Color fewColor = detailLevel == 2 ? C(42,150,100,255) : C(42,65,91,255);
+            DrawRectangleRounded(detailMoreButton, 0.22f, 12, moreColor);
+            DrawRectangleRounded(detailSomeButton, 0.22f, 12, someColor);
+            DrawRectangleRounded(detailFewButton, 0.22f, 12, fewColor);
+            DrawText("MORE", detailMoreButton.x+detailMoreButton.width/2-25, detailMoreButton.y+13, 15, RAYWHITE);
+            DrawText("SOME", detailSomeButton.x+detailSomeButton.width/2-24, detailSomeButton.y+13, 15, RAYWHITE);
+            DrawText("LESS", detailFewButton.x+detailFewButton.width/2-20, detailFewButton.y+13, 15, RAYWHITE);
+
+            DrawText("RENDER RESOLUTION", panelX+25, panelY+316, 16, RAYWHITE);
+            Color fullColor = resolutionLevel == 0 ? C(42,150,100,255) : C(42,65,91,255);
+            Color midResColor = resolutionLevel == 1 ? C(42,150,100,255) : C(42,65,91,255);
+            Color lowResColor = resolutionLevel == 2 ? C(42,150,100,255) : C(42,65,91,255);
+            DrawRectangleRounded(resolutionFullButton, 0.22f, 12, fullColor);
+            DrawRectangleRounded(resolution85Button, 0.22f, 12, midResColor);
+            DrawRectangleRounded(resolution70Button, 0.22f, 12, lowResColor);
+            DrawText("100%", resolutionFullButton.x+resolutionFullButton.width/2-22, resolutionFullButton.y+13, 15, RAYWHITE);
+            DrawText("85%", resolution85Button.x+resolution85Button.width/2-17, resolution85Button.y+13, 15, RAYWHITE);
+            DrawText("70%", resolution70Button.x+resolution70Button.width/2-17, resolution70Button.y+13, 15, RAYWHITE);
+
+            DrawText("CAMERA SENSITIVITY", panelX+25, panelY+402,
                      16, RAYWHITE);
             DrawText(TextFormat("%.1f", lookSensitivity),
-                     panelX+panelWidth-70, panelY+246, 20,
+                     panelX+panelWidth-70, panelY+402, 20,
                      C(95, 195, 255, 255));
 
             float sliderValue = (lookSensitivity-0.1f)/9.9f;
@@ -647,6 +728,7 @@ int main(void)
         EndDrawing();
     }
 
+    UnloadRenderTexture(sceneTexture);
     CloseWindow();
     return 0;
 }
