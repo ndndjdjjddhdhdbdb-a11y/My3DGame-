@@ -1080,14 +1080,7 @@ int main(void)
     if (targetFps < 30 || targetFps > 144) targetFps = 30;
     SetTargetFPS(targetFps);
 
-    for (int i = 0; i < 7; i++)
-    {
-        float hz = (i-3)*55.0f;
-        barrelPositions[i*2] = (Vector3){-13.5f, 0.0f, hz+3.4f};
-        barrelPositions[i*2+1] = (Vector3){13.5f, 0.0f, hz+25.4f};
-        barrelHealth[i*2] = 50;
-        barrelHealth[i*2+1] = 50;
-    }
+    for(int i=0;i<MAX_BARRELS;i++){barrelPositions[i]=(Vector3){0};barrelHealth[i]=0;barrelDestroyed[i]=true;}
 
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
@@ -2629,50 +2622,9 @@ int main(void)
         float chunkView = chunkDistance*50.0f;
         float chunkView2 = chunkView*chunkView;
 
-        int houseStep =
-            (graphicsQuality == 0 || detailLevel >= 2) ? 2 : 1;
-
-        for (int i = -3; i <= 3; i += houseStep)
-        {
-            float hz = i*55.0f;
-
-            float sc = 0.82f +
-                (float)((i*i+3)%3)*0.08f;
-
-            float hx1 = -18.0f-player.x;
-            float hz1 = hz-player.z;
-
-            if (hx1*hx1+hz1*hz1 < chunkView2)
-                DrawRustHouse(-18.0f, hz, sc, i+4);
-
-            float hx2 = 18.0f-player.x;
-            float hz2 = hz+22.0f-player.z;
-
-            if (hx2*hx2+hz2*hz2 < chunkView2)
-                DrawRustHouse(18.0f, hz+22.0f, sc*0.92f, i+7);
-        }
-
-        const Vector3 extraHouses[3] = {
-            {-42.0f, 0, -120.0f},
-            {48.0f, 0, 120.0f},
-            {42.0f, 0, -120.0f}
-        };
-
-        for (int h = 0; h < 3; h++)
-        {
-            float dx = extraHouses[h].x-player.x;
-            float dz = extraHouses[h].z-player.z;
-
-            if (dx*dx+dz*dz < chunkView2)
-            {
-                DrawRustHouse(
-                    extraHouses[h].x,
-                    extraHouses[h].z,
-                    (h == 1) ? 0.84f : 0.80f,
-                    h
-                );
-            }
-        }
+        float stationDx=player.x,stationDz=-22.0f-player.z;
+        if(stationDx*stationDx+stationDz*stationDz<chunkView2)
+            DrawMiniGasStation(0.0f,-22.0f,graphicsQuality);
 
         if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
@@ -2731,16 +2683,7 @@ int main(void)
             }
         }
 
-        for (int b = 0; b < MAX_BARRELS; b++)
-        {
-            if (barrelDestroyed[b]) continue;
-
-            float bx = barrelPositions[b].x-player.x;
-            float bz = barrelPositions[b].z-player.z;
-
-            if (bx*bx+bz*bz < chunkView2)
-                DrawLootBarrel(barrelPositions[b]);
-        }
+        // Старые бочки удалены из мира.
 
         // Дополнительные скалы и пещерные конструкции убраны по просьбе игрока.
 
