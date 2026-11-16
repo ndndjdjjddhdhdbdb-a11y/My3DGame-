@@ -74,8 +74,8 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
 }
 
 
-#define SETTINGS_STORAGE_VERSION 2
-#define SETTINGS_STORAGE_SLOTS 129
+#define SETTINGS_STORAGE_VERSION 3
+#define SETTINGS_STORAGE_SLOTS 131
 
 static const char *GetSettingsFilePath(void)
 {
@@ -116,7 +116,7 @@ static void SaveStorageValue(int position, int value)
 }
 
 static void SaveGameSettings(Vector2 joystickPosition, float joystickRadius,
-                             Rectangle settingsButton, Rectangle cameraButton,
+                             Rectangle settingsButton, Rectangle cameraButton, Rectangle mapButton,
                              Vector2 actionCenters[3], float actionScale[3],
                              int actionAlpha[3], float sensitivity,
                              int quality, int fps, int details,
@@ -130,6 +130,8 @@ static void SaveGameSettings(Vector2 joystickPosition, float joystickRadius,
     SaveStorageValue(105, (int)(settingsButton.y*10.0f));
     SaveStorageValue(106, (int)(cameraButton.x*10.0f));
     SaveStorageValue(107, (int)(cameraButton.y*10.0f));
+    SaveStorageValue(129, (int)(mapButton.x*10.0f));
+    SaveStorageValue(130, (int)(mapButton.y*10.0f));
     for (int i = 0; i < 3; i++)
     {
         SaveStorageValue(110+i*4, (int)(actionCenters[i].x*10.0f));
@@ -146,7 +148,7 @@ static void SaveGameSettings(Vector2 joystickPosition, float joystickRadius,
 }
 
 static void LoadGameSettings(Vector2 *joystickPosition, float *joystickRadius,
-                             Rectangle *settingsButton, Rectangle *cameraButton,
+                             Rectangle *settingsButton, Rectangle *cameraButton, Rectangle *mapButton,
                              Vector2 actionCenters[3], float actionScale[3],
                              int actionAlpha[3], float *sensitivity,
                              int *quality, int *fps, int *details,
@@ -161,6 +163,8 @@ static void LoadGameSettings(Vector2 *joystickPosition, float *joystickRadius,
     settingsButton->y = LoadStorageValue(105)/10.0f;
     cameraButton->x = LoadStorageValue(106)/10.0f;
     cameraButton->y = LoadStorageValue(107)/10.0f;
+    mapButton->x = LoadStorageValue(129)/10.0f;
+    mapButton->y = LoadStorageValue(130)/10.0f;
     for (int i = 0; i < 3; i++)
     {
         actionCenters[i].x = LoadStorageValue(110+i*4)/10.0f;
@@ -815,6 +819,7 @@ int main(void)
     bool editControls = false;
     bool sprintEnabled = false;
     bool inventoryOpen = false;
+    bool mapOpen = false;
     bool buildMode = false;
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
     int selectedHotbarSlot = 0;
@@ -870,6 +875,7 @@ int main(void)
 
     Rectangle settingsButton = {screenWidth - 190, 18, 170, 64};
     Rectangle cameraButton = {screenWidth - 190, 92, 170, 64};
+    Rectangle mapButton = {screenWidth - 190, 166, 170, 64};
 
     float panelWidth = fminf(540, screenWidth - 30);
     float panelHeight = 650;
@@ -939,7 +945,7 @@ int main(void)
     float attackAnimation = 0.0f;
 
     LoadGameSettings(&joystickPosition, &joystickRadius,
-                     &settingsButton, &cameraButton,
+                     &settingsButton, &cameraButton, &mapButton,
                      actionButtonCenters, actionButtonScale,
                      actionButtonAlpha, &lookSensitivity,
                      &graphicsQuality, &targetFps, &detailLevel,
@@ -1005,6 +1011,10 @@ int main(void)
 
         if (cameraButton.y + cameraButton.height > screenHeight)
             cameraButton.y = screenHeight-cameraButton.height-8;
+        if (mapButton.x + mapButton.width > screenWidth) mapButton.x = screenWidth-mapButton.width-12;
+        if (mapButton.x < 8) mapButton.x = 8;
+        if (mapButton.y < 8) mapButton.y = 8;
+        if (mapButton.y + mapButton.height > screenHeight) mapButton.y = screenHeight-mapButton.height-8;
 
         panel = (Rectangle){panelX, panelY, panelWidth, panelHeight};
 
@@ -1195,7 +1205,7 @@ int main(void)
                     dragTarget = 0;
                     dragTouchId = -1;
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
@@ -1262,11 +1272,10 @@ int main(void)
                         dragTarget = 3;
                         dragTouchId = id;
 
-                        dragOffset = (Vector2){
-                            cameraButton.x-pos.x,
-                            cameraButton.y-pos.y
-                        };
+                        dragOffset = (Vector2){cameraButton.x-pos.x,cameraButton.y-pos.y};
                     }
+                    else if (CheckCollisionPointRec(pos, mapButton))
+                    { dragTarget=7; dragTouchId=id; dragOffset=(Vector2){mapButton.x-pos.x,mapButton.y-pos.y}; }
                 }
             }
             else if (mainMenuOpen && !settingsOpen)
@@ -1318,6 +1327,10 @@ int main(void)
                 joystickActive = false;
                 lookTouchId = -1;
             }
+            else if (!mainMenuOpen && !mapOpen && CheckCollisionPointRec(pos, mapButton))
+            { mapOpen=true; joystickActive=false; lookTouchId=-1; }
+            else if (mapOpen)
+            { if (CheckCollisionPointRec(pos,mapButton)) mapOpen=false; }
             else if (!mainMenuOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
@@ -1895,6 +1908,8 @@ int main(void)
                             8, fminf(ny, screenHeight-cameraButton.height-8)
                         );
                     }
+                    else if (dragTarget == 7)
+                    { mapButton.x=fmaxf(8,fminf(nx,screenWidth-mapButton.width-8)); mapButton.y=fmaxf(8,fminf(ny,screenHeight-mapButton.height-8)); }
                     else if (dragTarget >= 4 && dragTarget <= 6)
                     {
                         int control = dragTarget-4;
@@ -2043,7 +2058,7 @@ int main(void)
             }
         }
 
-        if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+        if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && !mapOpen &&
             lookTouchId != -1)
         {
             bool found = false;
@@ -2076,7 +2091,7 @@ int main(void)
                 lookTouchId = -1;
         }
 
-        if (settingsOpen || editControls || mainMenuOpen || inventoryOpen)
+        if (settingsOpen || editControls || mainMenuOpen || inventoryOpen || mapOpen)
             lookTouchId = -1;
 
         for (int i = 0; i < MAX_TOUCHES; i++)
@@ -2754,11 +2769,11 @@ int main(void)
 
             DrawText(
                 firstPerson ? "FIRST PERSON" : "THIRD PERSON",
-                cameraButton.x+10,
-                cameraButton.y+19,
-                17,
-                RAYWHITE
+                cameraButton.x+10, cameraButton.y+19, 17, RAYWHITE
             );
+            DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
+            DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,220));
+            DrawText("MAP",mapButton.x+mapButton.width/2-MeasureText("MAP",19)/2,mapButton.y+22,19,RAYWHITE);
 
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
@@ -2954,6 +2969,29 @@ int main(void)
                     (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
                     10, C(145, 190, 220, 255));
             }
+        }
+
+        if (mapOpen && !mainMenuOpen)
+        {
+            DrawRectangle(0,0,screenWidth,screenHeight,C(3,10,18,225));
+            float ms=fminf(fminf(screenWidth*0.78f,screenHeight*0.70f),430.0f), mx=(screenWidth-ms)*0.5f, my=(screenHeight-ms)*0.5f;
+            DrawRectangleRounded((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,C(15,29,34,250));
+            DrawRectangleRoundedLinesEx((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,2,C(115,165,150,230));
+            DrawText("ISLAND MAP",(int)mx,(int)my-27,18,RAYWHITE);
+            float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
+            DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255)); DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
+            DrawCircle((int)cx,(int)cy,rr*0.78f,C(75,111,75,255));
+            DrawCircleSector((Vector2){cx+rr*0.55f,cy-rr*0.48f},rr*0.52f,210,350,24,C(184,195,190,230));
+            DrawCircleSector((Vector2){cx-rr*0.55f,cy+rr*0.08f},rr*0.48f,70,260,24,C(139,126,91,220));
+            for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
+            for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
+            for(int o=0;o<5;o++){float a=o*1.3f+1.0f;DrawCircle((int)(cx+cosf(a)*rr*0.62f),(int)(cy+sinf(a)*rr*0.62f),4,C(205,133,79,255));}
+            for(int o=0;o<3;o++){float a=o*1.9f+2.1f;DrawCircle((int)(cx+cosf(a)*rr*0.40f),(int)(cy+sinf(a)*rr*0.40f),4,C(89,220,128,255));}
+            float sc=rr/194.0f,px=cx+player.x*sc,py=cy+player.z*sc;
+            DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("YOU",(int)px+12,(int)py-8,12,RAYWHITE);
+            DrawCircle((int)mx+14,(int)(my+ms+18),4,C(205,133,79,255));DrawText("IRON",(int)mx+24,(int)(my+ms+12),11,C(220,155,95,255));
+            DrawCircle((int)mx+92,(int)(my+ms+18),4,C(89,220,128,255));DrawText("URANIUM",(int)mx+102,(int)(my+ms+12),11,C(115,225,145,255));
+            DrawText("Tap MAP to close",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
         }
 
         // Главное меню boltSurvival.
@@ -3487,6 +3525,7 @@ int main(void)
                 cameraButton, 3,
                 C(80, 200, 255, 255)
             );
+            DrawRectangleLinesEx(mapButton,3,C(80,200,255,255));
 
             DrawCircleLines(
                 (int)joystickPosition.x,
