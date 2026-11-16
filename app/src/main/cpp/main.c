@@ -449,15 +449,16 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
                    2.2f*scale, rock);
 }
 
-// Небольшие отдельные залежи четырёх видов руды.
+// Более крупные залежи с хорошо заметными цветными вкраплениями.
 static void DrawOreNode(float x, float z, int type)
 {
     Color ore = GetOreColor(type);
-    DrawSphere((Vector3){x, 0.19f, z}, 0.31f, C(79, 84, 87, 255));
-    DrawSphere((Vector3){x-0.18f, 0.16f, z+0.10f}, 0.19f, C(103, 108, 108, 255));
-    DrawSphere((Vector3){x+0.17f, 0.14f, z-0.11f}, 0.16f, C(91, 97, 98, 255));
-    DrawCube((Vector3){x-0.08f, 0.34f, z-0.08f}, 0.13f, 0.11f, 0.12f, ore);
-    DrawCube((Vector3){x+0.13f, 0.25f, z+0.10f}, 0.11f, 0.09f, 0.10f, ore);
+    DrawSphere((Vector3){x, 0.34f, z}, 0.53f, C(79, 84, 87, 255));
+    DrawSphere((Vector3){x-0.30f, 0.25f, z+0.19f}, 0.32f, C(103, 108, 108, 255));
+    DrawSphere((Vector3){x+0.29f, 0.23f, z-0.20f}, 0.28f, C(91, 97, 98, 255));
+    DrawCube((Vector3){x-0.15f, 0.67f, z-0.14f}, 0.23f, 0.20f, 0.21f, ore);
+    DrawCube((Vector3){x+0.22f, 0.49f, z+0.18f}, 0.20f, 0.17f, 0.19f, ore);
+    DrawCube((Vector3){x+0.02f, 0.78f, z+0.16f}, 0.15f, 0.14f, 0.15f, ore);
 }
 
 static void DrawOreDrop(Vector3 p, int type)
@@ -533,7 +534,7 @@ static bool IsBlockedAt(float x, float z,
         if (!gOreActive[ore]) continue;
         float dx = x-gOrePositions[ore].x;
         float dz = z-gOrePositions[ore].z;
-        float radius = playerRadius+0.48f;
+        float radius = playerRadius+0.66f;
         if (dx*dx+dz*dz < radius*radius) return true;
     }
 
@@ -2702,25 +2703,7 @@ int main(void)
                 DrawLootBarrel(barrelPositions[b]);
         }
 
-        // Горные районы по краям острова. На низкой графике остаются простые формы.
-        const Vector3 mountainSites[7] = {
-            {-132,0,-112}, {-158,0,-42}, {-126,0,102},
-            {132,0,-118}, {158,0,18}, {122,0,122}, {12,0,166}
-        };
-        for (int m=0; m<7; m++)
-        {
-            float dx=mountainSites[m].x-player.x, dz=mountainSites[m].z-player.z;
-            if (dx*dx+dz*dz > chunkView2) continue;
-            DrawMountain(mountainSites[m].x, mountainSites[m].z,
-                         0.72f+(float)(m%3)*0.12f, m==3 || m==4 || m==6);
-        }
-
-        const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
-        for (int cv=0; cv<3; cv++)
-        {
-            float dx=caveSites[cv].x-player.x, dz=caveSites[cv].z-player.z;
-            if (dx*dx+dz*dz < chunkView2) DrawCave(caveSites[cv].x, caveSites[cv].z);
-        }
+        // Дополнительные скалы и пещерные конструкции убраны по просьбе игрока.
 
         // Все четыре вида руды появляются только в игровом мире, не на карте интерфейса.
         for(int ore=0;ore<MAX_ORE_NODES;ore++)
@@ -3146,6 +3129,25 @@ int main(void)
                     "AIM AT BARREL",
                     (int)hudX+18, 166, 14, C(190, 215, 230, 255)
                 );
+            }
+
+            if (targetedOre >= 0 && gOreActive[targetedOre])
+            {
+                int oreType = targetedOre/4;
+                int maxOreHp = (oreType == 2) ? 10 : ((oreType == 3) ? 30 : 15);
+                const char *oreLabel = TextFormat("%s ORE", GetOreName(oreType));
+                float hudX = screenWidth/2.0f-145.0f;
+                Rectangle oreHud = {hudX, 105, 290, 82};
+                DrawRectangleRounded(oreHud, 0.18f, 12, C(15, 27, 40, 238));
+                DrawRectangleRoundedLinesEx(oreHud, 0.18f, 12, 2.2f, GetOreColor(oreType));
+                DrawText(oreLabel, (int)hudX+16, 114, 19, RAYWHITE);
+                DrawText(TextFormat("HP: %d / %d", oreHealth[targetedOre], maxOreHp),
+                         (int)hudX+16, 142, 17, C(235, 241, 248, 255));
+                DrawRectangleRounded((Rectangle){hudX+16, 166, 258, 9}, 0.5f, 6, C(54, 63, 72, 255));
+                float hpRatio = (float)oreHealth[targetedOre]/(float)maxOreHp;
+                if (hpRatio < 0.0f) hpRatio = 0.0f;
+                DrawRectangleRounded((Rectangle){hudX+16, 166, 258*hpRatio, 9},
+                                     0.5f, 6, GetOreColor(oreType));
             }
 
             DrawCircleLines(
