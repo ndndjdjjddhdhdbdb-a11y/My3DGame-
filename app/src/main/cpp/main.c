@@ -2195,7 +2195,9 @@ int main(void)
                     // Подъём по лестнице: удерживай направление вперёд рядом с ней.
                     bool ladderZone=fabsf(player.x-4.55f)<1.0f &&
                                     player.z>-25.0f && player.z<-21.0f;
-                    if(ladderZone && fabsf(moveForward)>0.12f)
+                    if(ladderZone &&
+                       ((player.y<3.5f && moveForward>0.12f) ||
+                        (player.y>0.0f && moveForward< -0.12f)))
                     {
                         player.y+=moveForward*survivalSpeed*1.15f;
                         if(player.y<0.0f)player.y=0.0f;
