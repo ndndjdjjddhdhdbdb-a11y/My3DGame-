@@ -7,6 +7,58 @@
 #define MAX_BARRELS 14
 #define MAX_BUILD_PIECES 64
 
+typedef struct BuildSaveData
+{
+    int count, woodCount;
+    int types[MAX_BUILD_PIECES], doorOpen[MAX_BUILD_PIECES];
+    float x[MAX_BUILD_PIECES], z[MAX_BUILD_PIECES];
+} BuildSaveData;
+
+static const char *GetBuildFilePath(void)
+{
+    return TextFormat("%sbolt_survival_build.bin", GetApplicationDirectory());
+}
+
+static void SaveBuildData(Vector3 pieces[MAX_BUILD_PIECES], int types[MAX_BUILD_PIECES],
+                          bool doors[MAX_BUILD_PIECES], int count, int wood)
+{
+    BuildSaveData data = {0};
+    data.count = count; data.woodCount = wood;
+    for (int i = 0; i < count && i < MAX_BUILD_PIECES; i++)
+    {
+        data.types[i] = types[i]; data.doorOpen[i] = doors[i] ? 1 : 0;
+        data.x[i] = pieces[i].x; data.z[i] = pieces[i].z;
+    }
+    SaveFileData(GetBuildFilePath(), &data, sizeof(data));
+}
+
+static void LoadBuildData(Vector3 pieces[MAX_BUILD_PIECES], int types[MAX_BUILD_PIECES],
+                          bool doors[MAX_BUILD_PIECES], int *count, int *wood)
+{
+    int size = 0;
+    unsigned char *bytes = LoadFileData(GetBuildFilePath(), &size);
+    if (bytes == NULL) return;
+    if (size == (int)sizeof(BuildSaveData))
+    {
+        BuildSaveData data;
+        memcpy(&data, bytes, sizeof(data));
+        if (data.count >= 0 && data.count <= MAX_BUILD_PIECES &&
+            data.woodCount >= 0 && data.woodCount <= 99)
+        {
+            *count = data.count; *wood = data.woodCount;
+            for (int i = 0; i < data.count; i++)
+            {
+                if (data.types[i] < 0 || data.types[i] > 2) continue;
+                pieces[i] = (Vector3){data.x[i], 0.0f, data.z[i]};
+                types[i] = data.types[i]; doors[i] = data.doorOpen[i] != 0;
+            }
+        }
+    }
+    UnloadFileData(bytes);
+}
+
+
+
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
     return (Color){r, g, b, a};
@@ -747,6 +799,7 @@ int main(void)
     Rectangle buildFloorButton = {0}, buildWallButton = {0}, buildDoorButton = {0}, buildPlaceButton = {0};
     Vector3 buildPieces[MAX_BUILD_PIECES] = {{0}};
     int buildPieceTypes[MAX_BUILD_PIECES] = {0};
+    bool buildDoorOpen[MAX_BUILD_PIECES] = {false};
     int buildPieceCount = 0;
     Rectangle hotbarSlots[4] = {{0}};
 
@@ -782,6 +835,9 @@ int main(void)
         barrelHealth[i*2] = 50;
         barrelHealth[i*2+1] = 50;
     }
+
+    LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                  &buildPieceCount, &itemCounts[4]);
 
     while (!WindowShouldClose())
     {
@@ -1157,6 +1213,8 @@ int main(void)
                 PlaceBuildPiece(player, playerAngle, selectedBuildType,
                     buildPieces, buildPieceTypes, &buildPieceCount,
                     &itemCounts[4], barrelPositions, barrelDestroyed);
+                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                              buildPieceCount, itemCounts[4]);
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
@@ -1465,6 +1523,8 @@ int main(void)
                 PlaceBuildPiece(player, playerAngle, selectedBuildType,
                     buildPieces, buildPieceTypes, &buildPieceCount,
                     &itemCounts[4], barrelPositions, barrelDestroyed);
+                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                              buildPieceCount, itemCounts[4]);
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
@@ -1963,7 +2023,27 @@ int main(void)
         {
             attackCooldown = attackCooldownDuration;
             attackAnimation = 0.24f;
-            if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
+            int nearbyDoor = -1;
+            float doorDistance = 3.2f;
+            for (int i = 0; i < buildPieceCount; i++)
+            {
+                if (buildPieceTypes[i] != 2) continue;
+                float dx = buildPieces[i].x-player.x;
+                float dz = buildPieces[i].z-player.z;
+                float distance = sqrtf(dx*dx+dz*dz);
+                float dot = distance > 0.001f ?
+                    (dx*sinf(playerAngle)-dz*cosf(playerAngle))/distance : 1.0f;
+                if (distance < doorDistance && dot > 0.15f)
+                { nearbyDoor = i; doorDistance = distance; }
+            }
+            if (nearbyDoor >= 0)
+            {
+                buildDoorOpen[nearbyDoor] = !buildDoorOpen[nearbyDoor];
+                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                              buildPieceCount, itemCounts[4]);
+                attackAnimation = 0.0f;
+            }
+            else if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
                 barrelHealth[targetedBarrel] -= 10;
                 if (barrelHealth[targetedBarrel] <= 0)
@@ -2146,9 +2226,10 @@ int main(void)
             }
             else
             {
-                DrawCube((Vector3){p.x, 1.1f, p.z}, 1.35f, 2.2f, 0.18f, C(103, 70, 43, 255));
-                DrawCube((Vector3){p.x, 1.1f, p.z-0.105f}, 1.15f, 1.98f, 0.025f, C(145, 99, 58, 255));
-                DrawSphere((Vector3){p.x+0.48f, 1.05f, p.z-0.16f}, 0.055f, C(214, 177, 91, 255));
+                float doorShift = buildDoorOpen[i] ? 0.95f : 0.0f;
+                DrawCube((Vector3){p.x+doorShift, 1.1f, p.z}, 1.35f, 2.2f, 0.18f, C(103, 70, 43, 255));
+                DrawCube((Vector3){p.x+doorShift, 1.1f, p.z-0.105f}, 1.15f, 1.98f, 0.025f, C(145, 99, 58, 255));
+                DrawSphere((Vector3){p.x+doorShift+0.48f, 1.05f, p.z-0.16f}, 0.055f, C(214, 177, 91, 255));
             }
         }
 
@@ -2524,7 +2605,27 @@ int main(void)
                 );
             }
 
-            if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
+            int nearbyDoor = -1;
+            float doorDistance = 3.2f;
+            for (int i = 0; i < buildPieceCount; i++)
+            {
+                if (buildPieceTypes[i] != 2) continue;
+                float dx = buildPieces[i].x-player.x;
+                float dz = buildPieces[i].z-player.z;
+                float distance = sqrtf(dx*dx+dz*dz);
+                float dot = distance > 0.001f ?
+                    (dx*sinf(playerAngle)-dz*cosf(playerAngle))/distance : 1.0f;
+                if (distance < doorDistance && dot > 0.15f)
+                { nearbyDoor = i; doorDistance = distance; }
+            }
+            if (nearbyDoor >= 0)
+            {
+                buildDoorOpen[nearbyDoor] = !buildDoorOpen[nearbyDoor];
+                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                              buildPieceCount, itemCounts[4]);
+                attackAnimation = 0.0f;
+            }
+            else if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
                 float hudX = screenWidth/2.0f-130.0f;
                 Rectangle barrelHud = {hudX, 105, 260, 76};
