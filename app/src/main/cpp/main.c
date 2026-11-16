@@ -1146,13 +1146,13 @@ int main(void)
             {
                 buildMode = !buildMode;
             }
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
                 selectedBuildType = 0;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
                 selectedBuildType = 1;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
                 selectedBuildType = 2;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
             {
                 PlaceBuildPiece(player, playerAngle, selectedBuildType,
                     buildPieces, buildPieceTypes, &buildPieceCount,
@@ -1454,13 +1454,13 @@ int main(void)
             {
                 buildMode = !buildMode;
             }
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
                 selectedBuildType = 0;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
                 selectedBuildType = 1;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
                 selectedBuildType = 2;
-            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
+            else if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
             {
                 PlaceBuildPiece(player, playerAngle, selectedBuildType,
                     buildPieces, buildPieceTypes, &buildPieceCount,
@@ -2424,16 +2424,19 @@ int main(void)
                 RAYWHITE
             );
 
-            DrawSurvivalButton(buildButton, buildMode ? "BUILD: ON" : "BUILD", 16, buildMode);
-            if (buildMode)
+            if (!settingsOpen && !editControls && !inventoryOpen)
             {
-                DrawSurvivalButton(buildFloorButton, "FLOOR", 12, selectedBuildType == 0);
-                DrawSurvivalButton(buildWallButton, "WALL", 12, selectedBuildType == 1);
-                DrawSurvivalButton(buildDoorButton, "DOOR", 12, selectedBuildType == 2);
-                DrawSurvivalButton(buildPlaceButton, "PLACE", 15, true);
-                DrawText(TextFormat("WOOD: %d  |  COST: %d",
-                    itemCounts[4], selectedBuildType == 0 ? 2 : 3),
-                    164, 278, 12, C(225, 235, 245, 255));
+                DrawSurvivalButton(buildButton, buildMode ? "BUILD: ON" : "BUILD", 16, buildMode);
+                if (buildMode)
+                {
+                    DrawSurvivalButton(buildFloorButton, "FLOOR", 12, selectedBuildType == 0);
+                    DrawSurvivalButton(buildWallButton, "WALL", 12, selectedBuildType == 1);
+                    DrawSurvivalButton(buildDoorButton, "DOOR", 12, selectedBuildType == 2);
+                    DrawSurvivalButton(buildPlaceButton, "PLACE", 15, true);
+                    DrawText(TextFormat("WOOD: %d  |  COST: %d",
+                        itemCounts[4], selectedBuildType == 0 ? 2 : 3),
+                        164, 278, 12, C(225, 235, 245, 255));
+                }
             }
 
             DrawCircleV(
