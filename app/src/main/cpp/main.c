@@ -1,4 +1,4 @@
-       #include "raymob.h"
+#include "raymob.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -48,12 +48,53 @@ static Vector3 PlayerPoint(Vector3 player, float angle, float x, float y, float 
 {
     float c = cosf(angle);
     float sn = sinf(angle);
-    return (Vector3){player.x + x*c + z*sn,
+    return (Vector3){player.x + x*c - z*sn,
                      player.y + y,
-                     player.z - x*sn + z*c};
+                     player.z + x*sn + z*c};
 }
 
 // Более детализированный персонаж с простой анимацией ходьбы.
+// Руки, видимые снизу экрана в режиме от первого лица.
+static void DrawFirstPersonArms(Vector3 eye, float yaw)
+{
+    Vector3 forward = {sinf(yaw), 0.0f, -cosf(yaw)};
+    Vector3 right = {cosf(yaw), 0.0f, sinf(yaw)};
+
+    Color shirt = C(40, 112, 205, 255);
+    Color skin = C(225, 183, 143, 255);
+
+    for (int side = -1; side <= 1; side += 2)
+    {
+        float s = (float)side;
+
+        Vector3 shoulder = {
+            eye.x + right.x*s*0.42f + forward.x*0.18f,
+            eye.y - 0.30f,
+            eye.z + right.z*s*0.42f + forward.z*0.18f
+        };
+        Vector3 elbow = {
+            eye.x + right.x*s*0.48f + forward.x*0.48f,
+            eye.y - 0.52f,
+            eye.z + right.z*s*0.48f + forward.z*0.48f
+        };
+        Vector3 wrist = {
+            eye.x + right.x*s*0.34f + forward.x*0.78f,
+            eye.y - 0.48f,
+            eye.z + right.z*s*0.34f + forward.z*0.78f
+        };
+        Vector3 hand = {
+            eye.x + right.x*s*0.30f + forward.x*0.88f,
+            eye.y - 0.45f,
+            eye.z + right.z*s*0.30f + forward.z*0.88f
+        };
+
+        DrawCylinderEx(shoulder, elbow, 0.16f, 0.13f, 8, shirt);
+        DrawSphere(elbow, 0.13f, shirt);
+        DrawCylinderEx(elbow, wrist, 0.105f, 0.085f, 8, skin);
+        DrawSphere(hand, 0.105f, skin);
+    }
+}
+
 static void DrawPlayer(Vector3 player, float angle, float walkPhase, bool moving)
 {
     float swing = moving ? sinf(walkPhase) * 0.34f : 0.0f;
@@ -125,7 +166,8 @@ int main(void)
     int screenHeight = GetScreenHeight();
 
     Vector3 player = {0, 0, 0};
-    float playerAngle = 0.0f;
+    float playerAngle = 0.0f;  // направление, куда смотрит персонаж
+    float cameraYaw = 0.0f;    // направление камеры
     float cameraPitch = 0.0f;
     float lookSensitivity = 3.0f;
     float playerSpeed = 0.08f;
@@ -477,10 +519,23 @@ int main(void)
                         playerMoving = true;
                         walkPhase += 0.22f;
                     }
-                    player.x += (cosf(playerAngle)*moveX +
-                                 sinf(playerAngle)*moveForward)*playerSpeed;
-                    player.z += (sinf(playerAngle)*moveX -
-                                 cosf(playerAngle)*moveForward)*playerSpeed;
+                    float worldMoveX = cosf(cameraYaw)*moveX +
+                                       sinf(cameraYaw)*moveForward;
+                    float worldMoveZ = sinf(cameraYaw)*moveX -
+                                       cosf(cameraYaw)*moveForward;
+
+                    player.x += worldMoveX*playerSpeed;
+                    player.z += worldMoveZ*playerSpeed;
+
+                    // Плавно разворачиваем персонажа туда, куда он движется.
+                    if (playerMoving)
+                    {
+                        float targetAngle = atan2f(worldMoveX, -worldMoveZ);
+                        float angleDiff = targetAngle - playerAngle;
+                        while (angleDiff > 3.14159265f) angleDiff -= 6.28318530f;
+                        while (angleDiff < -3.14159265f) angleDiff += 6.28318530f;
+                        playerAngle += angleDiff*0.22f;
+                    }
                     found = true;
                     break;
                 }
@@ -523,7 +578,7 @@ int main(void)
                     float dx = pos.x-previousLookPosition.x;
                     float dy = pos.y-previousLookPosition.y;
                     float sensitivity = lookSensitivity*0.004f;
-                    playerAngle += dx*sensitivity;
+                    cameraYaw += dx*sensitivity;
                     cameraPitch -= dy*sensitivity;
                     if (cameraPitch > 1.2f) cameraPitch = 1.2f;
                     if (cameraPitch < -1.2f) cameraPitch = -1.2f;
@@ -538,9 +593,9 @@ int main(void)
         if (settingsOpen || editControls) lookTouchId = -1;
         for (int i = 0; i < MAX_TOUCHES; i++) previousTouchIds[i] = currentTouchIds[i];
 
-        float dirX = sinf(playerAngle)*cosf(cameraPitch);
+        float dirX = sinf(cameraYaw)*cosf(cameraPitch);
         float dirY = sinf(cameraPitch);
-        float dirZ = -cosf(playerAngle)*cosf(cameraPitch);
+        float dirZ = -cosf(cameraYaw)*cosf(cameraPitch);
 
         if (firstPerson)
         {
@@ -648,6 +703,8 @@ int main(void)
         // Новый персонаж с руками, ногами, одеждой и анимацией ходьбы.
         if (!firstPerson)
             DrawPlayer(player, playerAngle, walkPhase, playerMoving);
+        else
+            DrawFirstPersonArms(camera.position, cameraYaw);
 
         EndMode3D();
         EndTextureMode();
