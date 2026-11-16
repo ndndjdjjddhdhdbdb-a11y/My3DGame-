@@ -403,7 +403,13 @@ static void DrawGasCrate(Vector3 p, bool weapon)
 static void DrawMiniGasStation(float x,float z,int quality)
 {
     Color wall=C(116,112,99,255),red=C(151,61,48,255),metal=C(48,54,55,255);
-    DrawCube((Vector3){x,1.65f,z},8.6f,3.3f,5.8f,wall);
+    // Стены магазина оставляют широкий открытый вход, чтобы были видны ящики.
+    DrawCube((Vector3){x,1.65f,z+2.82f},8.6f,3.3f,0.16f,wall);
+    DrawCube((Vector3){x-4.22f,1.65f,z},0.16f,3.3f,5.8f,wall);
+    DrawCube((Vector3){x+4.22f,1.65f,z},0.16f,3.3f,5.8f,wall);
+    DrawCube((Vector3){x-3.0f,1.65f,z-2.82f},2.6f,3.3f,0.16f,wall);
+    DrawCube((Vector3){x+3.0f,1.65f,z-2.82f},2.6f,3.3f,0.16f,wall);
+    DrawCube((Vector3){x,3.22f,z},2.6f,0.25f,0.16f,wall);
     DrawCube((Vector3){x,3.36f,z},8.9f,0.22f,6.1f,metal);
     DrawCube((Vector3){x,3.62f,z-0.1f},8.7f,0.24f,0.34f,red);
     DrawCube((Vector3){x,2.45f,z-2.96f},2.2f,1.15f,0.08f,C(66,104,111,230));
@@ -434,6 +440,24 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawGasCrate((Vector3){x+2.4f,0.48f,z+0.7f},false);
     DrawGasCrate((Vector3){x,3.95f,z},true);
     DrawCube((Vector3){x,0.015f,z+5.0f},19.0f,0.035f,19.0f,C(62,65,61,255));
+}
+
+static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
+{
+    if(playerY<2.9f)
+    {
+        // Боковые и задняя стены, а также участки фасада по сторонам входа.
+        if(fabsf(x)<4.25f+radius && fabsf(z+19.18f)<0.22f+radius) return true;
+        if(fabsf(x)<4.25f+radius && fabsf(z+24.82f)<0.22f+radius &&
+           fabsf(x)>1.35f) return true;
+        if(fabsf(z+22.0f)<2.9f+radius && fabsf(x)>4.05f-radius &&
+           fabsf(x)<4.45f+radius) return true;
+    }
+    // Опоры навеса и бензоколонки.
+    const float posts[4][2]={{-6.7f,-18.9f},{6.7f,-18.9f},{-6.7f,-11.2f},{6.7f,-11.2f}};
+    for(int i=0;i<4;i++){float dx=x-posts[i][0],dz=z-posts[i][1];if(dx*dx+dz*dz<(0.18f+radius)*(0.18f+radius))return true;}
+    for(int i=0;i<2;i++){float px=(i==0)?-2.8f:2.8f,dx=x-px,dz=z+16.0f;if(dx*dx+dz*dz<(0.55f+radius)*(0.55f+radius))return true;}
+    return false;
 }
 
 static bool IsVillageClear(float x, float z)
@@ -587,39 +611,7 @@ static bool IsBlockedAt(float x, float z,
         if (dx*dx+dz*dz < radius*radius) return true;
     }
 
-    // Домики основной деревни.
-    for (int i = -3; i <= 3; i++)
-    {
-        float hz = i*55.0f;
-        float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
-
-        float houses[2][3] = {
-            {-18.0f, hz, sc},
-            {18.0f, hz+22.0f, sc*0.92f}
-        };
-
-        for (int h = 0; h < 2; h++)
-        {
-            float halfW = 2.6f*houses[h][2] + playerRadius;
-            float halfD = 2.3f*houses[h][2] + playerRadius;
-
-            if (fabsf(x-houses[h][0]) < halfW &&
-                fabsf(z-houses[h][1]) < halfD)
-                return true;
-        }
-    }
-
-    // Дополнительные дома.
-    const float extra[3][2] = {
-        {-42.0f, -120.0f}, {48.0f, 120.0f}, {42.0f, -120.0f}
-    };
-    for (int h = 0; h < 3; h++)
-    {
-        float sc = (h == 1) ? 0.84f : 0.80f;
-        if (fabsf(x-extra[h][0]) < 2.6f*sc+playerRadius &&
-            fabsf(z-extra[h][1]) < 2.3f*sc+playerRadius)
-            return true;
-    }
+    if(IsGasStationBlocked(x,z,playerRadius,player.y)) return true;
 
     // Стены небольших пещер: центр входа оставлен свободным.
     const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
@@ -664,33 +656,7 @@ static bool IsCameraBlockedAt(float x, float z,
     // не позволяет ей резко отскакивать от невидимой широкой зоны.
     const float cameraRadius = 0.12f;
 
-    for (int i = -3; i <= 3; i++)
-    {
-        float hz = i*55.0f;
-        float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
-        float houses[2][3] = {
-            {-18.0f, hz, sc},
-            {18.0f, hz+22.0f, sc*0.92f}
-        };
-
-        for (int h = 0; h < 2; h++)
-        {
-            if (fabsf(x-houses[h][0]) < 2.6f*houses[h][2]+cameraRadius &&
-                fabsf(z-houses[h][1]) < 2.3f*houses[h][2]+cameraRadius)
-                return true;
-        }
-    }
-
-    const float extra[3][2] = {
-        {-42.0f, -120.0f}, {48.0f, 120.0f}, {42.0f, -120.0f}
-    };
-    for (int h = 0; h < 3; h++)
-    {
-        float sc = (h == 1) ? 0.84f : 0.80f;
-        if (fabsf(x-extra[h][0]) < 2.6f*sc+cameraRadius &&
-            fabsf(z-extra[h][1]) < 2.3f*sc+cameraRadius)
-            return true;
-    }
+    if(IsGasStationBlocked(x,z,cameraRadius,0.0f)) return true;
 
     for (int b = 0; b < MAX_BARRELS; b++)
     {
@@ -2225,13 +2191,24 @@ int main(void)
                     float nextX = player.x + worldMoveX*survivalSpeed;
                     float nextZ = player.z + worldMoveZ*survivalSpeed;
 
-                    // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
-                    if (!IsBlockedAt(nextX, player.z,
-                                     barrelPositions, barrelDestroyed))
-                        player.x = nextX;
+                    // Подъём по лестнице: удерживай направление вперёд рядом с ней.
+                    bool ladderZone=fabsf(player.x-4.55f)<1.0f &&
+                                    player.z>-25.0f && player.z<-21.0f;
+                    if(ladderZone && moveForward>0.12f)
+                    {
+                        player.y+=survivalSpeed*1.15f;
+                        if(player.y>3.25f)player.y=3.25f;
+                    }
+                    else if(player.y>0.0f && player.y<2.8f)
+                    {
+                        player.y-=GetFrameTime()*2.0f;
+                        if(player.y<0.0f)player.y=0.0f;
+                    }
 
-                    if (!IsBlockedAt(player.x, nextZ,
-                                     barrelPositions, barrelDestroyed))
+                    // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
+                    if (!IsBlockedAt(nextX, player.z,barrelPositions,barrelDestroyed))
+                        player.x = nextX;
+                    if (!IsBlockedAt(player.x, nextZ,barrelPositions,barrelDestroyed))
                         player.z = nextZ;
 
                     if (playerMoving)
