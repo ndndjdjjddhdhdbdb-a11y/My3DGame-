@@ -24,6 +24,18 @@ static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, boo
     DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, 255));
 }
 
+static void DrawSurvivalButtonAlpha(Rectangle r, const char *label, int fontSize,
+                                    bool selected, unsigned char alpha)
+{
+    Color fill = selected ? C(39, 83, 119, alpha) : C(17, 31, 55, alpha);
+    Color edge = selected ? C(157, 225, 255, alpha) : C(105, 157, 202, alpha);
+    DrawRectangleRounded((Rectangle){r.x+3, r.y+5, r.width, r.height}, 0.14f, 10, C(0, 0, 0, (unsigned char)(alpha*0.45f)));
+    DrawRectangleRounded(r, 0.14f, 10, fill);
+    DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
+    int tw = MeasureText(label, fontSize);
+    DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, alpha));
+}
+
 static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
 {
     Rectangle hitArea = {
@@ -599,6 +611,16 @@ int main(void)
     Rectangle sprintButton = {0};
     Rectangle inventoryButton = {0};
     Rectangle hotbarSlots[4] = {{0}};
+
+    // Настраиваемые положения, размеры и прозрачность игровых кнопок.
+    Vector2 actionButtonCenters[3] = {
+        {0, 0}, {0, 0}, {0, 0}
+    };
+    float actionButtonScale[3] = {1.0f, 1.0f, 1.0f};
+    int actionButtonAlpha[3] = {245, 245, 245};
+    int selectedActionControl = 0;
+    Rectangle editSelectButtons[3];
+    Rectangle editSizeMinus, editSizePlus, editAlphaMinus, editAlphaPlus;
     bool attackRequested = false;
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
@@ -756,14 +778,41 @@ int main(void)
             screenWidth/2-105, screenHeight-100, 210, 62
         };
 
-        interactButton = (Rectangle){
-            screenWidth-190, screenHeight-150, 170, 62
-        };
-        if (interactButton.x < screenWidth*0.55f)
-            interactButton.x = screenWidth*0.55f;
-        sprintButton = (Rectangle){screenWidth-190, screenHeight-230, 170, 62};
-        if (sprintButton.x < screenWidth*0.55f) sprintButton.x = screenWidth*0.55f;
-        inventoryButton = (Rectangle){screenWidth-64, screenHeight-82, 52, 52};
+        if (actionButtonCenters[0].x == 0)
+        {
+            actionButtonCenters[0] = (Vector2){screenWidth-105.0f, screenHeight-119.0f};
+            actionButtonCenters[1] = (Vector2){screenWidth-105.0f, screenHeight-230.0f};
+            actionButtonCenters[2] = (Vector2){screenWidth-38.0f, screenHeight-56.0f};
+        }
+
+        float hitW = 170.0f*actionButtonScale[0];
+        float hitH = 62.0f*actionButtonScale[0];
+        float runW = 170.0f*actionButtonScale[1];
+        float runH = 62.0f*actionButtonScale[1];
+        float bagW = 52.0f*actionButtonScale[2];
+        float bagH = 52.0f*actionButtonScale[2];
+
+        for (int control = 0; control < 3; control++)
+        {
+            float halfW = (control == 2 ? bagW : (control == 0 ? hitW : runW))*0.5f;
+            float halfH = (control == 2 ? bagH : (control == 0 ? hitH : runH))*0.5f;
+            if (actionButtonCenters[control].x < halfW+5) actionButtonCenters[control].x = halfW+5;
+            if (actionButtonCenters[control].x > screenWidth-halfW-5) actionButtonCenters[control].x = screenWidth-halfW-5;
+            if (actionButtonCenters[control].y < halfH+5) actionButtonCenters[control].y = halfH+5;
+            if (actionButtonCenters[control].y > screenHeight-halfH-5) actionButtonCenters[control].y = screenHeight-halfH-5;
+        }
+
+        interactButton = (Rectangle){actionButtonCenters[0].x-hitW/2, actionButtonCenters[0].y-hitH/2, hitW, hitH};
+        sprintButton = (Rectangle){actionButtonCenters[1].x-runW/2, actionButtonCenters[1].y-runH/2, runW, runH};
+        inventoryButton = (Rectangle){actionButtonCenters[2].x-bagW/2, actionButtonCenters[2].y-bagH/2, bagW, bagH};
+
+        float editSelectW = (screenWidth-40.0f)/3.0f;
+        for (int control = 0; control < 3; control++)
+            editSelectButtons[control] = (Rectangle){20.0f+control*editSelectW, 52.0f, editSelectW-5.0f, 38.0f};
+        editSizeMinus = (Rectangle){screenWidth/2.0f-112.0f, 102.0f, 92.0f, 38.0f};
+        editSizePlus = (Rectangle){screenWidth/2.0f+20.0f, 102.0f, 92.0f, 38.0f};
+        editAlphaMinus = (Rectangle){screenWidth/2.0f-112.0f, 148.0f, 92.0f, 38.0f};
+        editAlphaPlus = (Rectangle){screenWidth/2.0f+20.0f, 148.0f, 92.0f, 38.0f};
         float slotSize = fminf(54.0f, (screenWidth-165.0f)/4.0f);
         float slotGap = 6.0f;
         float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
@@ -809,6 +858,38 @@ int main(void)
                     editControls = false;
                     dragTarget = 0;
                     dragTouchId = -1;
+                }
+                else if (CheckCollisionPointRec(pos, editSelectButtons[0]))
+                    selectedActionControl = 0;
+                else if (CheckCollisionPointRec(pos, editSelectButtons[1]))
+                    selectedActionControl = 1;
+                else if (CheckCollisionPointRec(pos, editSelectButtons[2]))
+                    selectedActionControl = 2;
+                else if (CheckCollisionPointRec(pos, editSizeMinus))
+                    actionButtonScale[selectedActionControl] = fmaxf(0.55f, actionButtonScale[selectedActionControl]-0.10f);
+                else if (CheckCollisionPointRec(pos, editSizePlus))
+                    actionButtonScale[selectedActionControl] = fminf(1.70f, actionButtonScale[selectedActionControl]+0.10f);
+                else if (CheckCollisionPointRec(pos, editAlphaMinus))
+                    actionButtonAlpha[selectedActionControl] = (int)fmaxf(60.0f, actionButtonAlpha[selectedActionControl]-20.0f);
+                else if (CheckCollisionPointRec(pos, editAlphaPlus))
+                    actionButtonAlpha[selectedActionControl] = (int)fminf(255.0f, actionButtonAlpha[selectedActionControl]+20.0f);
+                else if (CheckCollisionPointRec(pos, interactButton))
+                {
+                    dragTarget = 4;
+                    dragTouchId = id;
+                    dragOffset = (Vector2){actionButtonCenters[0].x-pos.x, actionButtonCenters[0].y-pos.y};
+                }
+                else if (CheckCollisionPointRec(pos, sprintButton))
+                {
+                    dragTarget = 5;
+                    dragTouchId = id;
+                    dragOffset = (Vector2){actionButtonCenters[1].x-pos.x, actionButtonCenters[1].y-pos.y};
+                }
+                else if (CheckCollisionPointRec(pos, inventoryButton))
+                {
+                    dragTarget = 6;
+                    dragTouchId = id;
+                    dragOffset = (Vector2){actionButtonCenters[2].x-pos.x, actionButtonCenters[2].y-pos.y};
                 }
                 else
                 {
@@ -1327,6 +1408,18 @@ int main(void)
                         cameraButton.y = fmaxf(
                             8, fminf(ny, screenHeight-cameraButton.height-8)
                         );
+                    }
+                    else if (dragTarget >= 4 && dragTarget <= 6)
+                    {
+                        int control = dragTarget-4;
+                        float halfW = interactButton.width*0.5f;
+                        float halfH = interactButton.height*0.5f;
+                        if (control == 1) { halfW = sprintButton.width*0.5f; halfH = sprintButton.height*0.5f; }
+                        if (control == 2) { halfW = inventoryButton.width*0.5f; halfH = inventoryButton.height*0.5f; }
+                        actionButtonCenters[control] = (Vector2){
+                            fmaxf(halfW+5.0f, fminf(nx, screenWidth-halfW-5.0f)),
+                            fmaxf(halfH+5.0f, fminf(ny, screenHeight-halfH-5.0f))
+                        };
                     }
 
                     found = true;
@@ -2082,32 +2175,33 @@ int main(void)
                     DrawText(hotbarNames[slot], (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
                     DrawText(TextFormat("x%d", hotbarCounts[slot]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
                 }
-                DrawSurvivalButton(inventoryButton, "BAG", 13, false);
-                DrawSurvivalButton(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled);
+                DrawSurvivalButtonAlpha(inventoryButton, "BAG", 13, false, (unsigned char)actionButtonAlpha[2]);
+                DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
             }
 
             // Кнопка удара всегда видна во время игры.
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
+                unsigned char hitAlpha = (unsigned char)actionButtonAlpha[0];
                 Color hitColor = attackCooldown <= 0.0f ?
-                    C(185, 75, 55, 245) : C(75, 83, 91, 245);
+                    C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha);
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
                 DrawRectangleRoundedLinesEx(
                     interactButton, 0.25f, 14, 2,
-                    C(230, 190, 160, 240)
+                    C(230, 190, 160, hitAlpha)
                 );
                 DrawText(
                     "HIT",
                     (int)(interactButton.x+interactButton.width/2-
                           MeasureText("HIT", 20)/2),
-                    (int)(interactButton.y+7), 20, RAYWHITE
+                    (int)(interactButton.y+7), 20, C(255, 255, 255, hitAlpha)
                 );
 
                 float cooldownRatio = attackCooldown/attackCooldownDuration;
                 DrawRectangleRounded(
                     (Rectangle){interactButton.x+12, interactButton.y+34,
                                 (interactButton.width-24)*(1.0f-cooldownRatio), 7},
-                    0.5f, 6, C(105, 225, 150, 255)
+                    0.5f, 6, C(105, 225, 150, hitAlpha)
                 );
                 const char *cooldownLabel = attackCooldown <= 0.0f ?
                     "READY" : TextFormat("%.1f s", attackCooldown);
@@ -2115,7 +2209,7 @@ int main(void)
                     cooldownLabel,
                     (int)(interactButton.x+interactButton.width/2-
                           MeasureText(cooldownLabel, 13)/2),
-                    (int)(interactButton.y+44), 13, RAYWHITE
+                    (int)(interactButton.y+44), 13, C(255, 255, 255, hitAlpha)
                 );
             }
 
@@ -2651,9 +2745,41 @@ int main(void)
 
             DrawText(
                 "MOVE YOUR CONTROLS",
-                screenWidth/2-145, 30,
-                22, RAYWHITE
+                screenWidth/2-145, 12,
+                20, RAYWHITE
             );
+
+            const char *controlNames[3] = {"HIT", "RUN", "BAG"};
+            for (int control = 0; control < 3; control++)
+            {
+                DrawRectangleRounded(editSelectButtons[control], 0.18f, 8,
+                    selectedActionControl == control ? C(39, 112, 158, 245) : C(20, 39, 58, 235));
+                DrawRectangleRoundedLinesEx(editSelectButtons[control], 0.18f, 8, 1.5f,
+                    selectedActionControl == control ? C(150, 220, 255, 255) : C(100, 150, 190, 220));
+                int labelW = MeasureText(controlNames[control], 15);
+                DrawText(controlNames[control],
+                    (int)(editSelectButtons[control].x+editSelectButtons[control].width/2-labelW/2),
+                    (int)(editSelectButtons[control].y+11), 15, RAYWHITE);
+            }
+
+            Rectangle adjustButtons[4] = {editSizeMinus, editSizePlus, editAlphaMinus, editAlphaPlus};
+            const char *adjustLabels[4] = {"SIZE -", "SIZE +", "ALPHA -", "ALPHA +"};
+            for (int control = 0; control < 4; control++)
+            {
+                DrawRectangleRounded(adjustButtons[control], 0.18f, 8, C(24, 55, 78, 245));
+                DrawRectangleRoundedLinesEx(adjustButtons[control], 0.18f, 8, 1.2f, C(115, 180, 215, 230));
+                DrawText(adjustLabels[control], (int)adjustButtons[control].x+12,
+                    (int)adjustButtons[control].y+11, 13, RAYWHITE);
+            }
+
+            DrawText(TextFormat("SIZE: %d%%   OPACITY: %d%%",
+                (int)(actionButtonScale[selectedActionControl]*100.0f),
+                actionButtonAlpha[selectedActionControl]*100/255),
+                12, 194, 14, C(190, 220, 240, 255));
+
+            DrawRectangleLinesEx(interactButton, 2, C(255, 210, 120, 230));
+            DrawRectangleLinesEx(sprintButton, 2, C(255, 210, 120, 230));
+            DrawRectangleLinesEx(inventoryButton, 2, C(255, 210, 120, 230));
 
             DrawRectangleLinesEx(
                 settingsButton, 3,
