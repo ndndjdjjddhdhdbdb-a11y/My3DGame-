@@ -918,8 +918,39 @@ int main(void)
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
             {
+                // Сначала проверяем хотбар. Если касание не попало в слот,
+                // передаём его джойстику или управлению обзором камеры.
+                bool touchedHotbar = false;
                 for (int slot = 0; slot < 4; slot++)
-                    if (CheckCollisionPointRec(pos, hotbarSlots[slot])) selectedHotbarSlot = slot;
+                {
+                    if (CheckCollisionPointRec(pos, hotbarSlots[slot]))
+                    {
+                        selectedHotbarSlot = slot;
+                        touchedHotbar = true;
+                        break;
+                    }
+                }
+
+                if (!touchedHotbar)
+                {
+                    if (pos.x < screenWidth*0.48f &&
+                        pos.y > screenHeight*0.25f)
+                    {
+                        float dx = pos.x-joystickPosition.x;
+                        float dy = pos.y-joystickPosition.y;
+
+                        if (sqrtf(dx*dx+dy*dy) < joystickRadius+150.0f)
+                        {
+                            joystickActive = true;
+                            joystickTouchId = id;
+                        }
+                    }
+                    else if (pos.x >= screenWidth*0.48f && pos.y > 155.0f)
+                    {
+                        lookTouchId = id;
+                        previousLookPosition = pos;
+                    }
+                }
             }
             else if (settingsOpen)
             {
