@@ -1,4 +1,4 @@
-#include "raymob.h"
+       #include "raymob.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -42,6 +42,72 @@ static void DrawRock(float x, float y, float z, float size)
                size*0.52f, C(145, 151, 145, 255));
 }
 
+
+// Поворачивает точку персонажа относительно его центра.
+static Vector3 PlayerPoint(Vector3 player, float angle, float x, float y, float z)
+{
+    float c = cosf(angle);
+    float sn = sinf(angle);
+    return (Vector3){player.x + x*c + z*sn,
+                     player.y + y,
+                     player.z - x*sn + z*c};
+}
+
+// Более детализированный персонаж с простой анимацией ходьбы.
+static void DrawPlayer(Vector3 player, float angle, float walkPhase, bool moving)
+{
+    float swing = moving ? sinf(walkPhase) * 0.34f : 0.0f;
+    Color skin = C(225, 183, 143, 255);
+    Color shirt = C(40, 112, 205, 255);
+    Color pants = C(48, 55, 82, 255);
+    Color shoes = C(35, 38, 43, 255);
+
+    // Ноги и обувь.
+    Vector3 hipL = PlayerPoint(player, angle, -0.17f, 0.66f, 0.0f);
+    Vector3 hipR = PlayerPoint(player, angle,  0.17f, 0.66f, 0.0f);
+    Vector3 kneeL = PlayerPoint(player, angle, -0.18f, 0.34f, swing*0.55f);
+    Vector3 kneeR = PlayerPoint(player, angle,  0.18f, 0.34f, -swing*0.55f);
+    Vector3 footL = PlayerPoint(player, angle, -0.18f, 0.10f, swing);
+    Vector3 footR = PlayerPoint(player, angle,  0.18f, 0.10f, -swing);
+    DrawCylinderEx(hipL, kneeL, 0.14f, 0.12f, 8, pants);
+    DrawCylinderEx(kneeL, footL, 0.11f, 0.10f, 8, pants);
+    DrawCylinderEx(hipR, kneeR, 0.14f, 0.12f, 8, pants);
+    DrawCylinderEx(kneeR, footR, 0.11f, 0.10f, 8, pants);
+    DrawSphere(footL, 0.12f, shoes);
+    DrawSphere(footR, 0.12f, shoes);
+
+    // Корпус и шея.
+    DrawCylinder(PlayerPoint(player, angle, 0, 1.05f, 0),
+                 0.31f, 0.36f, 0.78f, 12, shirt);
+    DrawCylinder(PlayerPoint(player, angle, 0, 1.48f, 0),
+                 0.11f, 0.11f, 0.18f, 8, skin);
+
+    // Руки двигаются навстречу ногам.
+    Vector3 shoulderL = PlayerPoint(player, angle, -0.39f, 1.35f, 0);
+    Vector3 elbowL = PlayerPoint(player, angle, -0.48f, 0.98f, -swing*0.65f);
+    Vector3 handL = PlayerPoint(player, angle, -0.47f, 0.76f, -swing*0.9f);
+    Vector3 shoulderR = PlayerPoint(player, angle, 0.39f, 1.35f, 0);
+    Vector3 elbowR = PlayerPoint(player, angle, 0.48f, 0.98f, swing*0.65f);
+    Vector3 handR = PlayerPoint(player, angle, 0.47f, 0.76f, swing*0.9f);
+    DrawCylinderEx(shoulderL, elbowL, 0.12f, 0.095f, 8, shirt);
+    DrawCylinderEx(elbowL, handL, 0.09f, 0.075f, 8, skin);
+    DrawCylinderEx(shoulderR, elbowR, 0.12f, 0.095f, 8, shirt);
+    DrawCylinderEx(elbowR, handR, 0.09f, 0.075f, 8, skin);
+    DrawSphere(handL, 0.085f, skin);
+    DrawSphere(handR, 0.085f, skin);
+
+    // Голова, волосы, лицо и глаза (лицо направлено вперёд, к -Z).
+    DrawSphere(PlayerPoint(player, angle, 0, 1.78f, 0), 0.29f, skin);
+    DrawSphere(PlayerPoint(player, angle, 0, 1.94f, 0.015f),
+               0.255f, C(65, 43, 30, 255));
+    DrawSphere(PlayerPoint(player, angle, 0, 1.82f, -0.17f),
+               0.22f, skin);
+    DrawSphere(PlayerPoint(player, angle, -0.095f, 1.83f, -0.365f),
+               0.035f, C(30, 35, 42, 255));
+    DrawSphere(PlayerPoint(player, angle, 0.095f, 1.83f, -0.365f),
+               0.035f, C(30, 35, 42, 255));
+}
+
 static void DrawCloud(float x, float y, float z, float s)
 {
     Color cloud = C(245, 250, 255, 255);
@@ -63,6 +129,8 @@ int main(void)
     float cameraPitch = 0.0f;
     float lookSensitivity = 3.0f;
     float playerSpeed = 0.08f;
+    float walkPhase = 0.0f;
+    bool playerMoving = false;
 
     bool firstPerson = false;
     bool settingsOpen = false;
@@ -382,6 +450,7 @@ int main(void)
             if (!found) { dragTarget = 0; dragTouchId = -1; }
         }
 
+        playerMoving = false;
         if (joystickActive)
         {
             bool found = false;
@@ -403,6 +472,11 @@ int main(void)
 
                     float moveX = dx/joystickRadius;
                     float moveForward = -dy/joystickRadius;
+                    if (fabsf(moveX) + fabsf(moveForward) > 0.12f)
+                    {
+                        playerMoving = true;
+                        walkPhase += 0.22f;
+                    }
                     player.x += (cosf(playerAngle)*moveX +
                                  sinf(playerAngle)*moveForward)*playerSpeed;
                     player.z += (sinf(playerAngle)*moveX -
@@ -571,18 +645,9 @@ int main(void)
             }
         }
 
-        // Персонаж
+        // Новый персонаж с руками, ногами, одеждой и анимацией ходьбы.
         if (!firstPerson)
-        {
-            DrawCylinder((Vector3){player.x, player.y+0.68f, player.z},
-                         0.40f, 0.40f, 1.35f, 16, C(49, 112, 205, 255));
-            DrawSphere((Vector3){player.x, player.y+1.58f, player.z},
-                       0.36f, C(232, 194, 153, 255));
-            DrawSphere((Vector3){player.x-0.42f, player.y+0.78f, player.z},
-                       0.17f, C(232, 194, 153, 255));
-            DrawSphere((Vector3){player.x+0.42f, player.y+0.78f, player.z},
-                       0.17f, C(232, 194, 153, 255));
-        }
+            DrawPlayer(player, playerAngle, walkPhase, playerMoving);
 
         EndMode3D();
         EndTextureMode();
