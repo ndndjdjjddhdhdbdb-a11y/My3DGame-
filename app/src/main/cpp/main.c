@@ -83,10 +83,10 @@ static int FindNearestOreDrop(Vector3 player, Vector3 drops[MAX_ORE_DROPS], bool
 
 static Color GetOreColor(int type)
 {
-    if (type == 0) return C(184, 111, 67, 255);   // железо
-    if (type == 1) return C(48, 91, 205, 255);    // лазурит
-    if (type == 2) return C(224, 194, 49, 255);   // сера
-    return C(205, 211, 218, 255);                 // кремний
+    if (type == 0) return (Color){184, 111, 67, 255};   // железо
+    if (type == 1) return (Color){48, 91, 205, 255};    // лазурит
+    if (type == 2) return (Color){224, 194, 49, 255};   // сера
+    return (Color){205, 211, 218, 255};                 // кремний
 }
 
 static const char *GetOreName(int type)
