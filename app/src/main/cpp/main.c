@@ -13,11 +13,12 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
 // Это облегчает нажатие на маленьких экранах.
 static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
 {
+    // Широкая область слева и сверху. Снизу не заходит на кнопку смены камеры.
     Rectangle hitArea = {
-        button.x - 38,
-        button.y - 30,
-        button.width + 76,
-        button.height + 60
+        button.x - 65,
+        button.y - 32,
+        button.width + 130,
+        button.height + 32
     };
     return CheckCollisionPointRec(point, hitArea);
 }
@@ -55,7 +56,7 @@ static Vector3 PlayerPoint(Vector3 player, float angle, float x, float y, float 
 
 // Более детализированный персонаж с простой анимацией ходьбы.
 // Руки, видимые снизу экрана в режиме от первого лица.
-static void DrawFirstPersonArms(Vector3 eye, float yaw)
+static void DrawFirstPersonArms(Vector3 eye, float yaw, float walkPhase, bool moving, float time)
 {
     Vector3 forward = {sinf(yaw), 0.0f, -cosf(yaw)};
     Vector3 right = {cosf(yaw), 0.0f, sinf(yaw)};
@@ -67,25 +68,28 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw)
     {
         float s = (float)side;
 
+        // Руки двигаются попеременно при ходьбе и слегка покачиваются на месте.
+        float armSwing = moving ? sinf(walkPhase)*s*0.13f : sinf(time*1.6f)*0.012f*s;
+        float armLift = moving ? cosf(walkPhase*2.0f)*0.025f : sinf(time*1.6f)*0.012f;
         Vector3 shoulder = {
-            eye.x + right.x*s*0.42f + forward.x*0.18f,
-            eye.y - 0.30f,
-            eye.z + right.z*s*0.42f + forward.z*0.18f
+            eye.x + right.x*s*0.42f + forward.x*(0.18f+armSwing*0.25f),
+            eye.y - 0.30f + armLift,
+            eye.z + right.z*s*0.42f + forward.z*(0.18f+armSwing*0.25f)
         };
         Vector3 elbow = {
-            eye.x + right.x*s*0.48f + forward.x*0.48f,
-            eye.y - 0.52f,
-            eye.z + right.z*s*0.48f + forward.z*0.48f
+            eye.x + right.x*s*0.48f + forward.x*(0.48f+armSwing*0.65f),
+            eye.y - 0.52f + armLift*0.8f,
+            eye.z + right.z*s*0.48f + forward.z*(0.48f+armSwing*0.65f)
         };
         Vector3 wrist = {
-            eye.x + right.x*s*0.34f + forward.x*0.78f,
-            eye.y - 0.48f,
-            eye.z + right.z*s*0.34f + forward.z*0.78f
+            eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing),
+            eye.y - 0.48f + armLift,
+            eye.z + right.z*s*0.34f + forward.z*(0.78f+armSwing)
         };
         Vector3 hand = {
-            eye.x + right.x*s*0.30f + forward.x*0.88f,
-            eye.y - 0.45f,
-            eye.z + right.z*s*0.30f + forward.z*0.88f
+            eye.x + right.x*s*0.30f + forward.x*(0.88f+armSwing),
+            eye.y - 0.45f + armLift,
+            eye.z + right.z*s*0.30f + forward.z*(0.88f+armSwing)
         };
 
         DrawCylinderEx(shoulder, elbow, 0.16f, 0.13f, 8, shirt);
@@ -704,7 +708,7 @@ int main(void)
         if (!firstPerson)
             DrawPlayer(player, playerAngle, walkPhase, playerMoving);
         else
-            DrawFirstPersonArms(camera.position, cameraYaw);
+            DrawFirstPersonArms(camera.position, cameraYaw, walkPhase, playerMoving, (float)GetTime());
 
         EndMode3D();
         EndTextureMode();
