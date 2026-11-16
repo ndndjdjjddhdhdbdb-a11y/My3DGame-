@@ -104,8 +104,17 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
              C(69, 65, 59, 255));
 
     // Рамы окон и перекладины делают фасады заметнее.
-    DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.535f},
-             0.90f*scale, 0.84f*scale, 0.045f*scale,
+    DrawCube((Vector3){x-w*0.30f-0.42f*scale, 1.85f*scale, z-d*0.545f},
+             0.055f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x-w*0.30f+0.42f*scale, 1.85f*scale, z-d*0.545f},
+             0.055f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale-0.39f*scale, z-d*0.545f},
+             0.90f*scale, 0.055f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale+0.39f*scale, z-d*0.545f},
+             0.90f*scale, 0.055f*scale, 0.045f*scale,
              C(75, 57, 40, 255));
     DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.565f},
              0.055f*scale, 0.72f*scale, 0.025f*scale,
@@ -114,8 +123,17 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
              0.78f*scale, 0.055f*scale, 0.025f*scale,
              C(185, 190, 171, 255));
 
-    DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.535f},
-             0.90f*scale, 0.84f*scale, 0.045f*scale,
+    DrawCube((Vector3){x+w*0.30f-0.42f*scale, 1.85f*scale, z-d*0.545f},
+             0.055f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x+w*0.30f+0.42f*scale, 1.85f*scale, z-d*0.545f},
+             0.055f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale-0.39f*scale, z-d*0.545f},
+             0.90f*scale, 0.055f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale+0.39f*scale, z-d*0.545f},
+             0.90f*scale, 0.055f*scale, 0.045f*scale,
              C(75, 57, 40, 255));
     DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.565f},
              0.055f*scale, 0.72f*scale, 0.025f*scale,
