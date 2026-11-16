@@ -942,7 +942,7 @@ int main(void)
     const char *itemNames[12] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR", "ORF PIXCADE",
                                  "IRON", "LAPIS", "SULFUR", "SILICON"};
     int itemCounts[12] = {1, 1, 3, 3, 0, 0, 0, 1, 0, 0, 0, 0};
-    const int hotbarItemIds[4] = {0, 1, 2, 3};
+    const int hotbarItemIds[4] = {0, 7, 2, 3}; // AXE, ORF PIXCADE, FOOD, WATER.
 
     // Главное меню.
     bool mainMenuOpen = true;
@@ -2351,8 +2351,11 @@ int main(void)
             thirdPersonCameraPosition.z += (safeCamera.z-thirdPersonCameraPosition.z)*cameraSmooth;
             camera.position = thirdPersonCameraPosition;
 
+            // Камера смотрит вперёд по направлению прицела, а не прямо в игрока.
             camera.target = (Vector3){
-                player.x, player.y+1.4f, player.z
+                player.x+dirX*10.0f,
+                player.y+1.4f+dirY*10.0f,
+                player.z+dirZ*10.0f
             };
         }
 
@@ -2361,6 +2364,7 @@ int main(void)
         nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive);
         Vector3 aimOrigin = {player.x, player.y+1.6f, player.z};
         Vector3 aimDirection = {dirX, dirY, dirZ};
+        Ray centerAimRay = GetMouseRay((Vector2){screenWidth*0.5f, screenHeight*0.5f}, camera);
         float closestBarrelDistance = 9999.0f;
 
         for (int b = 0; b < MAX_BARRELS; b++)
@@ -2386,17 +2390,34 @@ int main(void)
             }
         }
 
+        // Дерево или руда выбираются только точным попаданием луча из центра экрана.
         float closestTreeDistance=9999.0f;
-        for(int t=0;t<treeCount;t++){if(treeChopped[t])continue;float dx=treePositions[t].x-aimOrigin.x,dy=1.6f-aimOrigin.y,dz=treePositions[t].z-aimOrigin.z;float d=sqrtf(dx*dx+dy*dy+dz*dz);if(d<0.1f||d>3.2f)continue;float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;if(dot>0.93f&&d<closestTreeDistance){closestTreeDistance=d;targetedTree=t;}}
-        float closestOreDistance=9999.0f;
-        for(int o=0;o<MAX_ORE_NODES;o++)
+        for (int t=0; t<treeCount; t++)
         {
-            if(!gOreActive[o])continue;
-            float dx=gOrePositions[o].x-aimOrigin.x, dy=0.0f, dz=gOrePositions[o].z-aimOrigin.z;
-            float d=sqrtf(dx*dx+dy*dy+dz*dz);
-            if(d<0.1f||d>2.6f)continue;
-            float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;
-            if(dot>0.93f&&d<closestOreDistance){closestOreDistance=d;targetedOre=o;}
+            if (treeChopped[t]) continue;
+            Vector3 treeCenter = {treePositions[t].x, 1.45f, treePositions[t].z};
+            float playerDistance = Vector3Distance(aimOrigin, treeCenter);
+            if (playerDistance > 3.2f) continue;
+            RayCollision hit = GetRayCollisionSphere(centerAimRay, treeCenter, 0.95f);
+            if (hit.hit && hit.distance < closestTreeDistance)
+            {
+                closestTreeDistance = hit.distance;
+                targetedTree = t;
+            }
+        }
+        float closestOreDistance=9999.0f;
+        for (int o=0; o<MAX_ORE_NODES; o++)
+        {
+            if (!gOreActive[o]) continue;
+            Vector3 oreCenter = {gOrePositions[o].x, 0.38f, gOrePositions[o].z};
+            float playerDistance = Vector3Distance(aimOrigin, oreCenter);
+            if (playerDistance > 2.6f) continue;
+            RayCollision hit = GetRayCollisionSphere(centerAimRay, oreCenter, 0.58f);
+            if (hit.hit && hit.distance < closestOreDistance)
+            {
+                closestOreDistance = hit.distance;
+                targetedOre = o;
+            }
         }
 
         if (attackRequested && attackCooldown <= 0.0f &&
@@ -2451,7 +2472,7 @@ int main(void)
             {
                 int type = targetedOre/4;
                 // Кремний добывается только киркой ORF PIXCADE.
-                if (type != 3 || itemCounts[7] > 0)
+                if (type != 3 || (itemCounts[7] > 0 && hotbarItemIds[selectedHotbarSlot] == 7))
                 {
                     oreHealth[targetedOre]--;
                     if (oreHealth[targetedOre] <= 0)
@@ -3143,11 +3164,27 @@ int main(void)
                 DrawText(oreLabel, (int)hudX+16, 114, 19, RAYWHITE);
                 DrawText(TextFormat("HP: %d / %d", oreHealth[targetedOre], maxOreHp),
                          (int)hudX+16, 142, 17, C(235, 241, 248, 255));
+                if (oreType == 3 && hotbarItemIds[selectedHotbarSlot] != 7)
+                    DrawText("EQUIP ORF PIXCADE IN SLOT 2", (int)hudX+16, 184, 13, C(255, 205, 115, 255));
                 DrawRectangleRounded((Rectangle){hudX+16, 166, 258, 9}, 0.5f, 6, C(54, 63, 72, 255));
                 float hpRatio = (float)oreHealth[targetedOre]/(float)maxOreHp;
                 if (hpRatio < 0.0f) hpRatio = 0.0f;
                 DrawRectangleRounded((Rectangle){hudX+16, 166, 258*hpRatio, 9},
                                      0.5f, 6, GetOreColor(oreType));
+            }
+
+            // Небольшой прицел в центре экрана — точка наведения для деревьев и руды.
+            if (!settingsOpen && !editControls && !inventoryOpen && !mapOpen)
+            {
+                int crossX = screenWidth/2;
+                int crossY = screenHeight/2;
+                Color crossColor = (targetedTree >= 0 || targetedOre >= 0) ?
+                    C(125, 245, 170, 245) : C(245, 250, 255, 220);
+                DrawLineEx((Vector2){crossX-9, crossY}, (Vector2){crossX-3, crossY}, 2.0f, crossColor);
+                DrawLineEx((Vector2){crossX+3, crossY}, (Vector2){crossX+9, crossY}, 2.0f, crossColor);
+                DrawLineEx((Vector2){crossX, crossY-9}, (Vector2){crossX, crossY-3}, 2.0f, crossColor);
+                DrawLineEx((Vector2){crossX, crossY+3}, (Vector2){crossX, crossY+9}, 2.0f, crossColor);
+                DrawCircle(crossX, crossY, 1.8f, crossColor);
             }
 
             DrawCircleLines(
