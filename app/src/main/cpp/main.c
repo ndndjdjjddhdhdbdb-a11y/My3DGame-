@@ -29,32 +29,27 @@ int main(void)
 
         bool moving = false;
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) ||
-            GetTouchPointCount() > 0)
-        {
-            if (touch.x < 220 && touch.y > screenHeight - 220)
-            {
-                float dx = touch.x - joystickCenter.x;
-                float dy = touch.y - joystickCenter.y;
+if (GetTouchPointCount() > 0)
+{
+    float dx = touch.x - joystickCenter.x;
+    float dy = touch.y - joystickCenter.y;
 
-                float length = sqrtf(dx*dx + dy*dy);
+    float length = sqrtf(dx*dx + dy*dy);
 
-                if (length > joystickRadius)
-                {
-                    dx *= joystickRadius / length;
-                    dy *= joystickRadius / length;
-                }
+    if (length > joystickRadius)
+    {
+        dx *= joystickRadius / length;
+        dy *= joystickRadius / length;
+    }
 
-                joystickKnob = (Vector2){ dx, dy };
-                moving = true;
-            }
-        }
+    joystickKnob = (Vector2){ dx, dy };
+    moving = true;
+}
 
-        if (!moving)
-        {
-            joystickKnob = (Vector2){ 0, 0 };
-        }
-
+if (!moving)
+{
+    joystickKnob = (Vector2){ 0, 0 };
+}
         player.x += joystickKnob.x / joystickRadius * 5.0f * dt;
         player.z += joystickKnob.y / joystickRadius * 5.0f * dt;
 
