@@ -222,9 +222,12 @@ static void DrawTree(float x, float z, float scale, int quality)
     DrawSphere((Vector3){x, 2.0f*scale, z},
                0.95f*scale, C(44, 132, 69, 255));
 
-    if (quality >= 1)
-        DrawSphere((Vector3){x-0.48f*scale, 1.85f*scale, z+0.08f*scale},
-                   0.62f*scale, C(57, 153, 77, 255));
+    // На низком качестве оставляем только ствол и основную крону.
+    // Дополнительные полигоны нужны лишь на средних/высоких настройках.
+    if (quality <= 0) return;
+
+    DrawSphere((Vector3){x-0.48f*scale, 1.85f*scale, z+0.08f*scale},
+               0.62f*scale, C(57, 153, 77, 255));
 
     if (quality >= 2)
         DrawSphere((Vector3){x+0.48f*scale, 1.88f*scale, z-0.08f*scale},
@@ -235,6 +238,7 @@ static void DrawTree(float x, float z, float scale, int quality)
         DrawSphere((Vector3){x-0.16f*scale, 2.42f*scale, z-0.20f*scale},
                    0.34f*scale, C(83, 166, 91, 255));
 
+    // Корни тоже отключены на низком качестве.
     // Небольшие корни у основания ствола.
     DrawCylinderEx(
         (Vector3){x, 0.20f*scale, z},
@@ -2351,27 +2355,16 @@ int main(void)
                 DrawLootBarrel(barrelPositions[b]);
         }
 
-        for (int i = -5; i <= 5; i++)
+        // Дальние декоративные холмы отключаем на низком качестве.
+        if (graphicsQuality >= 1)
         {
-            DrawSphere(
-                (Vector3){i*48.0f, -8.0f, -265.0f},
-                34.0f, C(101, 174, 105, 255)
-            );
-
-            DrawSphere(
-                (Vector3){i*48.0f, -8.0f, 265.0f},
-                34.0f, C(91, 160, 94, 255)
-            );
-
-            DrawSphere(
-                (Vector3){-265.0f, -8.0f, i*48.0f},
-                34.0f, C(101, 174, 105, 255)
-            );
-
-            DrawSphere(
-                (Vector3){265.0f, -8.0f, i*48.0f},
-                34.0f, C(91, 160, 94, 255)
-            );
+            for (int i = -5; i <= 5; i++)
+            {
+                DrawSphere((Vector3){i*48.0f, -8.0f, -265.0f}, 34.0f, C(101, 174, 105, 255));
+                DrawSphere((Vector3){i*48.0f, -8.0f, 265.0f}, 34.0f, C(91, 160, 94, 255));
+                DrawSphere((Vector3){-265.0f, -8.0f, i*48.0f}, 34.0f, C(101, 174, 105, 255));
+                DrawSphere((Vector3){265.0f, -8.0f, i*48.0f}, 34.0f, C(91, 160, 94, 255));
+            }
         }
 
         DrawSphere(
@@ -2388,19 +2381,40 @@ int main(void)
         if (graphicsQuality >= 2)
             DrawCloud(32, 17, 12, 2.1f);
 
-        int treeStep =
-            (graphicsQuality == 0) ? 46 :
-            ((graphicsQuality == 1) ? 34 : 27);
-
-        treeStep += detailLevel*5;
-
-        int treeLimit = 245;
-
-        float treeView = fminf(chunkDistance*50.0f, 245.0f);
+        // На низкой детализации ограничиваем лес ближней зоной.
+        // Это заметно сокращает количество 3D-объектов на слабых телефонах.
+        float detailTreeView = (detailLevel >= 2) ? 105.0f :
+                               ((detailLevel == 1) ? 165.0f : 245.0f);
+        float treeView = fminf(chunkView, detailTreeView);
         float treeView2 = treeView*treeView;
 
-        for(int t=0;t<treeCount;t++){if(treeChopped[t])continue;float tx=treePositions[t].x-player.x,tz=treePositions[t].z-player.z;if(tx*tx+tz*tz>treeView2)continue;int ix=(int)treePositions[t].x,iz=(int)treePositions[t].z;float scale=0.85f+(float)((ix*ix+iz*iz)%5)*0.07f;DrawTree(treePositions[t].x,treePositions[t].z,scale,graphicsQuality);}
-        for(int d=0;d<MAX_WOOD_DROPS;d++)if(woodDropActive[d]){Vector3 p=woodDrops[d];DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z},(Vector3){p.x+0.48f,0.16f,p.z},0.16f,0.16f,8,C(126,82,47,255));DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z+0.22f},(Vector3){p.x+0.48f,0.16f,p.z+0.22f},0.13f,0.13f,8,C(151,103,61,255));}
+        for (int t = 0; t < treeCount; t++)
+        {
+            if (treeChopped[t]) continue;
+            float tx = treePositions[t].x-player.x;
+            float tz = treePositions[t].z-player.z;
+            float distance2 = tx*tx + tz*tz;
+            if (distance2 > treeView2) continue;
+
+            int ix = (int)treePositions[t].x;
+            int iz = (int)treePositions[t].z;
+            float scale = 0.85f + (float)((ix*ix+iz*iz)%5)*0.07f;
+            DrawTree(treePositions[t].x, treePositions[t].z, scale, graphicsQuality);
+        }
+
+        for (int d = 0; d < MAX_WOOD_DROPS; d++)
+        {
+            if (!woodDropActive[d]) continue;
+            Vector3 p = woodDrops[d];
+            float dx = p.x-player.x, dz = p.z-player.z;
+            if (dx*dx + dz*dz > chunkView2) continue;
+            DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z},
+                           (Vector3){p.x+0.48f,0.16f,p.z},
+                           0.16f,0.16f,8,C(126,82,47,255));
+            DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z+0.22f},
+                           (Vector3){p.x+0.48f,0.16f,p.z+0.22f},
+                           0.13f,0.13f,8,C(151,103,61,255));
+        }
 
         if (graphicsQuality >= 1)
         {
