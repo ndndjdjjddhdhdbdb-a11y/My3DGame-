@@ -888,9 +888,9 @@ int main(void)
     bool buildMode = false;
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
     int selectedHotbarSlot = 0;
-    // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE.
-    const char *itemNames[7] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR"};
-    int itemCounts[7] = {1, 1, 3, 3, 0, 0, 0};
+    // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE.
+    const char *itemNames[8] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR", "ORF PIXCADE"};
+    int itemCounts[8] = {1, 1, 3, 3, 0, 0, 0, 1};
     const int hotbarItemIds[4] = {0, 1, 2, 3};
 
     // Главное меню.
@@ -3012,7 +3012,7 @@ int main(void)
                 DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
                 DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
-                for (int item = 0; item < 7; item++)
+                for (int item = 0; item < 8; item++)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
                     Rectangle r = {invPanel.x+16+(item%2)*(w+12),
