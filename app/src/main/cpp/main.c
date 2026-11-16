@@ -504,6 +504,11 @@ int main(void)
     bool firstPerson = false;
     bool settingsOpen = false;
     bool editControls = false;
+    bool sprintEnabled = false;
+    bool inventoryOpen = false;
+    int selectedHotbarSlot = 0;
+    const char *hotbarNames[4] = {"AXE", "MED", "FOOD", "WATER"};
+    const int hotbarCounts[4] = {1, 1, 3, 3};
 
     // Главное меню.
     bool mainMenuOpen = true;
@@ -591,6 +596,9 @@ int main(void)
     bool barrelDestroyed[MAX_BARRELS] = { false };
     int targetedBarrel = -1;
     Rectangle interactButton = {0};
+    Rectangle sprintButton = {0};
+    Rectangle inventoryButton = {0};
+    Rectangle hotbarSlots[4] = {{0}};
     bool attackRequested = false;
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
@@ -753,6 +761,16 @@ int main(void)
         };
         if (interactButton.x < screenWidth*0.55f)
             interactButton.x = screenWidth*0.55f;
+        sprintButton = (Rectangle){screenWidth-190, screenHeight-230, 170, 62};
+        if (sprintButton.x < screenWidth*0.55f) sprintButton.x = screenWidth*0.55f;
+        inventoryButton = (Rectangle){screenWidth-64, screenHeight-82, 52, 52};
+        float slotSize = fminf(54.0f, (screenWidth-110.0f)/4.0f);
+        float slotGap = 6.0f;
+        float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
+        float hotbarX = (screenWidth-hotbarWidth)/2.0f;
+        for (int slot = 0; slot < 4; slot++)
+            hotbarSlots[slot] = (Rectangle){hotbarX+slot*(slotSize+slotGap),
+                                           screenHeight-78.0f, slotSize, 58.0f};
 
         int touchCount = GetTouchPointCount();
 
@@ -856,7 +874,7 @@ int main(void)
                         menuPage = 0;
                 }
             }
-            else if (!mainMenuOpen && !settingsOpen &&
+            else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
                      CheckCollisionPointRec(pos, menuReturnButton))
             {
                 mainMenuOpen = true;
@@ -878,9 +896,26 @@ int main(void)
                 firstPerson = !firstPerson;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     CheckCollisionPointRec(pos, sprintButton))
+            {
+                sprintEnabled = !sprintEnabled;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     CheckCollisionPointRec(pos, inventoryButton))
+            {
+                inventoryOpen = !inventoryOpen;
+                joystickActive = false;
+                lookTouchId = -1;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
             {
                 attackRequested = true;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
+            {
+                for (int slot = 0; slot < 4; slot++)
+                    if (CheckCollisionPointRec(pos, hotbarSlots[slot])) selectedHotbarSlot = slot;
             }
             else if (settingsOpen)
             {
@@ -1041,7 +1076,7 @@ int main(void)
                     menuPage = 0;
                 }
             }
-            else if (!mainMenuOpen && !settingsOpen &&
+            else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
                      CheckCollisionPointRec(pos, menuReturnButton))
             {
                 mainMenuOpen = true;
@@ -1050,22 +1085,39 @@ int main(void)
                 lookTouchId = -1;
                 joystickKnob = joystickPosition;
             }
-            else if (!mainMenuOpen && !editControls &&
+            else if (!mainMenuOpen && !editControls && !inventoryOpen &&
                      IsSettingsButtonHit(pos, settingsButton))
             {
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
                 lookTouchId = -1;
             }
-            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     CheckCollisionPointRec(pos, sprintButton))
+            {
+                sprintEnabled = !sprintEnabled;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     CheckCollisionPointRec(pos, inventoryButton))
+            {
+                inventoryOpen = !inventoryOpen;
+                joystickActive = false;
+                lookTouchId = -1;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
             {
                 attackRequested = true;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
+            {
+                for (int slot = 0; slot < 4; slot++)
+                    if (CheckCollisionPointRec(pos, hotbarSlots[slot])) selectedHotbarSlot = slot;
             }
             else if (settingsOpen)
             {
@@ -1252,7 +1304,7 @@ int main(void)
 
         playerMoving = false;
 
-        if (joystickActive && !mainMenuOpen && !settingsOpen && !editControls)
+        if (joystickActive && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
             bool found = false;
 
@@ -1298,6 +1350,7 @@ int main(void)
                     float survivalSpeed = playerSpeed;
                     if (foodLevel < 20.0f || waterLevel < 20.0f)
                         survivalSpeed *= 0.72f;
+                    if (sprintEnabled) survivalSpeed *= 1.65f;
 
                     float nextX = player.x + worldMoveX*survivalSpeed;
                     float nextZ = player.z + worldMoveZ*survivalSpeed;
@@ -1372,7 +1425,7 @@ int main(void)
             }
         }
 
-        if (!mainMenuOpen && !settingsOpen && !editControls &&
+        if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
             lookTouchId != -1)
         {
             bool found = false;
@@ -1405,7 +1458,7 @@ int main(void)
                 lookTouchId = -1;
         }
 
-        if (settingsOpen || editControls || mainMenuOpen)
+        if (settingsOpen || editControls || mainMenuOpen || inventoryOpen)
             lookTouchId = -1;
 
         for (int i = 0; i < MAX_TOUCHES; i++)
@@ -1493,7 +1546,7 @@ int main(void)
         }
 
         if (attackRequested && attackCooldown <= 0.0f &&
-            !mainMenuOpen && !settingsOpen && !editControls)
+            !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
             attackCooldown = attackCooldownDuration;
             attackAnimation = 0.24f;
@@ -1975,8 +2028,27 @@ int main(void)
                 C(220, 239, 255, 205)
             );
 
+            // Панель быстрого доступа: четыре выбираемых слота.
+            if (!settingsOpen && !editControls && !inventoryOpen)
+            {
+                for (int slot = 0; slot < 4; slot++)
+                {
+                    Rectangle r = hotbarSlots[slot];
+                    DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.16f, 8, C(0, 0, 0, 110));
+                    DrawRectangleRounded(r, 0.16f, 8, slot == selectedHotbarSlot ? C(36, 91, 139, 245) : C(13, 28, 49, 235));
+                    DrawRectangleRoundedLinesEx(r, 0.16f, 8, slot == selectedHotbarSlot ? 2.5f : 1.4f,
+                        slot == selectedHotbarSlot ? C(117, 210, 255, 255) : C(91, 145, 184, 220));
+                    DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 11, C(160, 205, 235, 255));
+                    int nw = MeasureText(hotbarNames[slot], 10);
+                    DrawText(hotbarNames[slot], (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
+                    DrawText(TextFormat("x%d", hotbarCounts[slot]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
+                }
+                DrawSurvivalButton(inventoryButton, "BAG", 13, false);
+                DrawSurvivalButton(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled);
+            }
+
             // Кнопка удара всегда видна во время игры.
-            if (!settingsOpen && !editControls)
+            if (!settingsOpen && !editControls && !inventoryOpen)
             {
                 Color hitColor = attackCooldown <= 0.0f ?
                     C(185, 75, 55, 245) : C(75, 83, 91, 245);
@@ -2044,6 +2116,27 @@ int main(void)
 
             // Кнопка возврата в главное меню.
             DrawSurvivalButton(menuReturnButton, "MENU", 19, false);
+
+            if (inventoryOpen)
+            {
+                DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f, screenWidth*0.84f, screenHeight*0.60f};
+                DrawRectangleRounded(invPanel, 0.08f, 14, C(10, 24, 45, 248));
+                DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
+                DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
+                DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
+                for (int slot = 0; slot < 4; slot++)
+                {
+                    float w = (invPanel.width-50.0f)/2.0f;
+                    Rectangle r = {invPanel.x+16+(slot%2)*(w+12), invPanel.y+78+(slot/2)*76, w, 64};
+                    DrawRectangleRounded(r, 0.12f, 8, C(19, 42, 67, 255));
+                    DrawRectangleRoundedLinesEx(r, 0.12f, 8, 1.5f, C(100, 170, 215, 230));
+                    DrawText(hotbarNames[slot], (int)r.x+9, (int)r.y+10, 14, RAYWHITE);
+                    DrawText(TextFormat("COUNT: %d", hotbarCounts[slot]), (int)r.x+9, (int)r.y+34, 10, C(160, 205, 235, 255));
+                }
+                DrawSurvivalButton(inventoryButton, "BAG", 13, true);
+                DrawText("TAP BAG TO CLOSE", (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26), 10, C(145, 190, 220, 255));
+            }
         }
 
         // Главное меню boltSurvival.
