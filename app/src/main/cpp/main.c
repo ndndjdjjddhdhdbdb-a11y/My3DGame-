@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #define MAX_TOUCHES 10
+#define MAX_BARRELS 14
 
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -113,6 +114,20 @@ static void DrawRock(float x, float y, float z, float size)
 
     DrawSphere((Vector3){x-size*0.42f, y+size*0.2f, z-size*0.1f},
                size*0.52f, C(145, 151, 145, 255));
+}
+
+static void DrawLootBarrel(Vector3 p)
+{
+    DrawCylinder((Vector3){p.x, 0.48f, p.z},
+                 0.39f, 0.39f, 0.88f, 12, C(126, 78, 42, 255));
+    DrawCylinder((Vector3){p.x, 0.48f, p.z},
+                 0.405f, 0.405f, 0.12f, 12, C(91, 58, 37, 255));
+    DrawCylinder((Vector3){p.x, 0.20f, p.z},
+                 0.415f, 0.415f, 0.075f, 12, C(85, 91, 98, 255));
+    DrawCylinder((Vector3){p.x, 0.76f, p.z},
+                 0.415f, 0.415f, 0.075f, 12, C(85, 91, 98, 255));
+    DrawCylinder((Vector3){p.x, 0.94f, p.z},
+                 0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
 }
 
 static Vector3 PlayerPoint(Vector3 player, float angle,
@@ -358,6 +373,21 @@ int main(void)
     for (int i = 0; i < MAX_TOUCHES; i++)
         previousTouchIds[i] = -1;
 
+    Vector3 barrelPositions[MAX_BARRELS];
+    int barrelHealth[MAX_BARRELS];
+    bool barrelDestroyed[MAX_BARRELS] = { false };
+    int targetedBarrel = -1;
+    Rectangle interactButton = {0};
+
+    for (int i = 0; i < 7; i++)
+    {
+        float hz = (i-3)*55.0f;
+        barrelPositions[i*2] = (Vector3){-13.5f, 0.0f, hz+3.4f};
+        barrelPositions[i*2+1] = (Vector3){13.5f, 0.0f, hz+25.4f};
+        barrelHealth[i*2] = 50;
+        barrelHealth[i*2+1] = 50;
+    }
+
     while (!WindowShouldClose())
     {
         screenWidth = GetScreenWidth();
@@ -423,7 +453,7 @@ int main(void)
         menuBackButton = menuShopButton;
 
         menuReturnButton = (Rectangle){
-            screenWidth - 155, 18, 135, 55
+            18, 18, 135, 55
         };
 
         moveButtonsButton = (Rectangle){
@@ -503,6 +533,12 @@ int main(void)
         doneButton = (Rectangle){
             screenWidth/2-105, screenHeight-100, 210, 62
         };
+
+        interactButton = (Rectangle){
+            screenWidth-190, screenHeight-150, 170, 62
+        };
+        if (interactButton.x < screenWidth*0.55f)
+            interactButton.x = screenWidth*0.55f;
 
         int touchCount = GetTouchPointCount();
 
@@ -626,6 +662,18 @@ int main(void)
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     targetedBarrel >= 0 &&
+                     CheckCollisionPointRec(pos, interactButton))
+            {
+                barrelHealth[targetedBarrel] -= 10;
+                if (barrelHealth[targetedBarrel] <= 0)
+                {
+                    barrelHealth[targetedBarrel] = 0;
+                    barrelDestroyed[targetedBarrel] = true;
+                    targetedBarrel = -1;
+                }
             }
             else if (settingsOpen)
             {
@@ -806,6 +854,18 @@ int main(void)
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                     targetedBarrel >= 0 &&
+                     CheckCollisionPointRec(pos, interactButton))
+            {
+                barrelHealth[targetedBarrel] -= 10;
+                if (barrelHealth[targetedBarrel] <= 0)
+                {
+                    barrelHealth[targetedBarrel] = 0;
+                    barrelDestroyed[targetedBarrel] = true;
+                    targetedBarrel = -1;
+                }
             }
             else if (settingsOpen)
             {
@@ -1167,6 +1227,33 @@ int main(void)
             };
         }
 
+        targetedBarrel = -1;
+        Vector3 aimOrigin = {player.x, player.y+1.6f, player.z};
+        Vector3 aimDirection = {dirX, dirY, dirZ};
+        float closestBarrelDistance = 9999.0f;
+
+        for (int b = 0; b < MAX_BARRELS; b++)
+        {
+            if (barrelDestroyed[b]) continue;
+
+            float dx = barrelPositions[b].x-aimOrigin.x;
+            float dy = barrelPositions[b].y+0.48f-aimOrigin.y;
+            float dz = barrelPositions[b].z-aimOrigin.z;
+            float distance = sqrtf(dx*dx+dy*dy+dz*dz);
+
+            if (distance < 0.1f || distance > 9.0f) continue;
+
+            float dot = (dx*aimDirection.x +
+                         dy*aimDirection.y +
+                         dz*aimDirection.z)/distance;
+
+            if (dot > 0.965f && distance < closestBarrelDistance)
+            {
+                closestBarrelDistance = distance;
+                targetedBarrel = b;
+            }
+        }
+
         float renderScale =
             (resolutionLevel == 0) ? 1.0f :
             ((resolutionLevel == 1) ? 0.85f : 0.70f);
@@ -1281,6 +1368,17 @@ int main(void)
                     h
                 );
             }
+        }
+
+        for (int b = 0; b < MAX_BARRELS; b++)
+        {
+            if (barrelDestroyed[b]) continue;
+
+            float bx = barrelPositions[b].x-player.x;
+            float bz = barrelPositions[b].z-player.z;
+
+            if (bx*bx+bz*bz < chunkView2)
+                DrawLootBarrel(barrelPositions[b]);
         }
 
         for (int i = -5; i <= 5; i++)
@@ -1454,7 +1552,7 @@ int main(void)
         if (!mainMenuOpen)
         {
             DrawRectangleRounded(
-                (Rectangle){18, 16, 210, 48},
+                (Rectangle){18, 84, 210, 48},
                 0.35f, 12,
                 C(20, 35, 48, 165)
             );
@@ -1529,6 +1627,43 @@ int main(void)
                 knobRadius,
                 C(220, 239, 255, 205)
             );
+
+            if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
+            {
+                float hudX = screenWidth/2.0f-130.0f;
+                Rectangle barrelHud = {hudX, 105, 260, 76};
+
+                DrawRectangleRounded(
+                    barrelHud, 0.22f, 12, C(18, 31, 44, 225)
+                );
+                DrawRectangleRoundedLinesEx(
+                    barrelHud, 0.22f, 12, 2,
+                    C(190, 145, 90, 240)
+                );
+                DrawText(
+                    "LOOT BARREL", (int)hudX+18, 116, 19, RAYWHITE
+                );
+                DrawText(
+                    TextFormat("HP: %d/50", barrelHealth[targetedBarrel]),
+                    (int)hudX+18, 145, 18,
+                    C(255, 218, 145, 255)
+                );
+
+                DrawRectangleRounded(
+                    interactButton, 0.25f, 14, C(35, 139, 105, 245)
+                );
+                DrawRectangleRoundedLinesEx(
+                    interactButton, 0.25f, 14, 2,
+                    C(150, 230, 190, 240)
+                );
+
+                int interactTextWidth = MeasureText("INTERACT", 18);
+                DrawText(
+                    "INTERACT",
+                    (int)(interactButton.x+interactButton.width/2-interactTextWidth/2),
+                    (int)(interactButton.y+21), 18, RAYWHITE
+                );
+            }
 
             DrawCircleLines(
                 (int)joystickKnob.x,
@@ -1652,20 +1787,56 @@ int main(void)
                     RAYWHITE
                 );
 
-                const char *message =
-                    (menuPage == 1) ?
-                    "NO SERVERS YET" :
-                    "COMING SOON";
+                if (menuPage == 1)
+                {
+                    float cardWidth = fminf(360.0f, screenWidth-40.0f);
+                    Rectangle serverCard = {
+                        (screenWidth-cardWidth)/2.0f,
+                        menuStartY+5.0f, cardWidth, 105.0f
+                    };
 
-                int messageWidth = MeasureText(message, 18);
-
-                DrawText(
-                    message,
-                    screenWidth/2-messageWidth/2,
-                    menuStartY+75,
-                    18,
-                    C(165, 190, 210, 255)
-                );
+                    DrawRectangleRounded(
+                        serverCard, 0.20f, 14, C(30, 52, 68, 250)
+                    );
+                    DrawRectangleRoundedLinesEx(
+                        serverCard, 0.20f, 14, 2,
+                        C(100, 175, 215, 230)
+                    );
+                    DrawText(
+                        "SERVER #1",
+                        (int)serverCard.x+18,
+                        (int)serverCard.y+14, 20, RAYWHITE
+                    );
+                    DrawCircle(
+                        (int)(serverCard.x+serverCard.width-26),
+                        (int)serverCard.y+25, 6,
+                        C(80, 220, 135, 255)
+                    );
+                    DrawText(
+                        "ONLINE",
+                        (int)serverCard.x+18,
+                        (int)serverCard.y+49, 16,
+                        C(100, 225, 145, 255)
+                    );
+                    DrawText(
+                        "0/20 PLAYERS",
+                        (int)serverCard.x+18,
+                        (int)serverCard.y+75, 18,
+                        C(190, 215, 235, 255)
+                    );
+                }
+                else
+                {
+                    const char *message = "COMING SOON";
+                    int messageWidth = MeasureText(message, 18);
+                    DrawText(
+                        message,
+                        screenWidth/2-messageWidth/2,
+                        menuStartY+75,
+                        18,
+                        C(165, 190, 210, 255)
+                    );
+                }
 
                 DrawRectangleRounded(
                     menuBackButton, 0.25f, 14,
