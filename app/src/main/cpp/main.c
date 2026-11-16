@@ -5,6 +5,7 @@
 
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
+#define MAX_BUILD_PIECES 64
 
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -401,6 +402,30 @@ static bool IsBlockedAt(float x, float z,
     return false;
 }
 
+static bool PlaceBuildPiece(Vector3 player, float angle, int type,
+                               Vector3 *pieces, int *pieceTypes, int *pieceCount,
+                               int *woodCount, Vector3 *barrels,
+                               bool *barrelDestroyed)
+{
+    if (*pieceCount >= MAX_BUILD_PIECES) return false;
+    int cost = (type == 0) ? 2 : 3;
+    if (*woodCount < cost) return false;
+    float x = roundf((player.x + sinf(angle)*3.2f)/2.5f)*2.5f;
+    float z = roundf((player.z - cosf(angle)*3.2f)/2.5f)*2.5f;
+    if (fabsf(x-player.x) < 2.0f && fabsf(z-player.z) < 2.0f) return false;
+    if (IsBlockedAt(x, z, barrels, barrelDestroyed)) return false;
+    for (int i = 0; i < *pieceCount; i++)
+    {
+        float dx = pieces[i].x-x, dz = pieces[i].z-z;
+        if (dx*dx+dz*dz < 3.0f) return false;
+    }
+    pieces[*pieceCount] = (Vector3){x, 0.0f, z};
+    pieceTypes[*pieceCount] = type;
+    (*pieceCount)++;
+    *woodCount -= cost;
+    return true;
+}
+
 static Vector3 PlayerPoint(Vector3 player, float angle,
                            float x, float y, float z)
 {
@@ -622,6 +647,8 @@ int main(void)
     bool editControls = false;
     bool sprintEnabled = false;
     bool inventoryOpen = false;
+    bool buildMode = false;
+    int selectedBuildType = 0; // 0 FLOOR, 1 WALL, 2 DOOR.
     int selectedHotbarSlot = 0;
     // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE.
     const char *itemNames[6] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE"};
@@ -716,6 +743,11 @@ int main(void)
     Rectangle interactButton = {0};
     Rectangle sprintButton = {0};
     Rectangle inventoryButton = {0};
+    Rectangle buildButton = {0};
+    Rectangle buildFloorButton = {0}, buildWallButton = {0}, buildDoorButton = {0}, buildPlaceButton = {0};
+    Vector3 buildPieces[MAX_BUILD_PIECES] = {{0}};
+    int buildPieceTypes[MAX_BUILD_PIECES] = {0};
+    int buildPieceCount = 0;
     Rectangle hotbarSlots[4] = {{0}};
 
     // Настраиваемые положения, размеры и прозрачность игровых кнопок.
@@ -936,6 +968,12 @@ int main(void)
         for (int slot = 0; slot < 4; slot++)
             hotbarSlots[slot] = (Rectangle){hotbarX+slot*(slotSize+slotGap),
                                            screenHeight-78.0f, slotSize, 58.0f};
+        buildButton = (Rectangle){14, 170, 142, 42};
+        float buildChoiceW = fminf(92.0f, (screenWidth-44.0f)/3.0f);
+        buildFloorButton = (Rectangle){14, 220, buildChoiceW, 38};
+        buildWallButton = (Rectangle){22+buildChoiceW, 220, buildChoiceW, 38};
+        buildDoorButton = (Rectangle){30+buildChoiceW*2, 220, buildChoiceW, 38};
+        buildPlaceButton = (Rectangle){14, 266, 142, 42};
 
         int touchCount = GetTouchPointCount();
 
@@ -1102,6 +1140,23 @@ int main(void)
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, buildButton))
+            {
+                buildMode = !buildMode;
+            }
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
+                selectedBuildType = 0;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
+                selectedBuildType = 1;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
+                selectedBuildType = 2;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
+            {
+                PlaceBuildPiece(player, playerAngle, selectedBuildType,
+                    buildPieces, buildPieceTypes, &buildPieceCount,
+                    &itemCounts[4], barrelPositions, barrelDestroyed);
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
@@ -1393,6 +1448,23 @@ int main(void)
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, buildButton))
+            {
+                buildMode = !buildMode;
+            }
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildFloorButton))
+                selectedBuildType = 0;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildWallButton))
+                selectedBuildType = 1;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildDoorButton))
+                selectedBuildType = 2;
+            else if (buildMode && !inventoryOpen && CheckCollisionPointRec(pos, buildPlaceButton))
+            {
+                PlaceBuildPiece(player, playerAngle, selectedBuildType,
+                    buildPieces, buildPieceTypes, &buildPieceCount,
+                    &itemCounts[4], barrelPositions, barrelDestroyed);
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
@@ -2059,6 +2131,27 @@ int main(void)
             }
         }
 
+        for (int i = 0; i < buildPieceCount; i++)
+        {
+            Vector3 p = buildPieces[i];
+            if (buildPieceTypes[i] == 0)
+            {
+                DrawCube((Vector3){p.x, 0.12f, p.z}, 2.4f, 0.20f, 2.4f, C(133, 94, 58, 255));
+                DrawCube((Vector3){p.x, 0.235f, p.z}, 2.25f, 0.035f, 2.25f, C(166, 124, 77, 255));
+            }
+            else if (buildPieceTypes[i] == 1)
+            {
+                DrawCube((Vector3){p.x, 1.25f, p.z}, 2.4f, 2.5f, 0.20f, C(128, 91, 57, 255));
+                DrawCube((Vector3){p.x, 1.25f, p.z-0.115f}, 2.15f, 2.25f, 0.025f, C(157, 113, 70, 255));
+            }
+            else
+            {
+                DrawCube((Vector3){p.x, 1.1f, p.z}, 1.35f, 2.2f, 0.18f, C(103, 70, 43, 255));
+                DrawCube((Vector3){p.x, 1.1f, p.z-0.105f}, 1.15f, 1.98f, 0.025f, C(145, 99, 58, 255));
+                DrawSphere((Vector3){p.x+0.48f, 1.05f, p.z-0.16f}, 0.055f, C(214, 177, 91, 255));
+            }
+        }
+
         for (int b = 0; b < MAX_BARRELS; b++)
         {
             if (barrelDestroyed[b]) continue;
@@ -2330,6 +2423,18 @@ int main(void)
                 17,
                 RAYWHITE
             );
+
+            DrawSurvivalButton(buildButton, buildMode ? "BUILD: ON" : "BUILD", 16, buildMode);
+            if (buildMode)
+            {
+                DrawSurvivalButton(buildFloorButton, "FLOOR", 12, selectedBuildType == 0);
+                DrawSurvivalButton(buildWallButton, "WALL", 12, selectedBuildType == 1);
+                DrawSurvivalButton(buildDoorButton, "DOOR", 12, selectedBuildType == 2);
+                DrawSurvivalButton(buildPlaceButton, "PLACE", 15, true);
+                DrawText(TextFormat("WOOD: %d  |  COST: %d",
+                    itemCounts[4], selectedBuildType == 0 ? 2 : 3),
+                    164, 278, 12, C(225, 235, 245, 255));
+            }
 
             DrawCircleV(
                 joystickPosition,
