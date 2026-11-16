@@ -302,8 +302,32 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(footL, 0.12f, shoes);
     DrawSphere(footR, 0.12f, shoes);
 
+    // Небольшой походный рюкзак за спиной персонажа.
+    DrawCube(
+        PlayerPoint(player, angle, 0, 1.12f, 0.235f),
+        0.43f, 0.55f, 0.25f, C(48, 82, 65, 255)
+    );
+    DrawCube(
+        PlayerPoint(player, angle, 0, 1.12f, 0.37f),
+        0.25f, 0.22f, 0.06f, C(72, 105, 76, 255)
+    );
+
     DrawCylinder(PlayerPoint(player, angle, 0, 1.05f, 0),
                  0.31f, 0.36f, 0.78f, 12, shirt);
+
+    // Передняя панель жилета и пояс.
+    DrawCube(
+        PlayerPoint(player, angle, 0, 1.12f, -0.185f),
+        0.34f, 0.34f, 0.035f, C(31, 91, 132, 255)
+    );
+    DrawCube(
+        PlayerPoint(player, angle, 0, 0.69f, 0),
+        0.56f, 0.10f, 0.40f, C(91, 75, 52, 255)
+    );
+    DrawCube(
+        PlayerPoint(player, angle, 0, 0.69f, -0.215f),
+        0.13f, 0.11f, 0.035f, C(190, 157, 91, 255)
+    );
 
     DrawCylinder(PlayerPoint(player, angle, 0, 1.48f, 0),
                  0.11f, 0.11f, 0.18f, 8, skin);
