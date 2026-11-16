@@ -130,6 +130,59 @@ static void DrawLootBarrel(Vector3 p)
                  0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
 }
 
+static bool IsBlockedAt(float x, float z,
+                           Vector3 *barrels, bool *barrelDestroyed)
+{
+    const float playerRadius = 0.42f;
+
+    // Домики основной деревни.
+    for (int i = -3; i <= 3; i++)
+    {
+        float hz = i*55.0f;
+        float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
+
+        float houses[2][3] = {
+            {-18.0f, hz, sc},
+            {18.0f, hz+22.0f, sc*0.92f}
+        };
+
+        for (int h = 0; h < 2; h++)
+        {
+            float halfW = 2.6f*houses[h][2] + playerRadius;
+            float halfD = 2.3f*houses[h][2] + playerRadius;
+
+            if (fabsf(x-houses[h][0]) < halfW &&
+                fabsf(z-houses[h][1]) < halfD)
+                return true;
+        }
+    }
+
+    // Дополнительные дома.
+    const float extra[3][2] = {
+        {-42.0f, -120.0f}, {48.0f, 120.0f}, {42.0f, -120.0f}
+    };
+    for (int h = 0; h < 3; h++)
+    {
+        float sc = (h == 1) ? 0.84f : 0.80f;
+        if (fabsf(x-extra[h][0]) < 2.6f*sc+playerRadius &&
+            fabsf(z-extra[h][1]) < 2.3f*sc+playerRadius)
+            return true;
+    }
+
+    // Бочки.
+    for (int b = 0; b < MAX_BARRELS; b++)
+    {
+        if (barrelDestroyed[b]) continue;
+        float dx = x-barrels[b].x;
+        float dz = z-barrels[b].z;
+        float minDist = 0.39f + playerRadius;
+        if (dx*dx + dz*dz < minDist*minDist)
+            return true;
+    }
+
+    return false;
+}
+
 static Vector3 PlayerPoint(Vector3 player, float angle,
                            float x, float y, float z)
 {
@@ -1095,8 +1148,17 @@ int main(void)
                         sinf(cameraYaw)*moveX -
                         cosf(cameraYaw)*moveForward;
 
-                    player.x += worldMoveX*playerSpeed;
-                    player.z += worldMoveZ*playerSpeed;
+                    float nextX = player.x + worldMoveX*playerSpeed;
+                    float nextZ = player.z + worldMoveZ*playerSpeed;
+
+                    // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
+                    if (!IsBlockedAt(nextX, player.z,
+                                     barrelPositions, barrelDestroyed))
+                        player.x = nextX;
+
+                    if (!IsBlockedAt(player.x, nextZ,
+                                     barrelPositions, barrelDestroyed))
+                        player.z = nextZ;
 
                     if (playerMoving)
                     {
@@ -1216,11 +1278,35 @@ int main(void)
         }
         else
         {
-            camera.position = (Vector3){
+            Vector3 desiredCamera = {
                 player.x-dirX*7,
                 player.y+3.0f-dirY*7,
                 player.z-dirZ*7
             };
+
+            camera.position = desiredCamera;
+
+            // Не даём камере проходить сквозь стены или опускаться под землю.
+            Vector3 cameraStart = {player.x, player.y+1.4f, player.z};
+            for (int step = 1; step <= 24; step++)
+            {
+                float t = step/24.0f;
+                float cx = cameraStart.x+(desiredCamera.x-cameraStart.x)*t;
+                float cy = cameraStart.y+(desiredCamera.y-cameraStart.y)*t;
+                float cz = cameraStart.z+(desiredCamera.z-cameraStart.z)*t;
+
+                if (cy < 0.25f ||
+                    IsBlockedAt(cx, cz, barrelPositions, barrelDestroyed))
+                {
+                    float safeT = fmaxf(0.0f, t-0.06f);
+                    camera.position = (Vector3){
+                        cameraStart.x+(desiredCamera.x-cameraStart.x)*safeT,
+                        fmaxf(0.35f, cameraStart.y+(desiredCamera.y-cameraStart.y)*safeT),
+                        cameraStart.z+(desiredCamera.z-cameraStart.z)*safeT
+                    };
+                    break;
+                }
+            }
 
             camera.target = (Vector3){
                 player.x, player.y+1.4f, player.z
