@@ -197,7 +197,8 @@ static Vector3 PlayerPoint(Vector3 player, float angle,
 }
 
 static void DrawFirstPersonArms(Vector3 eye, float yaw,
-                                float walkPhase, bool moving, float time)
+                                float walkPhase, bool moving, float time,
+                                float attackProgress)
 {
     Vector3 forward = {sinf(yaw), 0.0f, -cosf(yaw)};
     Vector3 right = {cosf(yaw), 0.0f, sinf(yaw)};
@@ -229,16 +230,17 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
             eye.z + right.z*s*0.48f + forward.z*(0.48f+armSwing*0.65f)
         };
 
+        float punch = (side == 1) ? attackProgress*0.95f : 0.0f;
         Vector3 wrist = {
-            eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing),
-            eye.y - 0.48f + armLift,
-            eye.z + right.z*s*0.34f + forward.z*(0.78f+armSwing)
+            eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing+punch),
+            eye.y - 0.48f + armLift + punch*0.10f,
+            eye.z + right.z*s*0.34f + forward.z*(0.78f+armSwing+punch)
         };
 
         Vector3 hand = {
-            eye.x + right.x*s*0.30f + forward.x*(0.88f+armSwing),
-            eye.y - 0.45f + armLift,
-            eye.z + right.z*s*0.30f + forward.z*(0.88f+armSwing)
+            eye.x + right.x*s*0.30f + forward.x*(0.88f+armSwing+punch),
+            eye.y - 0.45f + armLift + punch*0.10f,
+            eye.z + right.z*s*0.30f + forward.z*(0.88f+armSwing+punch)
         };
 
         DrawCylinderEx(shoulder, elbow, 0.16f, 0.13f, 8, shirt);
@@ -431,6 +433,10 @@ int main(void)
     bool barrelDestroyed[MAX_BARRELS] = { false };
     int targetedBarrel = -1;
     Rectangle interactButton = {0};
+    bool attackRequested = false;
+    float attackCooldown = 0.0f;
+    const float attackCooldownDuration = 1.0f;
+    float attackAnimation = 0.0f;
 
     for (int i = 0; i < 7; i++)
     {
@@ -443,6 +449,12 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        float frameTime = GetFrameTime();
+        if (attackCooldown > 0.0f) attackCooldown -= frameTime;
+        if (attackCooldown < 0.0f) attackCooldown = 0.0f;
+        if (attackAnimation > 0.0f) attackAnimation -= frameTime;
+        if (attackAnimation < 0.0f) attackAnimation = 0.0f;
+        attackRequested = false;
         screenWidth = GetScreenWidth();
         screenHeight = GetScreenHeight();
 
@@ -717,16 +729,9 @@ int main(void)
                 firstPerson = !firstPerson;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls &&
-                     targetedBarrel >= 0 &&
                      CheckCollisionPointRec(pos, interactButton))
             {
-                barrelHealth[targetedBarrel] -= 10;
-                if (barrelHealth[targetedBarrel] <= 0)
-                {
-                    barrelHealth[targetedBarrel] = 0;
-                    barrelDestroyed[targetedBarrel] = true;
-                    targetedBarrel = -1;
-                }
+                attackRequested = true;
             }
             else if (settingsOpen)
             {
@@ -909,16 +914,9 @@ int main(void)
                 firstPerson = !firstPerson;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls &&
-                     targetedBarrel >= 0 &&
                      CheckCollisionPointRec(pos, interactButton))
             {
-                barrelHealth[targetedBarrel] -= 10;
-                if (barrelHealth[targetedBarrel] <= 0)
-                {
-                    barrelHealth[targetedBarrel] = 0;
-                    barrelDestroyed[targetedBarrel] = true;
-                    targetedBarrel = -1;
-                }
+                attackRequested = true;
             }
             else if (settingsOpen)
             {
@@ -1327,7 +1325,8 @@ int main(void)
             float dz = barrelPositions[b].z-aimOrigin.z;
             float distance = sqrtf(dx*dx+dy*dy+dz*dz);
 
-            if (distance < 0.1f || distance > 9.0f) continue;
+            // Бочку можно выбрать только на расстоянии удара.
+            if (distance < 0.1f || distance > 2.2f) continue;
 
             float dot = (dx*aimDirection.x +
                          dy*aimDirection.y +
@@ -1337,6 +1336,47 @@ int main(void)
             {
                 closestBarrelDistance = distance;
                 targetedBarrel = b;
+            }
+        }
+
+        if (attackRequested && attackCooldown <= 0.0f &&
+            !mainMenuOpen && !settingsOpen && !editControls)
+        {
+            attackCooldown = attackCooldownDuration;
+            attackAnimation = 0.24f;
+            DrawRectangleRounded(
+                interactButton, 0.25f, 14,
+                attackCooldown <= 0.0f ? C(185, 75, 55, 245) : C(75, 83, 91, 245)
+            );
+            DrawRectangleRoundedLinesEx(
+                interactButton, 0.25f, 14, 2, C(230, 190, 160, 240)
+            );
+            DrawText(
+                "HIT",
+                (int)(interactButton.x+interactButton.width/2-MeasureText("HIT", 20)/2),
+                (int)(interactButton.y+9), 20, RAYWHITE
+            );
+            float cooldownRatio = attackCooldown/attackCooldownDuration;
+            DrawRectangleRounded(
+                (Rectangle){interactButton.x+12, interactButton.y+39,
+                            (interactButton.width-24)*(1.0f-cooldownRatio), 8},
+                0.5f, 6, C(105, 225, 150, 255)
+            );
+            DrawText(
+                attackCooldown <= 0.0f ? "READY" : TextFormat("%.1f s", attackCooldown),
+                (int)(interactButton.x+interactButton.width/2-MeasureText(attackCooldown <= 0.0f ? "READY" : TextFormat("%.1f s", attackCooldown), 13)/2),
+                (int)(interactButton.y+49), 13, RAYWHITE
+            );
+
+            if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
+            {
+                barrelHealth[targetedBarrel] -= 10;
+                if (barrelHealth[targetedBarrel] <= 0)
+                {
+                    barrelHealth[targetedBarrel] = 0;
+                    barrelDestroyed[targetedBarrel] = true;
+                    targetedBarrel = -1;
+                }
             }
         }
 
@@ -1606,7 +1646,8 @@ int main(void)
                 cameraYaw,
                 walkPhase,
                 playerMoving,
-                (float)GetTime()
+                (float)GetTime(),
+                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f
             );
         }
 
@@ -1735,19 +1776,9 @@ int main(void)
                     C(255, 218, 145, 255)
                 );
 
-                DrawRectangleRounded(
-                    interactButton, 0.25f, 14, C(35, 139, 105, 245)
-                );
-                DrawRectangleRoundedLinesEx(
-                    interactButton, 0.25f, 14, 2,
-                    C(150, 230, 190, 240)
-                );
-
-                int interactTextWidth = MeasureText("INTERACT", 18);
                 DrawText(
-                    "INTERACT",
-                    (int)(interactButton.x+interactButton.width/2-interactTextWidth/2),
-                    (int)(interactButton.y+21), 18, RAYWHITE
+                    "AIM AT BARREL",
+                    (int)hudX+18, 166, 14, C(190, 215, 230, 255)
                 );
             }
 
