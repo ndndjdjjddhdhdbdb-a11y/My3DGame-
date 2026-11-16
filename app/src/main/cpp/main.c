@@ -37,6 +37,23 @@ static void DrawTree(float x, float z, float scale, int quality)
     if (quality >= 2)
         DrawSphere((Vector3){x+0.48f*scale, 1.88f*scale, z-0.08f*scale},
                    0.62f*scale, C(35, 117, 61, 255));
+
+    // Светлые верхушки кроны добавляют объём деревьям.
+    if (quality >= 1)
+        DrawSphere((Vector3){x-0.16f*scale, 2.42f*scale, z-0.20f*scale},
+                   0.34f*scale, C(83, 166, 91, 255));
+
+    // Небольшие корни у основания ствола.
+    DrawCylinderEx(
+        (Vector3){x, 0.20f*scale, z},
+        (Vector3){x-0.34f*scale, 0.04f*scale, z+0.12f*scale},
+        0.10f*scale, 0.035f*scale, 6, C(99, 69, 43, 255)
+    );
+    DrawCylinderEx(
+        (Vector3){x, 0.20f*scale, z},
+        (Vector3){x+0.30f*scale, 0.04f*scale, z-0.14f*scale},
+        0.10f*scale, 0.035f*scale, 6, C(99, 69, 43, 255)
+    );
 }
 
 static void DrawRustHouse(float x, float z, float scale, int variant)
@@ -85,6 +102,34 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
     DrawCube((Vector3){x+w*0.30f, h+0.75f*scale, z},
              0.42f*scale, 1.2f*scale, 0.42f*scale,
              C(69, 65, 59, 255));
+
+    // Рамы окон и перекладины делают фасады заметнее.
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.535f},
+             0.90f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.565f},
+             0.055f*scale, 0.72f*scale, 0.025f*scale,
+             C(185, 190, 171, 255));
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.565f},
+             0.78f*scale, 0.055f*scale, 0.025f*scale,
+             C(185, 190, 171, 255));
+
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.535f},
+             0.90f*scale, 0.84f*scale, 0.045f*scale,
+             C(75, 57, 40, 255));
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.565f},
+             0.055f*scale, 0.72f*scale, 0.025f*scale,
+             C(185, 190, 171, 255));
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.565f},
+             0.78f*scale, 0.055f*scale, 0.025f*scale,
+             C(185, 190, 171, 255));
+
+    // Ручка двери и деревянная ступенька.
+    DrawSphere((Vector3){x+0.23f*scale, 1.05f*scale, z-d*0.545f},
+               0.055f*scale, C(205, 166, 83, 255));
+    DrawCube((Vector3){x, 0.08f*scale, z-d*0.58f},
+             1.25f*scale, 0.16f*scale, 0.42f*scale,
+             C(91, 72, 52, 255));
 }
 
 static bool IsVillageClear(float x, float z)
@@ -357,6 +402,30 @@ static void DrawPlayer(Vector3 player, float angle,
 
     DrawSphere(PlayerPoint(player, angle, 0, 1.82f, -0.17f),
                0.22f, skin);
+
+    // Походная кепка и козырёк персонажа.
+    DrawCube(
+        PlayerPoint(player, angle, 0, 2.035f, 0.005f),
+        0.49f, 0.12f, 0.48f, C(47, 77, 57, 255)
+    );
+    DrawCube(
+        PlayerPoint(player, angle, 0, 1.99f, -0.22f),
+        0.46f, 0.045f, 0.24f, C(35, 61, 45, 255)
+    );
+
+    // Ремни рюкзака и небольшие плечевые накладки.
+    DrawCube(
+        PlayerPoint(player, angle, -0.19f, 1.20f, -0.205f),
+        0.075f, 0.48f, 0.045f, C(177, 148, 91, 255)
+    );
+    DrawCube(
+        PlayerPoint(player, angle, 0.19f, 1.20f, -0.205f),
+        0.075f, 0.48f, 0.045f, C(177, 148, 91, 255)
+    );
+    DrawSphere(PlayerPoint(player, angle, -0.39f, 1.34f, -0.015f),
+               0.145f, C(52, 91, 76, 255));
+    DrawSphere(PlayerPoint(player, angle, 0.39f, 1.34f, -0.015f),
+               0.145f, C(52, 91, 76, 255));
 
     DrawSphere(PlayerPoint(player, angle, -0.095f, 1.83f, -0.365f),
                0.035f, C(30, 35, 42, 255));
@@ -1783,23 +1852,27 @@ int main(void)
                      C(135, 190, 194, 255));
             DrawText("FOOD", 28, 98, 12, RAYWHITE);
             DrawRectangleRounded(
-                (Rectangle){82, 88, 148, 9},
+                (Rectangle){82, 88, 112, 9},
                 0.5f, 6, C(65, 70, 72, 230)
             );
             DrawRectangleRounded(
-                (Rectangle){82, 88, 148*(foodLevel/100.0f), 9},
+                (Rectangle){82, 88, 112*(foodLevel/100.0f), 9},
                 0.5f, 6, C(215, 160, 75, 255)
             );
+            DrawText(TextFormat("%d%%", (int)foodLevel),
+                     203, 85, 12, C(245, 220, 170, 255));
 
             DrawText("WATER", 28, 124, 12, RAYWHITE);
             DrawRectangleRounded(
-                (Rectangle){82, 126, 148, 9},
+                (Rectangle){82, 126, 112, 9},
                 0.5f, 6, C(65, 70, 72, 230)
             );
             DrawRectangleRounded(
-                (Rectangle){82, 126, 148*(waterLevel/100.0f), 9},
+                (Rectangle){82, 126, 112*(waterLevel/100.0f), 9},
                 0.5f, 6, C(75, 170, 235, 255)
             );
+            DrawText(TextFormat("%d%%", (int)waterLevel),
+                     203, 123, 12, C(170, 220, 250, 255));
 
             if (foodLevel < 20.0f || waterLevel < 20.0f)
                 DrawText("LOW SUPPLIES - FIND BARRELS", 28, 145, 10,
