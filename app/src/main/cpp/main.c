@@ -10,6 +10,19 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
+
+static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, bool selected)
+{
+    Color fill = selected ? C(83, 103, 67, 250) : C(31, 43, 39, 245);
+    Color edge = selected ? C(220, 177, 91, 255) : C(112, 128, 105, 230);
+    DrawRectangleRounded((Rectangle){r.x+2, r.y+4, r.width, r.height}, 0.16f, 10, C(0, 0, 0, 75));
+    DrawRectangleRounded(r, 0.16f, 10, fill);
+    DrawRectangleRoundedLinesEx(r, 0.16f, 10, selected ? 2.5f : 1.5f, edge);
+    DrawRectangle((int)(r.x+10), (int)(r.y+9), 4, (int)(r.height-18), edge);
+    int tw = MeasureText(label, fontSize);
+    DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(238, 237, 220, 255));
+}
+
 static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
 {
     Rectangle hitArea = {
@@ -418,8 +431,10 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(PlayerPoint(player, angle, 0, 1.94f, 0.015f),
                0.255f, C(65, 43, 30, 255));
 
-    DrawSphere(PlayerPoint(player, angle, 0, 1.82f, -0.17f),
-               0.22f, skin);
+    // Небольшой нос вместо крупной лишней лицевой сферы,
+    // которая визуально выглядела как второй человечек/голова.
+    DrawSphere(PlayerPoint(player, angle, 0, 1.80f, -0.285f),
+               0.055f, skin);
 
     // Походная кепка и козырёк персонажа.
     DrawCube(
@@ -2044,23 +2059,7 @@ int main(void)
             );
 
             // Кнопка возврата в главное меню.
-            DrawRectangleRounded(
-                menuReturnButton, 0.25f, 12,
-                C(20, 34, 52, 235)
-            );
-
-            DrawRectangleRoundedLinesEx(
-                menuReturnButton, 0.25f, 12, 2,
-                C(130, 205, 255, 240)
-            );
-
-            DrawText(
-                "MENU",
-                menuReturnButton.x+42,
-                menuReturnButton.y+17,
-                19,
-                RAYWHITE
-            );
+            DrawSurvivalButton(menuReturnButton, "MENU", 19, false);
         }
 
         // Главное меню boltSurvival.
@@ -2068,8 +2067,8 @@ int main(void)
         {
             DrawRectangleGradientV(
                 0, 0, screenWidth, screenHeight,
-                C(9, 18, 30, 245),
-                C(17, 39, 55, 245)
+                C(13, 20, 17, 248),
+                C(35, 48, 36, 248)
             );
 
             DrawRectangle(
@@ -2118,29 +2117,7 @@ int main(void)
 
                 for (int i = 0; i < 4; i++)
                 {
-                    Color buttonColor = (i == 0) ?
-                        C(35, 139, 105, 255) :
-                        C(35, 57, 76, 245);
-
-                    DrawRectangleRounded(
-                        buttons[i], 0.25f, 14,
-                        buttonColor
-                    );
-
-                    DrawRectangleRoundedLinesEx(
-                        buttons[i], 0.25f, 14, 2,
-                        C(105, 180, 215, 220)
-                    );
-
-                    int textWidth = MeasureText(labels[i], 20);
-
-                    DrawText(
-                        labels[i],
-                        buttons[i].x+buttons[i].width/2-textWidth/2,
-                        buttons[i].y+buttons[i].height/2-10,
-                        20,
-                        RAYWHITE
-                    );
+                    DrawSurvivalButton(buttons[i], labels[i], 20, i == 0);
                 }
             }
             else
@@ -2209,25 +2186,7 @@ int main(void)
                     );
                 }
             
-                DrawRectangleRounded(
-                    menuBackButton, 0.25f, 14,
-                    C(35, 57, 76, 245)
-                );
-
-                DrawRectangleRoundedLinesEx(
-                    menuBackButton, 0.25f, 14, 2,
-                    C(105, 180, 215, 220)
-                );
-
-                int backWidth = MeasureText("BACK", 19);
-
-                DrawText(
-                    "BACK",
-                    menuBackButton.x+menuBackButton.width/2-backWidth/2,
-                    menuBackButton.y+menuBackButton.height/2-9,
-                    19,
-                    RAYWHITE
-                );
+                DrawSurvivalButton(menuBackButton, "BACK", 19, false);
             }
 
             DrawText(
@@ -2249,12 +2208,12 @@ int main(void)
 
             DrawRectangleRounded(
                 panel, 0.08f, 20,
-                C(19, 29, 45, 250)
+                C(25, 34, 28, 252)
             );
 
             DrawRectangleRoundedLinesEx(
                 panel, 0.08f, 20, 2,
-                C(100, 175, 225, 230)
+                C(190, 157, 91, 235)
             );
 
             DrawText(
@@ -2271,7 +2230,7 @@ int main(void)
 
             DrawRectangleRounded(
                 moveButtonsButton, 0.25f, 14,
-                C(42, 65, 91, 255)
+                C(42, 54, 43, 255)
             );
 
             DrawText(
@@ -2301,7 +2260,7 @@ int main(void)
 
             Color lowColor =
                 graphicsQuality == 0 ?
-                C(42, 150, 100, 255) :
+                C(83, 103, 67, 255) :
                 C(42, 65, 91, 255);
 
             Color medColor =
