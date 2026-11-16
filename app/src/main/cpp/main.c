@@ -467,6 +467,52 @@ static bool IsBlockedAt(float x, float z,
     return false;
 }
 
+static bool IsCameraBlockedAt(float x, float z,
+                                 Vector3 *barrels, bool *barrelDestroyed)
+{
+    // Камера проходит ближе к объектам, чем игрок: небольшой отступ
+    // не позволяет ей резко отскакивать от невидимой широкой зоны.
+    const float cameraRadius = 0.12f;
+
+    for (int i = -3; i <= 3; i++)
+    {
+        float hz = i*55.0f;
+        float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
+        float houses[2][3] = {
+            {-18.0f, hz, sc},
+            {18.0f, hz+22.0f, sc*0.92f}
+        };
+
+        for (int h = 0; h < 2; h++)
+        {
+            if (fabsf(x-houses[h][0]) < 2.6f*houses[h][2]+cameraRadius &&
+                fabsf(z-houses[h][1]) < 2.3f*houses[h][2]+cameraRadius)
+                return true;
+        }
+    }
+
+    const float extra[3][2] = {
+        {-42.0f, -120.0f}, {48.0f, 120.0f}, {42.0f, -120.0f}
+    };
+    for (int h = 0; h < 3; h++)
+    {
+        float sc = (h == 1) ? 0.84f : 0.80f;
+        if (fabsf(x-extra[h][0]) < 2.6f*sc+cameraRadius &&
+            fabsf(z-extra[h][1]) < 2.3f*sc+cameraRadius)
+            return true;
+    }
+
+    for (int b = 0; b < MAX_BARRELS; b++)
+    {
+        if (barrelDestroyed[b]) continue;
+        float dx = x-barrels[b].x;
+        float dz = z-barrels[b].z;
+        float minDist = 0.39f+cameraRadius;
+        if (dx*dx+dz*dz < minDist*minDist) return true;
+    }
+    return false;
+}
+
 static void GetBuildPlacement(Vector3 player, float angle, int type,
                               Vector3 *pieces, int *pieceTypes, int pieceCount,
                               float *outX, float *outZ, int *outStoredType)
@@ -728,6 +774,8 @@ int main(void)
     float playerAngle = 0.0f;
     float cameraYaw = 0.0f;
     float cameraPitch = 0.0f;
+    Vector3 thirdPersonCameraPosition = {0.0f, 3.0f, -7.0f};
+    bool thirdPersonCameraReady = false;
     float lookSensitivity = 3.0f;
     float playerSpeed = 0.08f;
     float walkPhase = 0.0f;
@@ -2035,29 +2083,42 @@ int main(void)
                 player.z-dirZ*7
             };
 
-            camera.position = desiredCamera;
-
-            // Не даём камере проходить сквозь стены или опускаться под землю.
+            // Проверяем путь камеры отдельно от коллизии игрока.
+            // Мелкие шаги уменьшают скачки при пересечении края дома.
             Vector3 cameraStart = {player.x, player.y+1.4f, player.z};
-            for (int step = 1; step <= 24; step++)
+            Vector3 safeCamera = desiredCamera;
+            for (int step = 1; step <= 48; step++)
             {
-                float t = step/24.0f;
+                float t = step/48.0f;
                 float cx = cameraStart.x+(desiredCamera.x-cameraStart.x)*t;
                 float cy = cameraStart.y+(desiredCamera.y-cameraStart.y)*t;
                 float cz = cameraStart.z+(desiredCamera.z-cameraStart.z)*t;
 
-                if (cy < 0.25f ||
-                    IsBlockedAt(cx, cz, barrelPositions, barrelDestroyed))
+                if (cy < 0.35f ||
+                    IsCameraBlockedAt(cx, cz, barrelPositions, barrelDestroyed))
                 {
-                    float safeT = fmaxf(0.0f, t-0.06f);
-                    camera.position = (Vector3){
+                    float safeT = fmaxf(0.0f, t-0.025f);
+                    safeCamera = (Vector3){
                         cameraStart.x+(desiredCamera.x-cameraStart.x)*safeT,
-                        fmaxf(0.35f, cameraStart.y+(desiredCamera.y-cameraStart.y)*safeT),
+                        fmaxf(0.45f, cameraStart.y+(desiredCamera.y-cameraStart.y)*safeT),
                         cameraStart.z+(desiredCamera.z-cameraStart.z)*safeT
                     };
                     break;
                 }
             }
+
+            // Плавно подтягиваем камеру к безопасной точке вместо резкого
+            // телепортирования при каждом кадре столкновения.
+            if (!thirdPersonCameraReady)
+            {
+                thirdPersonCameraPosition = safeCamera;
+                thirdPersonCameraReady = true;
+            }
+            float cameraSmooth = 1.0f-expf(-GetFrameTime()*14.0f);
+            thirdPersonCameraPosition.x += (safeCamera.x-thirdPersonCameraPosition.x)*cameraSmooth;
+            thirdPersonCameraPosition.y += (safeCamera.y-thirdPersonCameraPosition.y)*cameraSmooth;
+            thirdPersonCameraPosition.z += (safeCamera.z-thirdPersonCameraPosition.z)*cameraSmooth;
+            camera.position = thirdPersonCameraPosition;
 
             camera.target = (Vector3){
                 player.x, player.y+1.4f, player.z
