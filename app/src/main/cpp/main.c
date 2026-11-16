@@ -36,6 +36,64 @@ static void DrawTree(float x, float z, float scale)
                0.62f*scale, C(35, 117, 61, 255));
 }
 
+
+// Небольшой деревянный домик в стиле заброшенного поселения.
+static void DrawRustHouse(float x, float z, float scale, int variant)
+{
+    float w = 5.2f*scale;
+    float h = 3.0f*scale;
+    float d = 4.6f*scale;
+    Color wall = (variant % 3 == 0) ? C(112, 91, 69, 255) :
+                 (variant % 3 == 1) ? C(132, 105, 76, 255) :
+                                      C(91, 99, 91, 255);
+    Color roof = (variant % 2 == 0) ? C(91, 83, 73, 255) : C(105, 78, 62, 255);
+
+    DrawCube((Vector3){x, h*0.5f, z}, w, h, d, wall);
+    // Крыша и два ската — простая низкополигональная форма.
+    DrawCube((Vector3){x, h+0.18f*scale, z}, w+0.55f*scale,
+             0.38f*scale, d+0.55f*scale, roof);
+    DrawCube((Vector3){x, h+0.48f*scale, z}, w*0.72f,
+             0.28f*scale, d+0.25f*scale, C(76, 72, 66, 255));
+
+    // Дверь и небольшие окна на фасаде.
+    DrawCube((Vector3){x, 1.05f*scale, z-d*0.505f},
+             0.85f*scale, 2.1f*scale, 0.10f*scale,
+             C(58, 48, 39, 255));
+    DrawCube((Vector3){x-w*0.30f, 1.85f*scale, z-d*0.515f},
+             0.78f*scale, 0.72f*scale, 0.12f*scale,
+             C(72, 112, 122, 255));
+    DrawCube((Vector3){x+w*0.30f, 1.85f*scale, z-d*0.515f},
+             0.78f*scale, 0.72f*scale, 0.12f*scale,
+             C(72, 112, 122, 255));
+    // Тёмные доски и короткая труба добавляют вид старого домика.
+    DrawCube((Vector3){x-w*0.18f, 1.5f*scale, z+d*0.515f},
+             0.12f*scale, 2.8f*scale, 0.10f*scale,
+             C(65, 54, 43, 255));
+    DrawCube((Vector3){x+w*0.18f, 1.5f*scale, z+d*0.515f},
+             0.12f*scale, 2.8f*scale, 0.10f*scale,
+             C(65, 54, 43, 255));
+    DrawCube((Vector3){x+w*0.30f, h+0.75f*scale, z},
+             0.42f*scale, 1.2f*scale, 0.42f*scale,
+             C(69, 65, 59, 255));
+}
+
+// Проверка, чтобы деревья не появлялись на дорогах и вплотную к домам.
+static bool IsVillageClear(float x, float z)
+{
+    if (fabsf(x) < 7.0f || fabsf(z) < 7.0f) return false;
+    if (fabsf(z + 120.0f) < 5.0f || fabsf(z - 120.0f) < 5.0f) return false;
+
+    // Посёлок располагается вдоль центральной дороги.
+    for (int i = -3; i <= 3; i++)
+    {
+        float hz = i*55.0f;
+        if (fabsf(z-hz) < 12.0f && (fabsf(x-18.0f) < 13.0f ||
+                                    fabsf(x+18.0f) < 13.0f))
+            return false;
+    }
+    return true;
+}
+
 static void DrawRock(float x, float y, float z, float size)
 {
     DrawSphere((Vector3){x, y, z}, size, C(112, 121, 119, 255));
@@ -633,21 +691,60 @@ int main(void)
         ClearBackground(C(135, 194, 235, 255));
         BeginMode3D(camera);
 
-        // Большая зелёная поляна и светлая дорожка
-        DrawPlane((Vector3){0, -0.08f, 0}, (Vector2){220, 220},
+        // Большой открытый мир: поле 520 на 520 метров.
+        DrawPlane((Vector3){0, -0.08f, 0}, (Vector2){520, 520},
                   C(83, 158, 86, 255));
-        DrawPlane((Vector3){0, -0.045f, 0}, (Vector2){5, 220},
-                  C(190, 174, 128, 255));
-        DrawPlane((Vector3){0, -0.04f, 0}, (Vector2){220, 5},
-                  C(190, 174, 128, 255));
+
+        // Пыльные дороги с тёмными обочинами, как в survival-играх.
+        DrawPlane((Vector3){0, -0.052f, 0}, (Vector2){9.5f, 520},
+                  C(116, 105, 84, 255));
+        DrawPlane((Vector3){0, -0.048f, 0}, (Vector2){7.0f, 520},
+                  C(164, 145, 111, 255));
+        DrawPlane((Vector3){0, -0.052f, 0}, (Vector2){520, 9.5f},
+                  C(116, 105, 84, 255));
+        DrawPlane((Vector3){0, -0.048f, 0}, (Vector2){520, 7.0f},
+                  C(164, 145, 111, 255));
+
+        // Две дополнительные поперечные дороги соединяют окраины.
+        DrawPlane((Vector3){0, -0.052f, -120}, (Vector2){520, 7.5f},
+                  C(116, 105, 84, 255));
+        DrawPlane((Vector3){0, -0.048f, -120}, (Vector2){520, 5.2f},
+                  C(164, 145, 111, 255));
+        DrawPlane((Vector3){0, -0.052f, 120}, (Vector2){520, 7.5f},
+                  C(116, 105, 84, 255));
+        DrawPlane((Vector3){0, -0.048f, 120}, (Vector2){520, 5.2f},
+                  C(164, 145, 111, 255));
+
+        // Небольшие домики вдоль центральной дороги.
+        int houseStep = (graphicsQuality == 0 || detailLevel >= 2) ? 2 : 1;
+        for (int i = -3; i <= 3; i += houseStep)
+        {
+            float hz = i*55.0f;
+            float sc = 0.82f + (float)((i*i+3)%3)*0.08f;
+            DrawRustHouse(-18.0f, hz, sc, i+4);
+            if (graphicsQuality >= 1)
+                DrawRustHouse(18.0f, hz+22.0f, sc*0.92f, i+7);
+        }
+
+        // Несколько дальних домиков у боковых дорог.
+        if (graphicsQuality >= 1 && detailLevel == 0)
+        {
+            DrawRustHouse(-42.0f, -120.0f, 0.78f, 2);
+            DrawRustHouse(48.0f, 120.0f, 0.84f, 1);
+            DrawRustHouse(42.0f, -120.0f, 0.80f, 0);
+        }
 
         // Дальний холмистый горизонт
-        for (int i = -3; i <= 3; i++)
+        for (int i = -5; i <= 5; i++)
         {
-            DrawSphere((Vector3){i*24.0f, -2.5f, -52.0f},
-                       18.0f, C(101, 174, 105, 255));
-            DrawSphere((Vector3){i*24.0f, -2.8f, 52.0f},
-                       19.0f, C(91, 160, 94, 255));
+            DrawSphere((Vector3){i*48.0f, -8.0f, -265.0f},
+                       34.0f, C(101, 174, 105, 255));
+            DrawSphere((Vector3){i*48.0f, -8.0f, 265.0f},
+                       34.0f, C(91, 160, 94, 255));
+            DrawSphere((Vector3){-265.0f, -8.0f, i*48.0f},
+                       34.0f, C(101, 174, 105, 255));
+            DrawSphere((Vector3){265.0f, -8.0f, i*48.0f},
+                       34.0f, C(91, 160, 94, 255));
         }
 
         // Солнце и облака
@@ -660,16 +757,14 @@ int main(void)
         if (graphicsQuality >= 2) DrawCloud(32, 17, 12, 2.1f);
 
         // Деревья вокруг поляны
-        int treeStep = (graphicsQuality == 0) ? 16 : ((graphicsQuality == 1) ? 10 : 7);
-        treeStep += detailLevel * 2;
-        int treeLimit = (graphicsQuality == 0) ? 24 : 35;
+        int treeStep = (graphicsQuality == 0) ? 28 : ((graphicsQuality == 1) ? 21 : 16);
+        treeStep += detailLevel * 3;
+        int treeLimit = 245;
         for (int x = -treeLimit; x <= treeLimit; x += treeStep)
         {
             for (int z = -treeLimit; z <= treeLimit; z += treeStep)
             {
-                if ((abs(x) < 10 && abs(z) < 10) ||
-                    (abs(x) < 5 && abs(z) < 25) ||
-                    (abs(z) < 5 && abs(x) < 25)) continue;
+                if (!IsVillageClear((float)x, (float)z)) continue;
                 float scale = 0.85f + (float)((x*x+z*z)%5)*0.07f;
                 DrawTree((float)x, (float)z, scale);
             }
