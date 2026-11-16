@@ -1233,7 +1233,7 @@ int main(void)
             {
                 if (selectedBuildType != 2 || itemCounts[6] > 0)
                 {
-                    bool placed = PlaceBuildPiece(player, playerAngle, selectedBuildType,
+                    bool placed = PlaceBuildPiece(player, cameraYaw, selectedBuildType,
                         buildPieces, buildPieceTypes, &buildPieceCount,
                         &itemCounts[4], barrelPositions, barrelDestroyed);
                     if (placed && selectedBuildType == 2) itemCounts[6]--;
@@ -1554,7 +1554,7 @@ int main(void)
             {
                 if (selectedBuildType != 2 || itemCounts[6] > 0)
                 {
-                    bool placed = PlaceBuildPiece(player, playerAngle, selectedBuildType,
+                    bool placed = PlaceBuildPiece(player, cameraYaw, selectedBuildType,
                         buildPieces, buildPieceTypes, &buildPieceCount,
                         &itemCounts[4], barrelPositions, barrelDestroyed);
                     if (placed && selectedBuildType == 2) itemCounts[6]--;
@@ -2262,8 +2262,9 @@ int main(void)
 
         if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
-            float previewX=roundf((player.x+sinf(playerAngle)*3.2f)/2.5f)*2.5f;
-            float previewZ=roundf((player.z-cosf(playerAngle)*3.2f)/2.5f)*2.5f;
+            // Предпросмотр направлен туда же, куда смотрит камера, и совпадает с местом установки.
+            float previewX=roundf((player.x+sinf(cameraYaw)*3.2f)/2.5f)*2.5f;
+            float previewZ=roundf((player.z-cosf(cameraYaw)*3.2f)/2.5f)*2.5f;
             int previewCost=selectedBuildType==0?30:((selectedBuildType==1||selectedBuildType==3)?15:0);
             bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
             if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
