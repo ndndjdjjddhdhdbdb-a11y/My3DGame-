@@ -961,7 +961,7 @@ int main(void)
                   &buildPieceCount, &itemCounts[4]);
     for (int tx=-178; tx<=178 && treeCount<MAX_TREES; tx+=34)
         for (int tz=-178; tz<=178 && treeCount<MAX_TREES; tz+=34)
-            if (IsVillageClear((float)tx,(float)tz)) { treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz}; treeHealth[treeCount++]=3; }
+            if (tx*tx+tz*tz < 180*180 && IsVillageClear((float)tx,(float)tz)) { treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz}; treeHealth[treeCount++]=3; }
 
     while (!WindowShouldClose())
     {
