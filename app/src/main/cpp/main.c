@@ -342,6 +342,12 @@ int main(void)
     float playerSpeed = 0.08f;
     float walkPhase = 0.0f;
 
+    // Система выживания: запас еды и воды постепенно уменьшается.
+    float foodLevel = 100.0f;
+    float waterLevel = 100.0f;
+    const float foodDrainRate = 0.035f;
+    const float waterDrainRate = 0.055f;
+
     bool playerMoving = false;
     bool firstPerson = false;
     bool settingsOpen = false;
@@ -454,6 +460,14 @@ int main(void)
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
         if (attackAnimation > 0.0f) attackAnimation -= frameTime;
         if (attackAnimation < 0.0f) attackAnimation = 0.0f;
+
+        if (!mainMenuOpen && !settingsOpen && !editControls)
+        {
+            foodLevel -= foodDrainRate*frameTime;
+            waterLevel -= waterDrainRate*frameTime;
+            if (foodLevel < 0.0f) foodLevel = 0.0f;
+            if (waterLevel < 0.0f) waterLevel = 0.0f;
+        }
         attackRequested = false;
         screenWidth = GetScreenWidth();
         screenHeight = GetScreenHeight();
@@ -1146,8 +1160,12 @@ int main(void)
                         sinf(cameraYaw)*moveX -
                         cosf(cameraYaw)*moveForward;
 
-                    float nextX = player.x + worldMoveX*playerSpeed;
-                    float nextZ = player.z + worldMoveZ*playerSpeed;
+                    float survivalSpeed = playerSpeed;
+                    if (foodLevel < 20.0f || waterLevel < 20.0f)
+                        survivalSpeed *= 0.72f;
+
+                    float nextX = player.x + worldMoveX*survivalSpeed;
+                    float nextZ = player.z + worldMoveZ*survivalSpeed;
 
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
                     if (!IsBlockedAt(nextX, player.z,
@@ -1351,6 +1369,19 @@ int main(void)
                 {
                     barrelHealth[targetedBarrel] = 0;
                     barrelDestroyed[targetedBarrel] = true;
+
+                    // В бочках находятся припасы: нечётные дают воду,
+                    // чётные — еду.
+                    if (targetedBarrel % 2 == 0)
+                    {
+                        waterLevel += 30.0f;
+                        if (waterLevel > 100.0f) waterLevel = 100.0f;
+                    }
+                    else
+                    {
+                        foodLevel += 30.0f;
+                        if (foodLevel > 100.0f) foodLevel = 100.0f;
+                    }
                     targetedBarrel = -1;
                 }
             }
@@ -1656,10 +1687,34 @@ int main(void)
         if (!mainMenuOpen)
         {
             DrawRectangleRounded(
-                (Rectangle){18, 84, 210, 48},
-                0.35f, 12,
-                C(20, 35, 48, 165)
+                (Rectangle){18, 78, 224, 66},
+                0.22f, 12,
+                C(20, 35, 48, 190)
             );
+
+            DrawText("FOOD", 28, 86, 12, RAYWHITE);
+            DrawRectangleRounded(
+                (Rectangle){82, 88, 148, 9},
+                0.5f, 6, C(65, 70, 72, 230)
+            );
+            DrawRectangleRounded(
+                (Rectangle){82, 88, 148*(foodLevel/100.0f), 9},
+                0.5f, 6, C(215, 160, 75, 255)
+            );
+
+            DrawText("WATER", 28, 111, 12, RAYWHITE);
+            DrawRectangleRounded(
+                (Rectangle){82, 113, 148, 9},
+                0.5f, 6, C(65, 70, 72, 230)
+            );
+            DrawRectangleRounded(
+                (Rectangle){82, 113, 148*(waterLevel/100.0f), 9},
+                0.5f, 6, C(75, 170, 235, 255)
+            );
+
+            if (foodLevel < 20.0f || waterLevel < 20.0f)
+                DrawText("LOW SUPPLIES - FIND BARRELS", 28, 128, 10,
+                         C(255, 190, 105, 255));
 
             DrawCircle(42, 40, 7, C(103, 230, 135, 255));
 
