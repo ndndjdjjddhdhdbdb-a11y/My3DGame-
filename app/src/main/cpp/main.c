@@ -6,6 +6,8 @@
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
 #define MAX_BUILD_PIECES 64
+#define MAX_TREES 256
+#define MAX_WOOD_DROPS 64
 
 typedef struct BuildSaveData
 {
@@ -58,6 +60,13 @@ static void LoadBuildData(Vector3 pieces[MAX_BUILD_PIECES], int types[MAX_BUILD_
 }
 
 
+
+static int FindNearestWoodDrop(Vector3 player, Vector3 drops[MAX_WOOD_DROPS], bool active[MAX_WOOD_DROPS])
+{
+    int nearest=-1; float best=2.8f*2.8f;
+    for(int i=0;i<MAX_WOOD_DROPS;i++){if(!active[i])continue;float dx=drops[i].x-player.x,dz=drops[i].z-player.z,d2=dx*dx+dz*dz;if(d2<best){best=d2;nearest=i;}}
+    return nearest;
+}
 
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -797,6 +806,11 @@ int main(void)
     Rectangle inventoryButton = {0};
     Rectangle buildButton = {0};
     Rectangle buildFloorButton = {0}, buildWallButton = {0}, buildDoorButton = {0}, buildPlaceButton = {0};
+    Rectangle takeButton = {0};
+    Vector3 treePositions[MAX_TREES] = {{0}}, woodDrops[MAX_WOOD_DROPS] = {{0}};
+    int treeHealth[MAX_TREES] = {0}, treeCount = 0;
+    bool treeChopped[MAX_TREES] = {false}, woodDropActive[MAX_WOOD_DROPS] = {false};
+    int nearbyWoodDrop = -1, targetedTree = -1;
     Vector3 buildPieces[MAX_BUILD_PIECES] = {{0}};
     int buildPieceTypes[MAX_BUILD_PIECES] = {0};
     bool buildDoorOpen[MAX_BUILD_PIECES] = {false};
@@ -838,6 +852,9 @@ int main(void)
 
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
+    for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=34)
+        for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=34)
+            if (IsVillageClear((float)tx,(float)tz)) { treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz}; treeHealth[treeCount++]=3; }
 
     while (!WindowShouldClose())
     {
@@ -1030,6 +1047,7 @@ int main(void)
         buildWallButton = (Rectangle){22+buildChoiceW, 220, buildChoiceW, 38};
         buildDoorButton = (Rectangle){30+buildChoiceW*2, 220, buildChoiceW, 38};
         buildPlaceButton = (Rectangle){14, 266, 142, 42};
+        takeButton = (Rectangle){screenWidth/2.0f-76.0f, screenHeight-150.0f, 152.0f, 46.0f};
 
         int touchCount = GetTouchPointCount();
 
@@ -1271,6 +1289,8 @@ int main(void)
                     }
                 }
             }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
+            { itemCounts[4] += 3; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
             {
@@ -1565,6 +1585,8 @@ int main(void)
                     }
                 }
             }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
+            { itemCounts[4] += 3; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
             {
@@ -1990,7 +2012,8 @@ int main(void)
             };
         }
 
-        targetedBarrel = -1;
+        targetedBarrel = -1; targetedTree = -1;
+        nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive);
         Vector3 aimOrigin = {player.x, player.y+1.6f, player.z};
         Vector3 aimDirection = {dirX, dirY, dirZ};
         float closestBarrelDistance = 9999.0f;
@@ -2017,6 +2040,9 @@ int main(void)
                 targetedBarrel = b;
             }
         }
+
+        float closestTreeDistance=9999.0f;
+        for(int t=0;t<treeCount;t++){if(treeChopped[t])continue;float dx=treePositions[t].x-aimOrigin.x,dy=1.6f-aimOrigin.y,dz=treePositions[t].z-aimOrigin.z;float d=sqrtf(dx*dx+dy*dy+dz*dz);if(d<0.1f||d>3.2f)continue;float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;if(dot>0.93f&&d<closestTreeDistance){closestTreeDistance=d;targetedTree=t;}}
 
         if (attackRequested && attackCooldown <= 0.0f &&
             !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
@@ -2060,6 +2086,11 @@ int main(void)
                                   buildPieceCount, itemCounts[4]);
                     targetedBarrel = -1;
                 }
+            }
+            else if (targetedTree >= 0 && !treeChopped[targetedTree])
+            {
+                treeHealth[targetedTree]--;
+                if(treeHealth[targetedTree]<=0){treeChopped[targetedTree]=true;for(int d=0;d<MAX_WOOD_DROPS;d++)if(!woodDropActive[d]){woodDrops[d]=treePositions[targetedTree];woodDropActive[d]=true;break;}}
             }
         }
 
@@ -2294,28 +2325,8 @@ int main(void)
         float treeView = fminf(chunkDistance*50.0f, 245.0f);
         float treeView2 = treeView*treeView;
 
-        for (int x = -treeLimit; x <= treeLimit; x += treeStep)
-        {
-            for (int z = -treeLimit; z <= treeLimit; z += treeStep)
-            {
-                float tx = (float)x-player.x;
-                float tz = (float)z-player.z;
-
-                if (tx*tx+tz*tz > treeView2)
-                    continue;
-
-                if (!IsVillageClear((float)x, (float)z))
-                    continue;
-
-                float scale =
-                    0.85f+(float)((x*x+z*z)%5)*0.07f;
-
-                DrawTree(
-                    (float)x, (float)z,
-                    scale, graphicsQuality
-                );
-            }
-        }
+        for(int t=0;t<treeCount;t++){if(treeChopped[t])continue;float tx=treePositions[t].x-player.x,tz=treePositions[t].z-player.z;if(tx*tx+tz*tz>treeView2)continue;int ix=(int)treePositions[t].x,iz=(int)treePositions[t].z;float scale=0.85f+(float)((ix*ix+iz*iz)%5)*0.07f;DrawTree(treePositions[t].x,treePositions[t].z,scale,graphicsQuality);}
+        for(int d=0;d<MAX_WOOD_DROPS;d++)if(woodDropActive[d]){Vector3 p=woodDrops[d];DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z},(Vector3){p.x+0.48f,0.16f,p.z},0.16f,0.16f,8,C(126,82,47,255));DrawCylinderEx((Vector3){p.x-0.48f,0.16f,p.z+0.22f},(Vector3){p.x+0.48f,0.16f,p.z+0.22f},0.13f,0.13f,8,C(151,103,61,255));}
 
         if (graphicsQuality >= 1)
         {
@@ -2533,6 +2544,8 @@ int main(void)
                 joystickRadius,
                 C(20, 35, 48, 105)
             );
+
+            if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen) DrawSurvivalButton(takeButton, "TAKE WOOD +3", 13, true);
 
             DrawCircleLines(
                 (int)joystickPosition.x,
@@ -3218,6 +3231,8 @@ int main(void)
                 cameraButton, 3,
                 C(80, 200, 255, 255)
             );
+
+            if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen) DrawSurvivalButton(takeButton, "TAKE WOOD +3", 13, true);
 
             DrawCircleLines(
                 (int)joystickPosition.x,
