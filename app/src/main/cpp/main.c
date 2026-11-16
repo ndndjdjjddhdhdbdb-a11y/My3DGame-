@@ -385,7 +385,20 @@ int main(void)
             );
         }
 
-        EndDrawing();
+        EndDrawing(DrawRectangleRounded(
+    closeButton,
+    0.2f,
+    8,
+    RED
+);
+
+DrawText(
+    "CLOSE",
+    closeButton.x + 115,
+    closeButton.y + 20,
+    25,
+    WHITE
+););
     }
 
     CloseWindow();
