@@ -50,7 +50,7 @@ static void LoadBuildData(Vector3 pieces[MAX_BUILD_PIECES], int types[MAX_BUILD_
             *count = data.count; *wood = data.woodCount;
             for (int i = 0; i < data.count; i++)
             {
-                if (data.types[i] < 0 || data.types[i] > 3) continue;
+                if (data.types[i] < 0 || data.types[i] > 4) continue;
                 pieces[i] = (Vector3){data.x[i], 0.0f, data.z[i]};
                 types[i] = data.types[i]; doors[i] = data.doorOpen[i] != 0;
             }
@@ -463,6 +463,53 @@ static bool IsBlockedAt(float x, float z,
     return false;
 }
 
+static void GetBuildPlacement(Vector3 player, float angle, int type,
+                              Vector3 *pieces, int *pieceTypes, int pieceCount,
+                              float *outX, float *outZ, int *outStoredType)
+{
+    float x = roundf((player.x + sinf(angle)*3.2f)/2.5f)*2.5f;
+    float z = roundf((player.z - cosf(angle)*3.2f)/2.5f)*2.5f;
+    int storedType = type;
+
+    // Стена должна вставать на край уже установленного фундамента,
+    // а не в его центр. Поворот стены выбирается по стороне подхода.
+    if (type == 1)
+    {
+        int foundation = -1;
+        float nearest = 2.8f*2.8f;
+        for (int i = 0; i < pieceCount; i++)
+        {
+            if (pieceTypes[i] != 0) continue;
+            float dx = x-pieces[i].x;
+            float dz = z-pieces[i].z;
+            float d2 = dx*dx + dz*dz;
+            if (d2 < nearest) { nearest = d2; foundation = i; }
+        }
+
+        if (foundation >= 0)
+        {
+            float dx = player.x-pieces[foundation].x;
+            float dz = player.z-pieces[foundation].z;
+            if (fabsf(dx) > fabsf(dz))
+            {
+                x = pieces[foundation].x + (dx >= 0.0f ? 1.25f : -1.25f);
+                z = pieces[foundation].z;
+                storedType = 4; // стена повёрнута вдоль оси Z
+            }
+            else
+            {
+                x = pieces[foundation].x;
+                z = pieces[foundation].z + (dz >= 0.0f ? 1.25f : -1.25f);
+                storedType = 1; // стена вдоль оси X
+            }
+        }
+    }
+
+    *outX = x;
+    *outZ = z;
+    *outStoredType = storedType;
+}
+
 static bool PlaceBuildPiece(Vector3 player, float angle, int type,
                                Vector3 *pieces, int *pieceTypes, int *pieceCount,
                                int *woodCount, Vector3 *barrels,
@@ -471,17 +518,20 @@ static bool PlaceBuildPiece(Vector3 player, float angle, int type,
     if (*pieceCount >= MAX_BUILD_PIECES) return false;
     int cost = (type == 0) ? 30 : ((type == 1 || type == 3) ? 15 : 0);
     if (type != 2 && *woodCount < cost) return false;
-    float x = roundf((player.x + sinf(angle)*3.2f)/2.5f)*2.5f;
-    float z = roundf((player.z - cosf(angle)*3.2f)/2.5f)*2.5f;
+
+    float x, z;
+    int storedType;
+    GetBuildPlacement(player, angle, type, pieces, pieceTypes, *pieceCount,
+                      &x, &z, &storedType);
     if (fabsf(x-player.x) < 2.0f && fabsf(z-player.z) < 2.0f) return false;
     if (IsBlockedAt(x, z, barrels, barrelDestroyed)) return false;
     for (int i = 0; i < *pieceCount; i++)
     {
         float dx = pieces[i].x-x, dz = pieces[i].z-z;
-        if (dx*dx+dz*dz < 0.01f && pieceTypes[i] == type) return false;
+        if (dx*dx+dz*dz < 0.01f && pieceTypes[i] == storedType) return false;
     }
     pieces[*pieceCount] = (Vector3){x, 0.0f, z};
-    pieceTypes[*pieceCount] = type;
+    pieceTypes[*pieceCount] = storedType;
     (*pieceCount)++;
     if (type != 2) *woodCount -= cost;
     return true;
@@ -2263,18 +2313,22 @@ int main(void)
         if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
             // Предпросмотр направлен туда же, куда смотрит камера, и совпадает с местом установки.
-            float previewX=roundf((player.x+sinf(cameraYaw)*3.2f)/2.5f)*2.5f;
-            float previewZ=roundf((player.z-cosf(cameraYaw)*3.2f)/2.5f)*2.5f;
+            float previewX, previewZ;
+            int previewStoredType;
+            GetBuildPlacement(player, cameraYaw, selectedBuildType,
+                              buildPieces, buildPieceTypes, buildPieceCount,
+                              &previewX, &previewZ, &previewStoredType);
             int previewCost=selectedBuildType==0?30:((selectedBuildType==1||selectedBuildType==3)?15:0);
             bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
             if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
             if(IsBlockedAt(previewX,previewZ,barrelPositions,barrelDestroyed))previewValid=false;
-            for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==selectedBuildType)previewValid=false;
+            for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==previewStoredType)previewValid=false;
             Color ghost=previewValid?C(90,230,140,115):C(240,75,65,115);
             float gy=selectedBuildType==0?0.14f:(selectedBuildType==1?1.25f:(selectedBuildType==3?2.55f:1.1f));
-            float gw=(selectedBuildType==0||selectedBuildType==3)?2.5f:(selectedBuildType==1?2.4f:1.35f);
+            float gw=(selectedBuildType==0||selectedBuildType==3)?2.5f:(selectedBuildType==1?(previewStoredType==4?0.20f:2.4f):1.35f);
             float gh=selectedBuildType==0?0.20f:(selectedBuildType==1?2.5f:(selectedBuildType==3?0.18f:2.2f));
             float gd=(selectedBuildType==0||selectedBuildType==3)?2.5f:0.20f;
+            if(selectedBuildType==1 && previewStoredType==4) gd=2.4f;
             DrawCube((Vector3){previewX,gy,previewZ},gw,gh,gd,ghost);
             DrawCubeWires((Vector3){previewX,gy,previewZ},gw,gh,gd,previewValid?GREEN:RED);
         }
@@ -2287,10 +2341,16 @@ int main(void)
                 DrawCube((Vector3){p.x, 0.12f, p.z}, 2.4f, 0.20f, 2.4f, C(133, 94, 58, 255));
                 DrawCube((Vector3){p.x, 0.235f, p.z}, 2.25f, 0.035f, 2.25f, C(166, 124, 77, 255));
             }
-            else if (buildPieceTypes[i] == 1)
+            else if (buildPieceTypes[i] == 1 || buildPieceTypes[i] == 4)
             {
-                DrawCube((Vector3){p.x, 1.25f, p.z}, 2.4f, 2.5f, 0.20f, C(128, 91, 57, 255));
-                DrawCube((Vector3){p.x, 1.25f, p.z-0.115f}, 2.15f, 2.25f, 0.025f, C(157, 113, 70, 255));
+                bool rotatedWall = buildPieceTypes[i] == 4;
+                float wallW = rotatedWall ? 0.20f : 2.4f;
+                float wallD = rotatedWall ? 2.4f : 0.20f;
+                DrawCube((Vector3){p.x, 1.25f, p.z}, wallW, 2.5f, wallD, C(128, 91, 57, 255));
+                DrawCube((Vector3){p.x+(rotatedWall ? -0.115f : 0.0f), 1.25f,
+                                   p.z+(rotatedWall ? 0.0f : -0.115f)},
+                         rotatedWall ? 0.025f : 2.15f, 2.25f,
+                         rotatedWall ? 2.15f : 0.025f, C(157, 113, 70, 255));
             }
             else if (buildPieceTypes[i] == 3)
             {
@@ -2471,12 +2531,18 @@ int main(void)
         // когда руки персонажа могут закрывать 3D-модель на земле.
         if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
         {
-            float px = roundf((player.x+sinf(cameraYaw)*3.2f)/2.5f)*2.5f;
-            float pz = roundf((player.z-cosf(cameraYaw)*3.2f)/2.5f)*2.5f;
-            float half = (selectedBuildType == 1 || selectedBuildType == 2) ? 1.2f : 1.25f;
+            float px, pz;
+            int hudStoredType;
+            GetBuildPlacement(player, cameraYaw, selectedBuildType,
+                              buildPieces, buildPieceTypes, buildPieceCount,
+                              &px, &pz, &hudStoredType);
+            float halfX = (selectedBuildType == 1) ? (hudStoredType == 4 ? 0.10f : 1.2f) :
+                          ((selectedBuildType == 2) ? 0.68f : 1.25f);
+            float halfZ = (selectedBuildType == 1) ? (hudStoredType == 4 ? 1.2f : 0.10f) :
+                          ((selectedBuildType == 2) ? 0.10f : 1.25f);
             Vector3 corners[4] = {
-                {px-half, 0.04f, pz-half}, {px+half, 0.04f, pz-half},
-                {px+half, 0.04f, pz+half}, {px-half, 0.04f, pz+half}
+                {px-halfX, 0.04f, pz-halfZ}, {px+halfX, 0.04f, pz-halfZ},
+                {px+halfX, 0.04f, pz+halfZ}, {px-halfX, 0.04f, pz+halfZ}
             };
             Color markerColor = (selectedBuildType == 2 ? itemCounts[6] > 0 :
                 itemCounts[4] >= (selectedBuildType == 0 ? 30 : 15)) ?
