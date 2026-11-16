@@ -475,8 +475,11 @@ static void GetBuildPlacement(Vector3 player, float angle, int type,
     // а не в его центр. Поворот стены выбирается по стороне подхода.
     if (type == 1)
     {
+        // Стена разрешена только рядом с существующим фундаментом.
+        // Ищем фундамент около точки прицеливания, а не разрешаем
+        // оставить стену на произвольной клетке в воздухе.
         int foundation = -1;
-        float nearest = 2.8f*2.8f;
+        float nearest = 4.25f*4.25f;
         for (int i = 0; i < pieceCount; i++)
         {
             if (pieceTypes[i] != 0) continue;
@@ -486,21 +489,28 @@ static void GetBuildPlacement(Vector3 player, float angle, int type,
             if (d2 < nearest) { nearest = d2; foundation = i; }
         }
 
-        if (foundation >= 0)
+        if (foundation < 0)
         {
+            storedType = -1; // нет опоры — предпросмотр будет красным
+        }
+        else
+        {
+            // Выбираем ближайшую из четырёх сторон фундамента.
+            // Направление определяется положением игрока, поэтому
+            // игроку достаточно подойти к нужной стороне и нажать.
             float dx = player.x-pieces[foundation].x;
             float dz = player.z-pieces[foundation].z;
             if (fabsf(dx) > fabsf(dz))
             {
                 x = pieces[foundation].x + (dx >= 0.0f ? 1.25f : -1.25f);
                 z = pieces[foundation].z;
-                storedType = 4; // стена повёрнута вдоль оси Z
+                storedType = 4;
             }
             else
             {
                 x = pieces[foundation].x;
                 z = pieces[foundation].z + (dz >= 0.0f ? 1.25f : -1.25f);
-                storedType = 1; // стена вдоль оси X
+                storedType = 1;
             }
         }
     }
@@ -523,6 +533,7 @@ static bool PlaceBuildPiece(Vector3 player, float angle, int type,
     int storedType;
     GetBuildPlacement(player, angle, type, pieces, pieceTypes, *pieceCount,
                       &x, &z, &storedType);
+    if (storedType < 0) return false;
     if (fabsf(x-player.x) < 2.0f && fabsf(z-player.z) < 2.0f) return false;
     if (IsBlockedAt(x, z, barrels, barrelDestroyed)) return false;
     for (int i = 0; i < *pieceCount; i++)
@@ -2320,6 +2331,7 @@ int main(void)
                               &previewX, &previewZ, &previewStoredType);
             int previewCost=selectedBuildType==0?30:((selectedBuildType==1||selectedBuildType==3)?15:0);
             bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
+            if(previewStoredType<0)previewValid=false;
             if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
             if(IsBlockedAt(previewX,previewZ,barrelPositions,barrelDestroyed))previewValid=false;
             for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==previewStoredType)previewValid=false;
