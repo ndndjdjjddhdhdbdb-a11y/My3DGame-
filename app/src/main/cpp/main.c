@@ -1603,8 +1603,6 @@ int main(void)
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
             { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
-            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
-            { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
             { itemCounts[4] += 15; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
@@ -1907,6 +1905,8 @@ int main(void)
                     }
                 }
             }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
+            { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
             { itemCounts[4] += 15; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
