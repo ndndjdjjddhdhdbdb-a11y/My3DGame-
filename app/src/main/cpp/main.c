@@ -651,13 +651,22 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawCube(PlayerPoint(player, angle, 0, 0.565f, -0.012f),
              0.49f, 0.035f, 0.375f, underwearDark);
 
-    // Торс остаётся без футболки, жилета и рюкзака.
-    DrawCylinder(PlayerPoint(player, angle, 0, 1.17f+bob, 0),
-                 0.285f, 0.315f, 0.76f, 12, skin);
+    // Торс от третьего лица: отдельная цельная геометрия от талии
+    // до плеч, чтобы корпус не терялся из-за тонкого цилиндра.
+    DrawCylinderEx(
+        PlayerPoint(player, angle, 0, 0.82f+bob, 0),
+        PlayerPoint(player, angle, 0, 1.48f+bob, 0),
+        0.245f,  0.315f, 12, skin
+    );
+    DrawSphere(PlayerPoint(player, angle, 0, 1.20f+bob, 0),
+               0.285f, skin);
     DrawSphere(PlayerPoint(player, angle, 0, 1.49f+bob, 0),
                0.22f, skin);
-    DrawCylinder(PlayerPoint(player, angle, 0, 1.60f+bob, 0),
-                 0.105f, 0.105f, 0.20f, 10, skin);
+    DrawCylinderEx(
+        PlayerPoint(player, angle, 0, 1.45f+bob, 0),
+        PlayerPoint(player, angle, 0, 1.66f+bob, 0),
+        0.12f, 0.105f, 10, skin
+    );
 
     // Руки полностью без рукавов.
     Vector3 shoulderL = PlayerPoint(player, angle, -0.36f, 1.42f+bob, 0);
