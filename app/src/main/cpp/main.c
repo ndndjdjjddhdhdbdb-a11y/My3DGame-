@@ -74,7 +74,7 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
 }
 
 
-#define SETTINGS_STORAGE_VERSION 1
+#define SETTINGS_STORAGE_VERSION 2
 #define SETTINGS_STORAGE_SLOTS 129
 
 static const char *GetSettingsFilePath(void)
@@ -1408,18 +1408,18 @@ int main(void)
                 if (!touchedHotbar)
                 {
                     if (pos.x < screenWidth*0.48f &&
-                        pos.y > screenHeight*0.25f)
+                        pos.y > screenHeight*0.18f)
                     {
                         float dx = pos.x-joystickPosition.x;
                         float dy = pos.y-joystickPosition.y;
 
-                        if (sqrtf(dx*dx+dy*dy) < joystickRadius+150.0f)
+                        if (sqrtf(dx*dx+dy*dy) < joystickRadius+260.0f)
                         {
                             joystickActive = true;
                             joystickTouchId = id;
                         }
                     }
-                    else if (pos.x >= screenWidth*0.48f && pos.y > 155.0f)
+                    else if (pos.x >= screenWidth*0.48f && pos.y > screenHeight*0.12f)
                     {
                         lookTouchId = id;
                         previousLookPosition = pos;
@@ -1558,18 +1558,18 @@ int main(void)
             else
             {
                 if (pos.x < screenWidth*0.48f &&
-                    pos.y > screenHeight*0.25f)
+                    pos.y > screenHeight*0.18f)
                 {
                     float dx = pos.x-joystickPosition.x;
                     float dy = pos.y-joystickPosition.y;
 
-                    if (sqrtf(dx*dx+dy*dy) < joystickRadius+100)
+                    if (sqrtf(dx*dx+dy*dy) < joystickRadius+260)
                     {
                         joystickActive = true;
                         joystickTouchId = id;
                     }
                 }
-                else if (pos.x > screenWidth*0.48f && pos.y > 155)
+                else if (pos.x > screenWidth*0.48f && pos.y > screenHeight*0.12f)
                 {
                     lookTouchId = id;
                     previousLookPosition = pos;
