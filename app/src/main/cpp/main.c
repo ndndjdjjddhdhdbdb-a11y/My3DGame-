@@ -107,11 +107,12 @@ int main(void)
                     editJoystick = false;
                 }
                 else if (CheckCollisionPointRec(pointer, closeButton))
-                {
-                    settingsOpen = false;
-                    editJoystick = false;
-                    joystickActive = false;
-                }
+{
+    settingsOpen = false;
+    editJoystick = false;
+    joystickActive = false;
+    pointerWasDown = true;
+}
             }
             else
             {
