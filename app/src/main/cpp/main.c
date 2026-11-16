@@ -8,6 +8,12 @@
 #define MAX_BUILD_PIECES 64
 #define MAX_TREES 256
 #define MAX_WOOD_DROPS 64
+#define MAX_ORE_NODES 16
+#define MAX_ORE_DROPS 16
+
+// Текущие залежи руды также участвуют в коллизиях игрока.
+static Vector3 gOrePositions[MAX_ORE_NODES];
+static bool gOreActive[MAX_ORE_NODES];
 
 typedef struct BuildSaveData
 {
@@ -66,6 +72,29 @@ static int FindNearestWoodDrop(Vector3 player, Vector3 drops[MAX_WOOD_DROPS], bo
     int nearest=-1; float best=2.8f*2.8f;
     for(int i=0;i<MAX_WOOD_DROPS;i++){if(!active[i])continue;float dx=drops[i].x-player.x,dz=drops[i].z-player.z,d2=dx*dx+dz*dz;if(d2<best){best=d2;nearest=i;}}
     return nearest;
+}
+
+static int FindNearestOreDrop(Vector3 player, Vector3 drops[MAX_ORE_DROPS], bool active[MAX_ORE_DROPS])
+{
+    int nearest=-1; float best=2.8f*2.8f;
+    for(int i=0;i<MAX_ORE_DROPS;i++){if(!active[i])continue;float dx=drops[i].x-player.x,dz=drops[i].z-player.z,d2=dx*dx+dz*dz;if(d2<best){best=d2;nearest=i;}}
+    return nearest;
+}
+
+static Color GetOreColor(int type)
+{
+    if (type == 0) return C(184, 111, 67, 255);   // железо
+    if (type == 1) return C(48, 91, 205, 255);    // лазурит
+    if (type == 2) return C(224, 194, 49, 255);   // сера
+    return C(205, 211, 218, 255);                 // кремний
+}
+
+static const char *GetOreName(int type)
+{
+    if (type == 0) return "IRON";
+    if (type == 1) return "LAPIS";
+    if (type == 2) return "SULFUR";
+    return "SILICON";
 }
 
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
@@ -420,13 +449,22 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
                    2.2f*scale, rock);
 }
 
-// Цветные прожилки помогают отличать железо от урана издалека.
-static void DrawOreNode(float x, float z, bool uranium)
+// Небольшие отдельные залежи четырёх видов руды.
+static void DrawOreNode(float x, float z, int type)
 {
-    Color ore = uranium ? C(87, 190, 112, 255) : C(190, 112, 72, 255);
-    DrawSphere((Vector3){x, 0.22f, z}, 0.38f, C(91, 99, 96, 255));
-    DrawCube((Vector3){x-0.12f, 0.37f, z-0.10f}, 0.17f, 0.12f, 0.14f, ore);
-    DrawCube((Vector3){x+0.16f, 0.29f, z+0.11f}, 0.13f, 0.10f, 0.12f, ore);
+    Color ore = GetOreColor(type);
+    DrawSphere((Vector3){x, 0.19f, z}, 0.31f, C(79, 84, 87, 255));
+    DrawSphere((Vector3){x-0.18f, 0.16f, z+0.10f}, 0.19f, C(103, 108, 108, 255));
+    DrawSphere((Vector3){x+0.17f, 0.14f, z-0.11f}, 0.16f, C(91, 97, 98, 255));
+    DrawCube((Vector3){x-0.08f, 0.34f, z-0.08f}, 0.13f, 0.11f, 0.12f, ore);
+    DrawCube((Vector3){x+0.13f, 0.25f, z+0.10f}, 0.11f, 0.09f, 0.10f, ore);
+}
+
+static void DrawOreDrop(Vector3 p, int type)
+{
+    Color ore = GetOreColor(type);
+    DrawSphere((Vector3){p.x, 0.16f, p.z}, 0.19f, C(83, 89, 91, 255));
+    DrawCube((Vector3){p.x, 0.27f, p.z}, 0.18f, 0.15f, 0.18f, ore);
 }
 
 static void DrawCave(float x, float z)
@@ -488,6 +526,16 @@ static bool IsBlockedAt(float x, float z,
     const float playerRadius = 0.42f;
     // Берег острова: игрок не может уйти за пределы игровой карты.
     if (x*x + z*z > 260.0f*260.0f) return true;
+
+    // Маленькие рудные залежи имеют физическую коллизию.
+    for (int ore = 0; ore < MAX_ORE_NODES; ore++)
+    {
+        if (!gOreActive[ore]) continue;
+        float dx = x-gOrePositions[ore].x;
+        float dz = z-gOrePositions[ore].z;
+        float radius = playerRadius+0.48f;
+        if (dx*dx+dz*dz < radius*radius) return true;
+    }
 
     // Домики основной деревни.
     for (int i = -3; i <= 3; i++)
@@ -888,9 +936,11 @@ int main(void)
     bool buildMode = false;
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
     int selectedHotbarSlot = 0;
-    // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE.
-    const char *itemNames[8] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR", "ORF PIXCADE"};
-    int itemCounts[8] = {1, 1, 3, 3, 0, 0, 0, 1};
+    // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE,
+    // 8 IRON, 9 LAPIS, 10 SULFUR, 11 SILICON.
+    const char *itemNames[12] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR", "ORF PIXCADE",
+                                 "IRON", "LAPIS", "SULFUR", "SILICON"};
+    int itemCounts[12] = {1, 1, 3, 3, 0, 0, 0, 1, 0, 0, 0, 0};
     const int hotbarItemIds[4] = {0, 1, 2, 3};
 
     // Главное меню.
@@ -989,7 +1039,12 @@ int main(void)
     int treeBiome[MAX_TREES] = {0};
     int treeHealth[MAX_TREES] = {0}, treeCount = 0;
     bool treeChopped[MAX_TREES] = {false}, woodDropActive[MAX_WOOD_DROPS] = {false};
-    int nearbyWoodDrop = -1, targetedTree = -1;
+    Vector3 oreDrops[MAX_ORE_DROPS] = {{0}};
+    int oreDropType[MAX_ORE_DROPS] = {0}, oreDropAmount[MAX_ORE_DROPS] = {0};
+    bool oreDropActive[MAX_ORE_DROPS] = {false};
+    int oreHealth[MAX_ORE_NODES] = {0};
+    double oreRespawnAt[MAX_ORE_NODES] = {0};
+    int nearbyWoodDrop = -1, nearbyOreDrop = -1, targetedTree = -1, targetedOre = -1;
     Vector3 buildPieces[MAX_BUILD_PIECES] = {{0}};
     int buildPieceTypes[MAX_BUILD_PIECES] = {0};
     bool buildDoorOpen[MAX_BUILD_PIECES] = {false};
@@ -1031,6 +1086,7 @@ int main(void)
 
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
+    srand((unsigned int)(GetTime()*100000.0) ^ 0x51A7u);
     for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=38)
         for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=38)
             if (tx*tx+tz*tz < 248*248 && IsVillageClear((float)tx,(float)tz))
@@ -1039,6 +1095,37 @@ int main(void)
                 treeBiome[treeCount] = (tz < -82) ? 1 : ((tz > 82) ? 2 : 0);
                 treeHealth[treeCount++]=3;
             }
+
+    // По четыре залежи каждого вида. Руды размещаются вне деревни и дорог.
+    for (int ore = 0; ore < MAX_ORE_NODES; ore++)
+    {
+        int type = ore/4;
+        bool placed = false;
+        for (int attempt = 0; attempt < 250 && !placed; attempt++)
+        {
+            float angle = ((float)rand()/(float)RAND_MAX)*6.2831853f;
+            float radius = 24.0f + ((float)rand()/(float)RAND_MAX)*205.0f;
+            float x = cosf(angle)*radius, z = sinf(angle)*radius;
+            if (!IsVillageClear(x,z)) continue;
+            bool clear = true;
+            for (int t=0; t<treeCount; t++)
+            {
+                float dx=x-treePositions[t].x, dz=z-treePositions[t].z;
+                if (dx*dx+dz*dz < 16.0f) { clear=false; break; }
+            }
+            for (int b=0; b<MAX_BARRELS && clear; b++)
+            {
+                float dx=x-barrelPositions[b].x, dz=z-barrelPositions[b].z;
+                if (dx*dx+dz*dz < 36.0f) clear=false;
+            }
+            if (!clear) continue;
+            gOrePositions[ore]=(Vector3){x,0,z};
+            gOreActive[ore]=true;
+            oreHealth[ore]=(type==2)?10:((type==3)?30:15);
+            placed=true;
+        }
+        if (!placed) oreRespawnAt[ore]=GetTime()+5.0;
+    }
 
     while (!WindowShouldClose())
     {
@@ -1056,6 +1143,30 @@ int main(void)
             if (waterLevel < 0.0f) waterLevel = 0.0f;
         }
         attackRequested = false;
+        // Возрождение каждой залежи через 60 секунд в новой случайной точке.
+        for (int ore=0; ore<MAX_ORE_NODES; ore++)
+        {
+            if (gOreActive[ore] || GetTime() < oreRespawnAt[ore]) continue;
+            bool placed = false;
+            int type = ore/4;
+            for (int attempt=0; attempt<250 && !placed; attempt++)
+            {
+                float angle=((float)rand()/(float)RAND_MAX)*6.2831853f;
+                float radius=24.0f+((float)rand()/(float)RAND_MAX)*205.0f;
+                float x=cosf(angle)*radius, z=sinf(angle)*radius;
+                if (!IsVillageClear(x,z)) continue;
+                bool clear=true;
+                for(int t=0;t<treeCount;t++){float dx=x-treePositions[t].x,dz=z-treePositions[t].z;if(dx*dx+dz*dz<16.0f){clear=false;break;}}
+                for(int b=0;b<MAX_BARRELS&&clear;b++){float dx=x-barrelPositions[b].x,dz=z-barrelPositions[b].z;if(dx*dx+dz*dz<36.0f)clear=false;}
+                for(int other=0;other<MAX_ORE_NODES&&clear;other++){if(other==ore||!gOreActive[other])continue;float dx=x-gOrePositions[other].x,dz=z-gOrePositions[other].z;if(dx*dx+dz*dz<64.0f)clear=false;}
+                if(!clear)continue;
+                gOrePositions[ore]=(Vector3){x,0,z};
+                gOreActive[ore]=true;
+                oreHealth[ore]=(type==2)?10:((type==3)?30:15);
+                placed=true;
+            }
+            if(!placed) oreRespawnAt[ore]=GetTime()+5.0;
+        }
         screenWidth = GetScreenWidth();
         screenHeight = GetScreenHeight();
 
@@ -1470,9 +1581,9 @@ int main(void)
                 { itemCounts[4] -= 10; itemCounts[6]++; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
                 for (int item = 2; item <= 3; item++)
                 {
-                    float w = (invPanel.width-50.0f)/2.0f;
-                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*42, w, 38};
+                    float w = (invPanel.width-56.0f)/3.0f;
+                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
+                                   invPanel.y+72+(item/3)*42, w, 38};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -1490,6 +1601,10 @@ int main(void)
                     }
                 }
             }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
+            { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
+            { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
             { itemCounts[4] += 15; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
@@ -1772,9 +1887,9 @@ int main(void)
                                       screenWidth*0.84f, screenHeight*0.72f};
                 for (int item = 2; item <= 3; item++)
                 {
-                    float w = (invPanel.width-50.0f)/2.0f;
-                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*42, w, 38};
+                    float w = (invPanel.width-56.0f)/3.0f;
+                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
+                                   invPanel.y+72+(item/3)*42, w, 38};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -2234,8 +2349,9 @@ int main(void)
             };
         }
 
-        targetedBarrel = -1; targetedTree = -1;
+        targetedBarrel = -1; targetedTree = -1; targetedOre = -1;
         nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive);
+        nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive);
         Vector3 aimOrigin = {player.x, player.y+1.6f, player.z};
         Vector3 aimDirection = {dirX, dirY, dirZ};
         float closestBarrelDistance = 9999.0f;
@@ -2265,6 +2381,16 @@ int main(void)
 
         float closestTreeDistance=9999.0f;
         for(int t=0;t<treeCount;t++){if(treeChopped[t])continue;float dx=treePositions[t].x-aimOrigin.x,dy=1.6f-aimOrigin.y,dz=treePositions[t].z-aimOrigin.z;float d=sqrtf(dx*dx+dy*dy+dz*dz);if(d<0.1f||d>3.2f)continue;float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;if(dot>0.93f&&d<closestTreeDistance){closestTreeDistance=d;targetedTree=t;}}
+        float closestOreDistance=9999.0f;
+        for(int o=0;o<MAX_ORE_NODES;o++)
+        {
+            if(!gOreActive[o])continue;
+            float dx=gOrePositions[o].x-aimOrigin.x, dy=0.25f-aimOrigin.y, dz=gOrePositions[o].z-aimOrigin.z;
+            float d=sqrtf(dx*dx+dy*dy+dz*dz);
+            if(d<0.1f||d>2.6f)continue;
+            float dot=(dx*aimDirection.x+dy*aimDirection.y+dz*aimDirection.z)/d;
+            if(dot>0.93f&&d<closestOreDistance){closestOreDistance=d;targetedOre=o;}
+        }
 
         if (attackRequested && attackCooldown <= 0.0f &&
             !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
@@ -2313,6 +2439,29 @@ int main(void)
             {
                 treeHealth[targetedTree]--;
                 if(treeHealth[targetedTree]<=0){treeChopped[targetedTree]=true;for(int d=0;d<MAX_WOOD_DROPS;d++)if(!woodDropActive[d]){woodDrops[d]=treePositions[targetedTree];woodDropActive[d]=true;break;}}
+            }
+            else if (targetedOre >= 0 && gOreActive[targetedOre])
+            {
+                int type = targetedOre/4;
+                // Кремний добывается только киркой ORF PIXCADE.
+                if (type != 3 || itemCounts[7] > 0)
+                {
+                    oreHealth[targetedOre]--;
+                    if (oreHealth[targetedOre] <= 0)
+                    {
+                        int dropSlot=-1;
+                        for(int d=0;d<MAX_ORE_DROPS;d++)if(!oreDropActive[d]){dropSlot=d;break;}
+                        if(dropSlot>=0)
+                        {
+                            oreDrops[dropSlot]=gOrePositions[targetedOre];
+                            oreDropType[dropSlot]=type;
+                            oreDropAmount[dropSlot]=(type==0)?30:((type==1)?10:((type==2)?25:20));
+                            oreDropActive[dropSlot]=true;
+                            gOreActive[targetedOre]=false;
+                            oreRespawnAt[targetedOre]=GetTime()+60.0;
+                        }
+                    }
+                }
             }
         }
 
@@ -2567,26 +2716,13 @@ int main(void)
             if (dx*dx+dz*dz < chunkView2) DrawCave(caveSites[cv].x, caveSites[cv].z);
         }
 
-        // Рудные выходы: железо — рыжее, уран — зелёные прожилки.
-        const Vector3 ironSites[10] = {
-            {-112,0,-72}, {-145,0,42}, {-82,0,132}, {-34,0,158},
-            {78,0,-142}, {142,0,-76}, {154,0,78}, {92,0,138},
-            {-156,0,-8}, {42,0,148}
-        };
-        const Vector3 uraniumSites[5] = {
-            {118,0,-112}, {154,0,36}, {-132,0,112}, {-92,0,-142}, {32,0,-166}
-        };
-        for (int ore=0; ore<10; ore++)
+        // Все четыре вида руды появляются только в игровом мире, не на карте интерфейса.
+        for(int ore=0;ore<MAX_ORE_NODES;ore++)
         {
-            float dx=ironSites[ore].x-player.x, dz=ironSites[ore].z-player.z;
-            if (dx*dx+dz*dz < chunkView2 && graphicsQuality >= 1)
-                DrawOreNode(ironSites[ore].x, ironSites[ore].z, false);
-        }
-        for (int ore=0; ore<5; ore++)
-        {
-            float dx=uraniumSites[ore].x-player.x, dz=uraniumSites[ore].z-player.z;
-            if (dx*dx+dz*dz < chunkView2 && graphicsQuality >= 1)
-                DrawOreNode(uraniumSites[ore].x, uraniumSites[ore].z, true);
+            if(!gOreActive[ore])continue;
+            float dx=gOrePositions[ore].x-player.x, dz=gOrePositions[ore].z-player.z;
+            if(dx*dx+dz*dz<chunkView2)
+                DrawOreNode(gOrePositions[ore].x,gOrePositions[ore].z,ore/4);
         }
 
         DrawSphere(
@@ -2622,6 +2758,15 @@ int main(void)
             int iz = (int)treePositions[t].z;
             float scale = 0.85f + (float)((ix*ix+iz*iz)%5)*0.07f;
             DrawTree(treePositions[t].x, treePositions[t].z, scale, graphicsQuality, treeBiome[t]);
+        }
+
+        for (int d = 0; d < MAX_ORE_DROPS; d++)
+        {
+            if (!oreDropActive[d]) continue;
+            Vector3 p=oreDrops[d];
+            float dx=p.x-player.x, dz=p.z-player.z;
+            if(dx*dx+dz*dz>chunkView2)continue;
+            DrawOreDrop(p,oreDropType[d]);
         }
 
         for (int d = 0; d < MAX_WOOD_DROPS; d++)
@@ -2884,7 +3029,10 @@ int main(void)
                 C(20, 35, 48, 105)
             );
 
-            if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen) DrawSurvivalButton(takeButton, "TAKE WOOD +15", 13, true);
+            if (nearbyOreDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen)
+                DrawSurvivalButton(takeButton, TextFormat("TAKE %s +%d",GetOreName(oreDropType[nearbyOreDrop]),oreDropAmount[nearbyOreDrop]), 12, true);
+            else if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen)
+                DrawSurvivalButton(takeButton, "TAKE WOOD +15", 13, true);
 
             DrawCircleLines(
                 (int)joystickPosition.x,
@@ -3012,17 +3160,18 @@ int main(void)
                 DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
                 DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
-                for (int item = 0; item < 8; item++)
+                for (int item = 0; item < 12; item++)
                 {
-                    float w = (invPanel.width-50.0f)/2.0f;
-                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*42, w, 38};
+                    float w = (invPanel.width-56.0f)/3.0f;
+                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
+                                   invPanel.y+72+(item/3)*42, w, 38};
                     DrawRectangleRounded(r, 0.12f, 8,
                         (item == 2 || item == 3) ? C(24, 61, 86, 255) : C(19, 42, 67, 255));
                     DrawRectangleRoundedLinesEx(r, 0.12f, 8, 1.5f, C(100, 170, 215, 230));
-                    DrawText(itemNames[item], (int)r.x+9, (int)r.y+6, 13, RAYWHITE);
-                    DrawText(TextFormat("COUNT: %d", itemCounts[item]),
-                        (int)r.x+9, (int)r.y+25, 10, C(160, 205, 235, 255));
+                    int labelSize = (item == 7) ? 9 : 11;
+                    DrawText(itemNames[item], (int)r.x+5, (int)r.y+6, labelSize, RAYWHITE);
+                    DrawText(TextFormat("x%d", itemCounts[item]),
+                        (int)r.x+5, (int)r.y+25, 10, C(160, 205, 235, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
                 DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+242,
