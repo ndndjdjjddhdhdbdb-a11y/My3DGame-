@@ -10,6 +10,69 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
+#define SETTINGS_STORAGE_VERSION 1
+
+static void SaveGameSettings(Vector2 joystickPosition, float joystickRadius,
+                             Rectangle settingsButton, Rectangle cameraButton,
+                             Vector2 actionCenters[3], float actionScale[3],
+                             int actionAlpha[3], float sensitivity,
+                             int quality, int fps, int details,
+                             int resolution, int chunks)
+{
+    SaveStorageValue(100, SETTINGS_STORAGE_VERSION);
+    SaveStorageValue(101, (int)(joystickPosition.x*10.0f));
+    SaveStorageValue(102, (int)(joystickPosition.y*10.0f));
+    SaveStorageValue(103, (int)(joystickRadius*10.0f));
+    SaveStorageValue(104, (int)(settingsButton.x*10.0f));
+    SaveStorageValue(105, (int)(settingsButton.y*10.0f));
+    SaveStorageValue(106, (int)(cameraButton.x*10.0f));
+    SaveStorageValue(107, (int)(cameraButton.y*10.0f));
+    for (int i = 0; i < 3; i++)
+    {
+        SaveStorageValue(110+i*4, (int)(actionCenters[i].x*10.0f));
+        SaveStorageValue(111+i*4, (int)(actionCenters[i].y*10.0f));
+        SaveStorageValue(112+i*4, (int)(actionScale[i]*1000.0f));
+        SaveStorageValue(113+i*4, actionAlpha[i]);
+    }
+    SaveStorageValue(123, (int)(sensitivity*100.0f));
+    SaveStorageValue(124, quality);
+    SaveStorageValue(125, fps);
+    SaveStorageValue(126, details);
+    SaveStorageValue(127, resolution);
+    SaveStorageValue(128, chunks);
+}
+
+static void LoadGameSettings(Vector2 *joystickPosition, float *joystickRadius,
+                             Rectangle *settingsButton, Rectangle *cameraButton,
+                             Vector2 actionCenters[3], float actionScale[3],
+                             int actionAlpha[3], float *sensitivity,
+                             int *quality, int *fps, int *details,
+                             int *resolution, int *chunks)
+{
+    if (LoadStorageValue(100) != SETTINGS_STORAGE_VERSION) return;
+
+    joystickPosition->x = LoadStorageValue(101)/10.0f;
+    joystickPosition->y = LoadStorageValue(102)/10.0f;
+    *joystickRadius = LoadStorageValue(103)/10.0f;
+    settingsButton->x = LoadStorageValue(104)/10.0f;
+    settingsButton->y = LoadStorageValue(105)/10.0f;
+    cameraButton->x = LoadStorageValue(106)/10.0f;
+    cameraButton->y = LoadStorageValue(107)/10.0f;
+    for (int i = 0; i < 3; i++)
+    {
+        actionCenters[i].x = LoadStorageValue(110+i*4)/10.0f;
+        actionCenters[i].y = LoadStorageValue(111+i*4)/10.0f;
+        actionScale[i] = LoadStorageValue(112+i*4)/1000.0f;
+        actionAlpha[i] = LoadStorageValue(113+i*4);
+    }
+    *sensitivity = LoadStorageValue(123)/100.0f;
+    *quality = LoadStorageValue(124);
+    *fps = LoadStorageValue(125);
+    *details = LoadStorageValue(126);
+    *resolution = LoadStorageValue(127);
+    *chunks = LoadStorageValue(128);
+}
+
 
 static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, bool selected)
 {
@@ -626,6 +689,16 @@ int main(void)
     const float attackCooldownDuration = 1.0f;
     float attackAnimation = 0.0f;
 
+    LoadGameSettings(&joystickPosition, &joystickRadius,
+                     &settingsButton, &cameraButton,
+                     actionButtonCenters, actionButtonScale,
+                     actionButtonAlpha, &lookSensitivity,
+                     &graphicsQuality, &targetFps, &detailLevel,
+                     &resolutionLevel, &chunkDistance);
+    knobRadius = joystickRadius*0.42f;
+    if (targetFps < 30 || targetFps > 144) targetFps = 30;
+    SetTargetFPS(targetFps);
+
     for (int i = 0; i < 7; i++)
     {
         float hz = (i-3)*55.0f;
@@ -858,6 +931,11 @@ int main(void)
                     editControls = false;
                     dragTarget = 0;
                     dragTouchId = -1;
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 }
                 else if (CheckCollisionPointRec(pos, editSelectButtons[0]))
                     selectedActionControl = 0;
@@ -1069,6 +1147,11 @@ int main(void)
                 {
                     targetFps = 30;
                     SetTargetFPS(targetFps);
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 }
                 else if (CheckCollisionPointRec(pos, fpsButtons[1]))
                 {
@@ -1150,6 +1233,11 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, closeButton))
                 {
                     settingsOpen = false;
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 }
             }
             else
@@ -1365,6 +1453,11 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, closeButton))
                 {
                     settingsOpen = false;
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 }
             }
         }
