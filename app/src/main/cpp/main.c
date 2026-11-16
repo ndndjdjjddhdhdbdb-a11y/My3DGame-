@@ -219,41 +219,30 @@ static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
 
 static void DrawTree(float x, float z, float scale, int quality)
 {
-    DrawCylinder((Vector3){x, 0.85f*scale, z},
-                 0.18f*scale, 0.23f*scale, 1.7f*scale,
-                 8, C(112, 75, 45, 255));
-
-    DrawSphere((Vector3){x, 2.0f*scale, z},
-               0.95f*scale, C(44, 132, 69, 255));
-
-    // На низком качестве оставляем только ствол и основную крону.
-    // Дополнительные полигоны нужны лишь на средних/высоких настройках.
-    if (quality <= 0) return;
-
-    DrawSphere((Vector3){x-0.48f*scale, 1.85f*scale, z+0.08f*scale},
-               0.62f*scale, C(57, 153, 77, 255));
-
-    if (quality >= 2)
-        DrawSphere((Vector3){x+0.48f*scale, 1.88f*scale, z-0.08f*scale},
-                   0.62f*scale, C(35, 117, 61, 255));
-
-    // Светлые верхушки кроны добавляют объём деревьям.
+    // Ярусная хвойная крона и цельный ствол.
+    DrawCylinder((Vector3){x, 1.12f*scale, z},
+                 0.16f*scale, 0.23f*scale, 2.25f*scale,
+                 7, C(105, 69, 40, 255));
+    DrawCylinder((Vector3){x, 0.18f*scale, z},
+                 0.28f*scale, 0.18f*scale, 0.36f*scale,
+                 7, C(91, 59, 36, 255));
+    DrawCylinder((Vector3){x, 1.75f*scale, z},
+                 0.0f, 1.05f*scale, 1.85f*scale,
+                 7, C(35, 105, 54, 255));
+    DrawCylinder((Vector3){x, 2.30f*scale, z},
+                 0.0f, 0.82f*scale, 1.55f*scale,
+                 7, C(47, 128, 62, 255));
     if (quality >= 1)
-        DrawSphere((Vector3){x-0.16f*scale, 2.42f*scale, z-0.20f*scale},
-                   0.34f*scale, C(83, 166, 91, 255));
-
-    // Корни тоже отключены на низком качестве.
-    // Небольшие корни у основания ствола.
-    DrawCylinderEx(
-        (Vector3){x, 0.20f*scale, z},
-        (Vector3){x-0.34f*scale, 0.04f*scale, z+0.12f*scale},
-        0.10f*scale, 0.035f*scale, 6, C(99, 69, 43, 255)
-    );
-    DrawCylinderEx(
-        (Vector3){x, 0.20f*scale, z},
-        (Vector3){x+0.30f*scale, 0.04f*scale, z-0.14f*scale},
-        0.10f*scale, 0.035f*scale, 6, C(99, 69, 43, 255)
-    );
+        DrawCylinder((Vector3){x, 2.82f*scale, z},
+                     0.0f, 0.58f*scale, 1.15f*scale,
+                     7, C(66, 145, 72, 255));
+    if (quality >= 2)
+    {
+        DrawSphere((Vector3){x-0.28f*scale, 1.75f*scale, z+0.18f*scale},
+                   0.34f*scale, C(48, 119, 59, 255));
+        DrawSphere((Vector3){x+0.25f*scale, 2.25f*scale, z-0.16f*scale},
+                   0.29f*scale, C(74, 151, 78, 255));
+    }
 }
 
 static void DrawRustHouse(float x, float z, float scale, int variant)
@@ -414,9 +403,23 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
 static void DrawOreNode(float x, float z, bool uranium)
 {
     Color ore = uranium ? C(87, 190, 112, 255) : C(190, 112, 72, 255);
-    DrawRock(x, 0.42f, z, 0.72f);
-    DrawCube((Vector3){x-0.18f, 0.64f, z-0.24f}, 0.24f, 0.12f, 0.10f, ore);
-    DrawCube((Vector3){x+0.20f, 0.48f, z+0.12f}, 0.18f, 0.10f, 0.12f, ore);
+    DrawSphere((Vector3){x, 0.22f, z}, 0.38f, C(91, 99, 96, 255));
+    DrawCube((Vector3){x-0.12f, 0.37f, z-0.10f}, 0.17f, 0.12f, 0.14f, ore);
+    DrawCube((Vector3){x+0.16f, 0.29f, z+0.11f}, 0.13f, 0.10f, 0.12f, ore);
+}
+
+static void DrawCave(float x, float z)
+{
+    Color dark = C(24, 29, 31, 255);
+    Color rock = C(89, 96, 94, 255);
+    DrawCube((Vector3){x, 1.25f, z+2.1f}, 2.65f, 2.45f, 0.18f, dark);
+    DrawCube((Vector3){x-1.55f, 1.0f, z}, 0.72f, 2.0f, 4.8f, rock);
+    DrawCube((Vector3){x+1.55f, 1.0f, z}, 0.72f, 2.0f, 4.8f, rock);
+    DrawCube((Vector3){x, 2.12f, z}, 3.65f, 0.72f, 4.8f, rock);
+    DrawRock(x-1.15f, 1.85f, z-1.1f, 0.62f);
+    DrawRock(x+1.18f, 1.88f, z-0.8f, 0.58f);
+    DrawRock(x-0.65f, 2.35f, z+0.2f, 0.48f);
+    DrawRock(x+0.72f, 2.32f, z+0.1f, 0.52f);
 }
 
 static void DrawGrassPatch(float x, float z, float size, int seed)
@@ -497,6 +500,27 @@ static bool IsBlockedAt(float x, float z,
         if (fabsf(x-extra[h][0]) < 2.6f*sc+playerRadius &&
             fabsf(z-extra[h][1]) < 2.3f*sc+playerRadius)
             return true;
+    }
+
+    // Стены небольших пещер: центр входа оставлен свободным.
+    const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
+    for (int cv=0; cv<3; cv++)
+    {
+        float dx=x-caveSites[cv].x, dz=z-caveSites[cv].z;
+        if (fabsf(dz) < 2.65f && fabsf(dx) > 1.05f && fabsf(dx) < 2.15f) return true;
+        if (fabsf(dx) < 1.75f && dz > 2.15f && dz < 2.65f) return true;
+    }
+
+    const Vector3 oreSites[15] = {
+        {-112,0,-72}, {-145,0,42}, {-82,0,132}, {-34,0,158},
+        {78,0,-142}, {142,0,-76}, {154,0,78}, {92,0,138},
+        {-156,0,-8}, {42,0,148},
+        {118,0,-112}, {154,0,36}, {-132,0,112}, {-92,0,-142}, {32,0,-166}
+    };
+    for (int o=0; o<15; o++)
+    {
+        float dx=x-oreSites[o].x, dz=z-oreSites[o].z;
+        if (dx*dx+dz*dz < 0.62f*0.62f) return true;
     }
 
     // Бочки.
@@ -2504,6 +2528,13 @@ int main(void)
             if (dx*dx+dz*dz > chunkView2) continue;
             DrawMountain(mountainSites[m].x, mountainSites[m].z,
                          0.72f+(float)(m%3)*0.12f, m==3 || m==4 || m==6);
+        }
+
+        const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
+        for (int cv=0; cv<3; cv++)
+        {
+            float dx=caveSites[cv].x-player.x, dz=caveSites[cv].z-player.z;
+            if (dx*dx+dz*dz < chunkView2) DrawCave(caveSites[cv].x, caveSites[cv].z);
         }
 
         // Рудные выходы: железо — рыжее, уран — зелёные прожилки.
