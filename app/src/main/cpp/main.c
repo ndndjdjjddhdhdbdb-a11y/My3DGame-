@@ -1120,6 +1120,22 @@ int main(void)
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
                 Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
                                       screenWidth*0.84f, screenHeight*0.60f};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+236, invPanel.width-32, 38};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+280, invPanel.width-32, 38};
+                if (CheckCollisionPointRec(pos, craftAxeButton) &&
+                    itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99)
+                {
+                    itemCounts[4] -= 3;
+                    itemCounts[5] -= 2;
+                    itemCounts[0]++;
+                }
+                else if (CheckCollisionPointRec(pos, craftMedButton) &&
+                         itemCounts[4] >= 2 && itemCounts[5] >= 1 && itemCounts[1] < 99)
+                {
+                    itemCounts[4] -= 2;
+                    itemCounts[5] -= 1;
+                    itemCounts[1]++;
+                }
                 for (int item = 2; item <= 3; item++)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
@@ -2458,6 +2474,22 @@ int main(void)
                         (int)r.x+9, (int)r.y+25, 10, C(160, 205, 235, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
+                DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+224,
+                    12, C(145, 205, 240, 255));
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+242, invPanel.width-32, 34};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+282, invPanel.width-32, 34};
+                bool canCraftAxe = itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99;
+                bool canCraftMed = itemCounts[4] >= 2 && itemCounts[5] >= 1 && itemCounts[1] < 99;
+                DrawRectangleRounded(craftAxeButton, 0.16f, 8,
+                    canCraftAxe ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
+                DrawRectangleRoundedLinesEx(craftAxeButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
+                DrawText("CRAFT AXE  -  3 WOOD / 2 STONE",
+                    (int)craftAxeButton.x+10, (int)craftAxeButton.y+11, 10, RAYWHITE);
+                DrawRectangleRounded(craftMedButton, 0.16f, 8,
+                    canCraftMed ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
+                DrawRectangleRoundedLinesEx(craftMedButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
+                DrawText("CRAFT MED  -  2 WOOD / 1 STONE",
+                    (int)craftMedButton.x+10, (int)craftMedButton.y+11, 10, RAYWHITE);
                 DrawText("TAP FOOD / WATER TO CONSUME",
                     (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
                     10, C(145, 190, 220, 255));
