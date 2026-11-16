@@ -1118,6 +1118,12 @@ int main(void)
                 float dx=x-barrelPositions[b].x, dz=z-barrelPositions[b].z;
                 if (dx*dx+dz*dz < 36.0f) clear=false;
             }
+            for (int other=0; other<ore && clear; other++)
+            {
+                if (!gOreActive[other]) continue;
+                float dx=x-gOrePositions[other].x, dz=z-gOrePositions[other].z;
+                if (dx*dx+dz*dz < 64.0f) clear=false;
+            }
             if (!clear) continue;
             gOrePositions[ore]=(Vector3){x,0,z};
             gOreActive[ore]=true;
