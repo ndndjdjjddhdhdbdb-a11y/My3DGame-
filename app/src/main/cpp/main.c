@@ -415,7 +415,7 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawCube((Vector3){x,2.45f,z-2.96f},2.2f,1.15f,0.08f,C(66,104,111,230));
     DrawCube((Vector3){x-2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
     DrawCube((Vector3){x+2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
-    DrawCube((Vector3){x,1.0f,z-2.99f},1.05f,2.0f,0.12f,C(68,58,47,255));
+    DrawCube((Vector3){x+1.15f,1.0f,z-2.99f},0.75f,2.0f,0.12f,C(68,58,47,255));
     DrawCube((Vector3){x,3.95f,z-3.05f},5.4f,0.48f,0.22f,red);
     DrawCube((Vector3){x,4.15f,z+7.0f},15.0f,0.35f,11.0f,C(89,86,76,255));
     DrawCube((Vector3){x,4.36f,z+7.0f},14.7f,0.12f,10.7f,red);
@@ -451,7 +451,8 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
         if(fabsf(x)<4.25f+radius && fabsf(z+24.82f)<0.22f+radius &&
            fabsf(x)>1.35f) return true;
         if(fabsf(z+22.0f)<2.9f+radius && fabsf(x)>4.05f-radius &&
-           fabsf(x)<4.45f+radius) return true;
+           fabsf(x)<4.45f+radius &&
+           !(fabsf(x-4.55f)<0.85f && z>-25.0f && z<-22.0f)) return true;
     }
     // Опоры навеса и бензоколонки.
     const float posts[4][2]={{-6.7f,-18.9f},{6.7f,-18.9f},{-6.7f,-11.2f},{6.7f,-11.2f}};
@@ -2197,7 +2198,7 @@ int main(void)
                     if(ladderZone && moveForward>0.12f)
                     {
                         player.y+=survivalSpeed*1.15f;
-                        if(player.y>3.25f)player.y=3.25f;
+                        if(player.y>3.55f)player.y=3.55f;
                     }
                     else if(player.y>0.0f && player.y<2.8f)
                     {
