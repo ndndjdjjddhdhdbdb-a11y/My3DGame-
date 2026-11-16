@@ -2195,10 +2195,14 @@ int main(void)
                     // Подъём по лестнице: удерживай направление вперёд рядом с ней.
                     bool ladderZone=fabsf(player.x-4.55f)<1.0f &&
                                     player.z>-25.0f && player.z<-21.0f;
-                    if(ladderZone && moveForward>0.12f)
+                    if(ladderZone && fabsf(moveForward)>0.12f)
                     {
-                        player.y+=survivalSpeed*1.15f;
+                        player.y+=moveForward*survivalSpeed*1.15f;
+                        if(player.y<0.0f)player.y=0.0f;
                         if(player.y>3.55f)player.y=3.55f;
+                        // Пока карабкаемся, персонаж остаётся на лестнице.
+                        nextX=player.x;
+                        nextZ=player.z;
                     }
                     else if(player.y>0.0f && player.y<2.8f)
                     {
