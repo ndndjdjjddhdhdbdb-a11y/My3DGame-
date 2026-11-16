@@ -54,6 +54,9 @@ int main(void)
     bool firstPerson = false;
     bool settingsOpen = false;
     bool editControls = false;
+    // 0 = low, 1 = medium, 2 = high
+    int graphicsQuality = 1;
+    SetTargetFPS(45);
 
     Camera3D camera = {0};
     camera.up = (Vector3){0, 1, 0};
@@ -67,15 +70,16 @@ int main(void)
     bool joystickActive = false;
     int joystickTouchId = -1;
 
-    Rectangle settingsButton = {screenWidth - 170, 20, 150, 58};
-    Rectangle cameraButton = {screenWidth - 170, 90, 150, 58};
+    Rectangle settingsButton = {screenWidth - 190, 18, 170, 64};
+    Rectangle cameraButton = {screenWidth - 190, 92, 170, 64};
 
     float panelWidth = fminf(540, screenWidth - 30);
-    float panelHeight = 455;
+    float panelHeight = 430;
     float panelX = (screenWidth - panelWidth)/2;
     float panelY = (screenHeight - panelHeight)/2;
 
     Rectangle panel, moveButtonsButton, sizeButton, slider;
+    Rectangle lowButton, mediumButton, highButton;
     Rectangle resetButton, closeButton, doneButton;
 
     int dragTarget = 0;
@@ -100,13 +104,28 @@ int main(void)
         panelX = (screenWidth - panelWidth)/2;
         panelY = (screenHeight - panelHeight)/2;
 
+        // Keep the menu controls on-screen, even after changing orientation.
+        if (settingsButton.x + settingsButton.width > screenWidth) settingsButton.x = screenWidth-settingsButton.width-12;
+        if (settingsButton.x < 8) settingsButton.x = 8;
+        if (settingsButton.y < 8) settingsButton.y = 8;
+        if (settingsButton.y + settingsButton.height > screenHeight) settingsButton.y = screenHeight-settingsButton.height-8;
+        if (cameraButton.x + cameraButton.width > screenWidth) cameraButton.x = screenWidth-cameraButton.width-12;
+        if (cameraButton.x < 8) cameraButton.x = 8;
+        if (cameraButton.y < 8) cameraButton.y = 8;
+        if (cameraButton.y + cameraButton.height > screenHeight) cameraButton.y = screenHeight-cameraButton.height-8;
+
         panel = (Rectangle){panelX, panelY, panelWidth, panelHeight};
-        moveButtonsButton = (Rectangle){panelX+25, panelY+100, panelWidth-50, 52};
-        sizeButton = (Rectangle){panelX+25, panelY+165, panelWidth-50, 52};
-        slider = (Rectangle){panelX+45, panelY+275, panelWidth-90, 12};
-        resetButton = (Rectangle){panelX+25, panelY+365, (panelWidth-65)/2, 55};
-        closeButton = (Rectangle){panelX+40+(panelWidth-65)/2, panelY+365,
-                                  (panelWidth-65)/2, 55};
+        moveButtonsButton = (Rectangle){panelX+20, panelY+75, panelWidth-40, 44};
+        sizeButton = (Rectangle){panelX+20, panelY+128, panelWidth-40, 44};
+        float qualityGap = 8;
+        float qualityW = (panelWidth-40-qualityGap*2)/3;
+        lowButton = (Rectangle){panelX+20, panelY+184, qualityW, 46};
+        mediumButton = (Rectangle){panelX+20+qualityW+qualityGap, panelY+184, qualityW, 46};
+        highButton = (Rectangle){panelX+20+(qualityW+qualityGap)*2, panelY+184, qualityW, 46};
+        slider = (Rectangle){panelX+40, panelY+292, panelWidth-80, 12};
+        resetButton = (Rectangle){panelX+20, panelY+355, (panelWidth-48)/2, 48};
+        closeButton = (Rectangle){panelX+28+(panelWidth-48)/2, panelY+355,
+                                  (panelWidth-48)/2, 48};
         doneButton = (Rectangle){screenWidth/2-105, screenHeight-100, 210, 62};
 
         int touchCount = GetTouchPointCount();
@@ -184,6 +203,21 @@ int main(void)
                     if (joystickRadius > 180) joystickRadius = 90;
                     knobRadius = joystickRadius*0.42f;
                 }
+                else if (CheckCollisionPointRec(pos, lowButton))
+                {
+                    graphicsQuality = 0;
+                    SetTargetFPS(30);
+                }
+                else if (CheckCollisionPointRec(pos, mediumButton))
+                {
+                    graphicsQuality = 1;
+                    SetTargetFPS(45);
+                }
+                else if (CheckCollisionPointRec(pos, highButton))
+                {
+                    graphicsQuality = 2;
+                    SetTargetFPS(60);
+                }
                 else if (CheckCollisionPointRec(pos, slider))
                 {
                     draggingSlider = true;
@@ -195,8 +229,8 @@ int main(void)
                     knobRadius = 50;
                     joystickPosition = (Vector2){150, screenHeight-160};
                     joystickKnob = joystickPosition;
-                    settingsButton = (Rectangle){screenWidth-170, 20, 150, 58};
-                    cameraButton = (Rectangle){screenWidth-170, 90, 150, 58};
+                    settingsButton = (Rectangle){screenWidth-190, 18, 170, 64};
+                    cameraButton = (Rectangle){screenWidth-190, 92, 170, 64};
                     lookSensitivity = 3.0f;
                 }
                 else if (CheckCollisionPointRec(pos, closeButton))
@@ -224,6 +258,47 @@ int main(void)
             }
         }
 
+        // Дополнительная обработка мыши: на некоторых устройствах Android
+        // касание передаётся Raylib как нажатие левой кнопки мыши.
+        if (touchCount == 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            Vector2 pos = GetMousePosition();
+            if (!editControls && CheckCollisionPointRec(pos, settingsButton))
+            {
+                settingsOpen = !settingsOpen;
+                joystickActive = false;
+                lookTouchId = -1;
+            }
+            else if (!settingsOpen && !editControls && CheckCollisionPointRec(pos, cameraButton))
+            {
+                firstPerson = !firstPerson;
+            }
+            else if (settingsOpen)
+            {
+                if (CheckCollisionPointRec(pos, moveButtonsButton))
+                { settingsOpen = false; editControls = true; }
+                else if (CheckCollisionPointRec(pos, sizeButton))
+                { joystickRadius += 15; if (joystickRadius > 180) joystickRadius = 90; knobRadius = joystickRadius*0.42f; }
+                else if (CheckCollisionPointRec(pos, lowButton))
+                { graphicsQuality = 0; SetTargetFPS(30); }
+                else if (CheckCollisionPointRec(pos, mediumButton))
+                { graphicsQuality = 1; SetTargetFPS(45); }
+                else if (CheckCollisionPointRec(pos, highButton))
+                { graphicsQuality = 2; SetTargetFPS(60); }
+                else if (CheckCollisionPointRec(pos, slider))
+                { float v = (pos.x-slider.x)/slider.width; if(v<0)v=0; if(v>1)v=1; lookSensitivity=0.1f+v*9.9f; }
+                else if (CheckCollisionPointRec(pos, resetButton))
+                {
+                    joystickRadius=120; knobRadius=50;
+                    joystickPosition=(Vector2){150,screenHeight-160}; joystickKnob=joystickPosition;
+                    settingsButton=(Rectangle){screenWidth-190,18,170,64};
+                    cameraButton=(Rectangle){screenWidth-190,92,170,64};
+                    lookSensitivity=3.0f; graphicsQuality=1; SetTargetFPS(45);
+                }
+                else if (CheckCollisionPointRec(pos, closeButton)) settingsOpen=false;
+            }
+        }
+
         if (editControls && dragTarget != 0)
         {
             bool found = false;
@@ -234,6 +309,10 @@ int main(void)
                     Vector2 pos = GetTouchPosition(i);
                     float nx = pos.x+dragOffset.x;
                     float ny = pos.y+dragOffset.y;
+                    if (nx < joystickRadius+8) nx = joystickRadius+8;
+                    if (nx > screenWidth-joystickRadius-8) nx = screenWidth-joystickRadius-8;
+                    if (ny < joystickRadius+8) ny = joystickRadius+8;
+                    if (ny > screenHeight-joystickRadius-8) ny = screenHeight-joystickRadius-8;
                     if (dragTarget == 1)
                     {
                         joystickPosition = (Vector2){nx, ny};
@@ -241,11 +320,13 @@ int main(void)
                     }
                     else if (dragTarget == 2)
                     {
-                        settingsButton.x = nx; settingsButton.y = ny;
+                        settingsButton.x = fmaxf(8, fminf(nx, screenWidth-settingsButton.width-8));
+                        settingsButton.y = fmaxf(8, fminf(ny, screenHeight-settingsButton.height-8));
                     }
                     else if (dragTarget == 3)
                     {
-                        cameraButton.x = nx; cameraButton.y = ny;
+                        cameraButton.x = fmaxf(8, fminf(nx, screenWidth-cameraButton.width-8));
+                        cameraButton.y = fmaxf(8, fminf(ny, screenHeight-cameraButton.height-8));
                     }
                     found = true;
                     break;
@@ -379,16 +460,21 @@ int main(void)
 
         // Солнце и облака
         DrawSphere((Vector3){-28, 28, -45}, 5.0f, C(255, 226, 125, 255));
-        DrawCloud(-15, 18, -35, 2.4f);
-        DrawCloud(15, 22, -48, 2.8f);
-        DrawCloud(32, 17, 12, 2.1f);
+        if (graphicsQuality >= 1)
+        {
+            DrawCloud(-15, 18, -35, 2.4f);
+            DrawCloud(15, 22, -48, 2.8f);
+        }
+        if (graphicsQuality >= 2) DrawCloud(32, 17, 12, 2.1f);
 
         // Деревья вокруг поляны
-        for (int x = -32; x <= 32; x += 8)
+        int treeStep = (graphicsQuality == 0) ? 16 : ((graphicsQuality == 1) ? 10 : 7);
+        int treeLimit = (graphicsQuality == 0) ? 24 : 35;
+        for (int x = -treeLimit; x <= treeLimit; x += treeStep)
         {
-            for (int z = -32; z <= 32; z += 8)
+            for (int z = -treeLimit; z <= treeLimit; z += treeStep)
             {
-                if ((abs(x) < 9 && abs(z) < 9) ||
+                if ((abs(x) < 10 && abs(z) < 10) ||
                     (abs(x) < 5 && abs(z) < 25) ||
                     (abs(z) < 5 && abs(x) < 25)) continue;
                 float scale = 0.85f + (float)((x*x+z*z)%5)*0.07f;
@@ -397,23 +483,30 @@ int main(void)
         }
 
         // Камни и небольшие кусты
-        DrawRock(-5, 0.35f, -8, 0.65f);
-        DrawRock(7, 0.28f, 5, 0.48f);
-        DrawRock(-10, 0.25f, 9, 0.42f);
-        DrawSphere((Vector3){-7, 0.45f, 3}, 0.65f, C(48, 137, 67, 255));
-        DrawSphere((Vector3){9, 0.42f, -7}, 0.58f, C(58, 147, 72, 255));
+        if (graphicsQuality >= 1)
+        {
+            DrawRock(-5, 0.35f, -8, 0.65f);
+            DrawRock(7, 0.28f, 5, 0.48f);
+            DrawSphere((Vector3){-7, 0.45f, 3}, 0.65f, C(48, 137, 67, 255));
+            DrawSphere((Vector3){9, 0.42f, -7}, 0.58f, C(58, 147, 72, 255));
+        }
+        if (graphicsQuality >= 2) DrawRock(-10, 0.25f, 9, 0.42f);
 
         // Цветы по краям дорожки
-        for (int i = -12; i <= 12; i += 3)
+        if (graphicsQuality >= 1)
         {
-            DrawCylinder((Vector3){-3.6f, 0.18f, i*2.0f},
-                         0.035f, 0.035f, 0.35f, 5, C(49, 120, 54, 255));
-            DrawSphere((Vector3){-3.6f, 0.38f, i*2.0f},
-                       0.13f, C(255, 220, 95, 255));
-            DrawCylinder((Vector3){3.6f, 0.18f, i*2.0f},
-                         0.035f, 0.035f, 0.35f, 5, C(49, 120, 54, 255));
-            DrawSphere((Vector3){3.6f, 0.38f, i*2.0f},
-                       0.13f, C(245, 150, 175, 255));
+            int flowerStep = (graphicsQuality == 1) ? 6 : 3;
+            for (int i = -12; i <= 12; i += flowerStep)
+            {
+                DrawCylinder((Vector3){-3.6f, 0.18f, i*2.0f},
+                             0.035f, 0.035f, 0.35f, 5, C(49, 120, 54, 255));
+                DrawSphere((Vector3){-3.6f, 0.38f, i*2.0f},
+                           0.13f, C(255, 220, 95, 255));
+                DrawCylinder((Vector3){3.6f, 0.18f, i*2.0f},
+                             0.035f, 0.035f, 0.35f, 5, C(49, 120, 54, 255));
+                DrawSphere((Vector3){3.6f, 0.38f, i*2.0f},
+                           0.13f, C(245, 150, 175, 255));
+            }
         }
 
         // Персонаж
@@ -438,14 +531,14 @@ int main(void)
         DrawText("GREEN VALLEY", 58, 29, 19, RAYWHITE);
 
         // Кнопки в стиле полупрозрачного стекла
-        DrawRectangleRounded(settingsButton, 0.35f, 16, C(20, 34, 52, 215));
-        DrawRectangleRoundedLinesEx(settingsButton, 0.35f, 16, 2,
-                                    C(130, 205, 255, 220));
-        DrawText("SETTINGS", settingsButton.x+23, settingsButton.y+19,
+        DrawRectangleRounded(settingsButton, 0.30f, 16, C(20, 34, 52, 235));
+        DrawRectangleRoundedLinesEx(settingsButton, 0.30f, 16, 2,
+                                    C(130, 205, 255, 240));
+        DrawText("SETTINGS", settingsButton.x+18, settingsButton.y+22,
                  19, RAYWHITE);
 
-        DrawRectangleRounded(cameraButton, 0.35f, 16, C(20, 34, 52, 215));
-        DrawRectangleRoundedLinesEx(cameraButton, 0.35f, 16, 2,
+        DrawRectangleRounded(cameraButton, 0.30f, 16, C(20, 34, 52, 235));
+        DrawRectangleRoundedLinesEx(cameraButton, 0.30f, 16, 2,
                                     C(130, 205, 255, 220));
         DrawText(firstPerson ? "FIRST PERSON" : "THIRD PERSON",
                  cameraButton.x+10, cameraButton.y+19, 17, RAYWHITE);
@@ -468,9 +561,9 @@ int main(void)
             DrawRectangleRoundedLinesEx(panel, 0.08f, 20, 2,
                                         C(100, 175, 225, 230));
 
-            DrawText("GAME SETTINGS", panelX+28, panelY+25, 29, RAYWHITE);
-            DrawText("Personalize your controls", panelX+30, panelY+61,
-                     16, C(155, 177, 198, 255));
+            DrawText("GAME SETTINGS", panelX+24, panelY+18, 25, RAYWHITE);
+            DrawText("Controls and graphics", panelX+26, panelY+47,
+                     15, C(155, 177, 198, 255));
 
             DrawRectangleRounded(moveButtonsButton, 0.25f, 14,
                                  C(42, 65, 91, 255));
@@ -482,10 +575,22 @@ int main(void)
             DrawText("JOYSTICK SIZE", sizeButton.x+18,
                      sizeButton.y+17, 19, RAYWHITE);
 
-            DrawText("CAMERA SENSITIVITY", panelX+30, panelY+235,
-                     18, RAYWHITE);
+            DrawText("GRAPHICS QUALITY", panelX+25, panelY+166,
+                     16, C(205, 220, 238, 255));
+            Color lowColor = graphicsQuality == 0 ? C(42, 150, 100, 255) : C(42, 65, 91, 255);
+            Color medColor = graphicsQuality == 1 ? C(42, 150, 100, 255) : C(42, 65, 91, 255);
+            Color highColor = graphicsQuality == 2 ? C(42, 150, 100, 255) : C(42, 65, 91, 255);
+            DrawRectangleRounded(lowButton, 0.22f, 12, lowColor);
+            DrawRectangleRounded(mediumButton, 0.22f, 12, medColor);
+            DrawRectangleRounded(highButton, 0.22f, 12, highColor);
+            DrawText("LOW", lowButton.x+lowButton.width/2-19, lowButton.y+14, 16, RAYWHITE);
+            DrawText("MEDIUM", mediumButton.x+mediumButton.width/2-34, mediumButton.y+14, 16, RAYWHITE);
+            DrawText("HIGH", highButton.x+highButton.width/2-19, highButton.y+14, 16, RAYWHITE);
+
+            DrawText("CAMERA SENSITIVITY", panelX+25, panelY+246,
+                     16, RAYWHITE);
             DrawText(TextFormat("%.1f", lookSensitivity),
-                     panelX+panelWidth-82, panelY+235, 22,
+                     panelX+panelWidth-70, panelY+246, 20,
                      C(95, 195, 255, 255));
 
             float sliderValue = (lookSensitivity-0.1f)/9.9f;
@@ -497,19 +602,19 @@ int main(void)
                                C(52, 164, 238, 255));
             DrawCircle((int)(slider.x+slider.width*sliderValue),
                        (int)(slider.y+6), 15, RAYWHITE);
-            DrawText("0.1", slider.x, slider.y+28, 16, C(160, 180, 200, 255));
-            DrawText("10", slider.x+slider.width-20, slider.y+28,
-                     16, C(160, 180, 200, 255));
+            DrawText("0.1", slider.x, slider.y+18, 14, C(160, 180, 200, 255));
+            DrawText("10", slider.x+slider.width-20, slider.y+18,
+                     14, C(160, 180, 200, 255));
 
             DrawRectangleRounded(resetButton, 0.25f, 14,
                                  C(57, 75, 98, 255));
             DrawText("RESET", resetButton.x+resetButton.width/2-34,
-                     resetButton.y+18, 19, RAYWHITE);
+                     resetButton.y+15, 18, RAYWHITE);
 
             DrawRectangleRounded(closeButton, 0.25f, 14,
                                  C(35, 133, 218, 255));
             DrawText("CLOSE", closeButton.x+closeButton.width/2-34,
-                     closeButton.y+18, 19, RAYWHITE);
+                     closeButton.y+15, 18, RAYWHITE);
         }
 
         if (editControls)
