@@ -116,6 +116,31 @@ static void DrawRock(float x, float y, float z, float size)
                size*0.52f, C(145, 151, 145, 255));
 }
 
+static void DrawGrassPatch(float x, float z, float size, int seed)
+{
+    Color grassA = C(55, 125, 62, 235);
+    Color grassB = C(76, 151, 72, 230);
+    for (int i = 0; i < 3; i++)
+    {
+        float offset = ((seed*(i+3))%7 - 3)*0.035f*size;
+        DrawCylinderEx(
+            (Vector3){x+offset, 0.02f, z+(i-1)*0.10f*size},
+            (Vector3){x+offset+0.07f*size, 0.22f*size, z+(i-1)*0.10f*size},
+            0.018f*size, 0.008f*size, 4,
+            (i == 1) ? grassB : grassA
+        );
+    }
+}
+
+static void DrawPlayerShadow(Vector3 player)
+{
+    DrawCylinder(
+        (Vector3){player.x, 0.025f, player.z},
+        0.48f, 0.48f, 0.025f, 16,
+        C(25, 42, 28, 90)
+    );
+}
+
 static void DrawLootBarrel(Vector3 p)
 {
     DrawCylinder((Vector3){p.x, 0.48f, p.z},
@@ -1419,9 +1444,43 @@ int main(void)
 
         BeginMode3D(camera);
 
+        // Мягкая многослойная поверхность мира.
         DrawPlane((Vector3){0, -0.08f, 0},
                   (Vector2){520, 520},
-                  C(83, 158, 86, 255));
+                  C(73, 139, 76, 255));
+
+        // Широкая грунтовая дорога через поселение.
+        DrawPlane((Vector3){0, -0.055f, 0},
+                  (Vector2){12.5f, 520},
+                  C(126, 111, 83, 255));
+        DrawPlane((Vector3){0, -0.049f, 0},
+                  (Vector2){9.2f, 520},
+                  C(157, 137, 101, 255));
+        DrawPlane((Vector3){0, -0.055f, 0},
+                  (Vector2){520, 12.5f},
+                  C(126, 111, 83, 255));
+        DrawPlane((Vector3){0, -0.049f, 0},
+                  (Vector2){520, 9.2f},
+                  C(157, 137, 101, 255));
+
+        // Небольшие естественные пятна травы вокруг игрока.
+        if (graphicsQuality >= 1)
+        {
+            int grassStep = (detailLevel == 0) ? 7 : 11;
+            int centerX = (int)(player.x/grassStep)*grassStep;
+            int centerZ = (int)(player.z/grassStep)*grassStep;
+            for (int gx = -5; gx <= 5; gx++)
+            {
+                for (int gz = -5; gz <= 5; gz++)
+                {
+                    float px = (float)(centerX+gx*grassStep);
+                    float pz = (float)(centerZ+gz*grassStep);
+                    if (!IsVillageClear(px, pz)) continue;
+                    int seed = abs((int)(px*13.0f+pz*7.0f));
+                    DrawGrassPatch(px, pz, 0.8f, seed);
+                }
+            }
+        }
 
         DrawPlane((Vector3){0, -0.052f, 0},
                   (Vector2){9.5f, 520},
@@ -1642,6 +1701,7 @@ int main(void)
 
         if (!firstPerson)
         {
+            DrawPlayerShadow(player);
             DrawPlayer(
                 player, playerAngle, walkPhase, playerMoving,
                 attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f
@@ -1686,13 +1746,18 @@ int main(void)
         // Игровой интерфейс скрывается в главном меню.
         if (!mainMenuOpen)
         {
+            // Компактная панель выживания в стиле военного HUD.
             DrawRectangleRounded(
-                (Rectangle){18, 78, 224, 66},
-                0.22f, 12,
-                C(20, 35, 48, 190)
+                (Rectangle){14, 72, 244, 88},
+                0.16f, 14, C(12, 24, 34, 218)
             );
-
-            DrawText("FOOD", 28, 86, 12, RAYWHITE);
+            DrawRectangleRoundedLinesEx(
+                (Rectangle){14, 72, 244, 88},
+                0.16f, 14, 1.5f, C(119, 159, 166, 190)
+            );
+            DrawText("SURVIVAL STATUS", 27, 78, 11,
+                     C(135, 190, 194, 255));
+            DrawText("FOOD", 28, 98, 12, RAYWHITE);
             DrawRectangleRounded(
                 (Rectangle){82, 88, 148, 9},
                 0.5f, 6, C(65, 70, 72, 230)
@@ -1702,23 +1767,32 @@ int main(void)
                 0.5f, 6, C(215, 160, 75, 255)
             );
 
-            DrawText("WATER", 28, 111, 12, RAYWHITE);
+            DrawText("WATER", 28, 124, 12, RAYWHITE);
             DrawRectangleRounded(
-                (Rectangle){82, 113, 148, 9},
+                (Rectangle){82, 126, 148, 9},
                 0.5f, 6, C(65, 70, 72, 230)
             );
             DrawRectangleRounded(
-                (Rectangle){82, 113, 148*(waterLevel/100.0f), 9},
+                (Rectangle){82, 126, 148*(waterLevel/100.0f), 9},
                 0.5f, 6, C(75, 170, 235, 255)
             );
 
             if (foodLevel < 20.0f || waterLevel < 20.0f)
-                DrawText("LOW SUPPLIES - FIND BARRELS", 28, 128, 10,
+                DrawText("LOW SUPPLIES - FIND BARRELS", 28, 145, 10,
                          C(255, 190, 105, 255));
 
-            DrawCircle(42, 40, 7, C(103, 230, 135, 255));
-
-            DrawText("GREEN VALLEY", 58, 29, 19, RAYWHITE);
+            DrawRectangleRounded(
+                (Rectangle){14, 14, 210, 46},
+                0.22f, 12, C(12, 25, 37, 205)
+            );
+            DrawRectangleRoundedLinesEx(
+                (Rectangle){14, 14, 210, 46},
+                0.22f, 12, 1.5f, C(116, 169, 180, 190)
+            );
+            DrawCircle(34, 37, 7, C(103, 230, 135, 255));
+            DrawText("GREEN VALLEY", 49, 24, 18, RAYWHITE);
+            DrawText("SURVIVAL ZONE  /  DAY 01", 49, 43, 9,
+                     C(139, 179, 190, 255));
 
             DrawRectangleRounded(
                 settingsButton, 0.30f, 16,
