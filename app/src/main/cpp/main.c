@@ -17,6 +17,7 @@ int main(void)
 
     Vector2 joystickCenter = { 90, 0 };
     Vector2 joystickKnob = { 0, 0 };
+    float joystickRadius = 160;
     float joystickRadius = 80;
 
     while (!WindowShouldClose())
@@ -108,7 +109,7 @@ int main(void)
                 joystickCenter.x + joystickKnob.x,
                 joystickCenter.y + joystickKnob.y
             },
-            35,
+            70,
             WHITE
         );
 
