@@ -1249,10 +1249,11 @@ int main(void)
             else if (inventoryOpen)
             {
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
-                                      screenWidth*0.84f, screenHeight*0.60f};
-                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+242, invPanel.width-32, 34};
-                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+282, invPanel.width-32, 34};
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f,
+                                      screenWidth*0.84f, screenHeight*0.72f};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
+                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
                 if (CheckCollisionPointRec(pos, craftAxeButton) &&
                     itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99)
                 {
@@ -1267,11 +1268,13 @@ int main(void)
                     itemCounts[5] -= 1;
                     itemCounts[1]++;
                 }
+                else if (CheckCollisionPointRec(pos, craftDoorButton) && itemCounts[4] >= 10 && itemCounts[6] < 99)
+                { itemCounts[4] -= 10; itemCounts[6]++; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
                 for (int item = 2; item <= 3; item++)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
                     Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*52, w, 44};
+                                   invPanel.y+72+(item/2)*42, w, 38};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -1561,13 +1564,13 @@ int main(void)
             else if (inventoryOpen)
             {
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
-                                      screenWidth*0.84f, screenHeight*0.60f};
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f,
+                                      screenWidth*0.84f, screenHeight*0.72f};
                 for (int item = 2; item <= 3; item++)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
                     Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*52, w, 44};
+                                   invPanel.y+72+(item/2)*42, w, 38};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -2244,6 +2247,24 @@ int main(void)
             }
         }
 
+        if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
+        {
+            float previewX=roundf((player.x+sinf(playerAngle)*3.2f)/2.5f)*2.5f;
+            float previewZ=roundf((player.z-cosf(playerAngle)*3.2f)/2.5f)*2.5f;
+            int previewCost=selectedBuildType==0?30:((selectedBuildType==1||selectedBuildType==3)?15:0);
+            bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
+            if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
+            if(IsBlockedAt(previewX,previewZ,barrelPositions,barrelDestroyed))previewValid=false;
+            for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==selectedBuildType)previewValid=false;
+            Color ghost=previewValid?C(90,230,140,115):C(240,75,65,115);
+            float gy=selectedBuildType==0?0.14f:(selectedBuildType==1?1.25f:(selectedBuildType==3?2.55f:1.1f));
+            float gw=(selectedBuildType==0||selectedBuildType==3)?2.5f:(selectedBuildType==1?2.4f:1.35f);
+            float gh=selectedBuildType==0?0.20f:(selectedBuildType==1?2.5f:(selectedBuildType==3?0.18f:2.2f));
+            float gd=(selectedBuildType==0||selectedBuildType==3)?2.5f:0.20f;
+            DrawCube((Vector3){previewX,gy,previewZ},gw,gh,gd,ghost);
+            DrawCubeWires((Vector3){previewX,gy,previewZ},gw,gh,gd,previewValid?GREEN:RED);
+        }
+
         for (int i = 0; i < buildPieceCount; i++)
         {
             Vector3 p = buildPieces[i];
@@ -2668,7 +2689,7 @@ int main(void)
             if (inventoryOpen)
             {
                 DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f, screenWidth*0.84f, screenHeight*0.60f};
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f, screenWidth*0.84f, screenHeight*0.72f};
                 DrawRectangleRounded(invPanel, 0.08f, 14, C(10, 24, 45, 248));
                 DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
@@ -2677,7 +2698,7 @@ int main(void)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
                     Rectangle r = {invPanel.x+16+(item%2)*(w+12),
-                                   invPanel.y+72+(item/2)*52, w, 44};
+                                   invPanel.y+72+(item/2)*42, w, 38};
                     DrawRectangleRounded(r, 0.12f, 8,
                         (item == 2 || item == 3) ? C(24, 61, 86, 255) : C(19, 42, 67, 255));
                     DrawRectangleRoundedLinesEx(r, 0.12f, 8, 1.5f, C(100, 170, 215, 230));
@@ -2686,22 +2707,27 @@ int main(void)
                         (int)r.x+9, (int)r.y+25, 10, C(160, 205, 235, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
-                DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+224,
+                DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+242,
                     12, C(145, 205, 240, 255));
-                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+242, invPanel.width-32, 34};
-                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+282, invPanel.width-32, 34};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
+                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
                 bool canCraftAxe = itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99;
                 bool canCraftMed = itemCounts[4] >= 2 && itemCounts[5] >= 1 && itemCounts[1] < 99;
                 DrawRectangleRounded(craftAxeButton, 0.16f, 8,
                     canCraftAxe ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftAxeButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
                 DrawText("CRAFT AXE  -  3 WOOD / 2 STONE",
-                    (int)craftAxeButton.x+10, (int)craftAxeButton.y+11, 10, RAYWHITE);
+                    (int)craftAxeButton.x+10, (int)craftAxeButton.y+10, 10, RAYWHITE);
                 DrawRectangleRounded(craftMedButton, 0.16f, 8,
                     canCraftMed ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftMedButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
                 DrawText("CRAFT MED  -  2 WOOD / 1 STONE",
-                    (int)craftMedButton.x+10, (int)craftMedButton.y+11, 10, RAYWHITE);
+                    (int)craftMedButton.x+10, (int)craftMedButton.y+10, 10, RAYWHITE);
+                bool canCraftDoor = itemCounts[4] >= 10 && itemCounts[6] < 99;
+                DrawRectangleRounded(craftDoorButton, 0.16f, 8, canCraftDoor ? C(31,91,119,255) : C(42,51,62,230));
+                DrawRectangleRoundedLinesEx(craftDoorButton, 0.16f, 8, 1.0f, C(100,180,220,210));
+                DrawText("CRAFT DOOR - 10 WOOD", (int)craftDoorButton.x+10, (int)craftDoorButton.y+10, 10, RAYWHITE);
                 DrawText("TAP FOOD / WATER TO CONSUME",
                     (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
                     10, C(145, 190, 220, 255));
