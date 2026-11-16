@@ -1045,6 +1045,12 @@ int main(void)
             else if (!mainMenuOpen &&
                      IsSettingsButtonHit(pos, settingsButton))
             {
+                if (settingsOpen)
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
                 lookTouchId = -1;
@@ -1449,6 +1455,11 @@ int main(void)
 
                     targetFps = 30;
                     SetTargetFPS(targetFps);
+                    SaveGameSettings(joystickPosition, joystickRadius,
+                        settingsButton, cameraButton, actionButtonCenters,
+                        actionButtonScale, actionButtonAlpha, lookSensitivity,
+                        graphicsQuality, targetFps, detailLevel,
+                        resolutionLevel, chunkDistance);
                 }
                 else if (CheckCollisionPointRec(pos, closeButton))
                 {
