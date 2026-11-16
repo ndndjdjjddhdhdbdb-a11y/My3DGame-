@@ -1120,8 +1120,8 @@ int main(void)
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
                 Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
                                       screenWidth*0.84f, screenHeight*0.60f};
-                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+236, invPanel.width-32, 38};
-                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+280, invPanel.width-32, 38};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+242, invPanel.width-32, 34};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+282, invPanel.width-32, 34};
                 if (CheckCollisionPointRec(pos, craftAxeButton) &&
                     itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99)
                 {
