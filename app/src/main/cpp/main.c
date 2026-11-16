@@ -1,6 +1,7 @@
 #include "raymob.h"
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
@@ -10,7 +11,46 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
+
 #define SETTINGS_STORAGE_VERSION 1
+#define SETTINGS_STORAGE_SLOTS 129
+
+static const char *GetSettingsFilePath(void)
+{
+    return TextFormat("%sbolt_survival_settings.bin", GetApplicationDirectory());
+}
+
+static int LoadStorageValue(int position)
+{
+    if (position < 0 || position >= SETTINGS_STORAGE_SLOTS) return 0;
+
+    int dataSize = 0;
+    unsigned char *data = LoadFileData(GetSettingsFilePath(), &dataSize);
+    if (data == NULL || dataSize != (int)(sizeof(int)*SETTINGS_STORAGE_SLOTS))
+    {
+        if (data != NULL) UnloadFileData(data);
+        return 0;
+    }
+
+    int value = ((int *)data)[position];
+    UnloadFileData(data);
+    return value;
+}
+
+static void SaveStorageValue(int position, int value)
+{
+    if (position < 0 || position >= SETTINGS_STORAGE_SLOTS) return;
+
+    int values[SETTINGS_STORAGE_SLOTS] = {0};
+    int dataSize = 0;
+    unsigned char *data = LoadFileData(GetSettingsFilePath(), &dataSize);
+    if (data != NULL && dataSize == (int)sizeof(values))
+        memcpy(values, data, sizeof(values));
+    if (data != NULL) UnloadFileData(data);
+
+    values[position] = value;
+    SaveFileData(GetSettingsFilePath(), values, sizeof(values));
+}
 
 static void SaveGameSettings(Vector2 joystickPosition, float joystickRadius,
                              Rectangle settingsButton, Rectangle cameraButton,
