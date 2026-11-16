@@ -2467,6 +2467,28 @@ int main(void)
             WHITE
         );
 
+        // Дублируем предпросмотр в HUD: он остаётся заметным даже от первого лица,
+        // когда руки персонажа могут закрывать 3D-модель на земле.
+        if (buildMode && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
+        {
+            float px = roundf((player.x+sinf(cameraYaw)*3.2f)/2.5f)*2.5f;
+            float pz = roundf((player.z-cosf(cameraYaw)*3.2f)/2.5f)*2.5f;
+            float half = (selectedBuildType == 1 || selectedBuildType == 2) ? 1.2f : 1.25f;
+            Vector3 corners[4] = {
+                {px-half, 0.04f, pz-half}, {px+half, 0.04f, pz-half},
+                {px+half, 0.04f, pz+half}, {px-half, 0.04f, pz+half}
+            };
+            Color markerColor = (selectedBuildType == 2 ? itemCounts[6] > 0 :
+                itemCounts[4] >= (selectedBuildType == 0 ? 30 : 15)) ?
+                C(80,255,145,255) : C(255,75,65,255);
+            Vector2 screenCorners[4];
+            for (int k=0; k<4; k++) screenCorners[k] = GetWorldToScreen(corners[k], camera);
+            for (int k=0; k<4; k++)
+                DrawLineEx(screenCorners[k], screenCorners[(k+1)%4], 5.0f, markerColor);
+            DrawCircleLines(screenWidth/2, screenHeight/2, 13.0f, markerColor);
+            DrawText("BUILD TARGET", screenWidth/2-58, screenHeight/2+22, 18, markerColor);
+        }
+
         // Игровой интерфейс скрывается в главном меню.
         if (!mainMenuOpen)
         {
