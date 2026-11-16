@@ -217,31 +217,52 @@ static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
     return CheckCollisionPointRec(point, hitArea);
 }
 
-static void DrawTree(float x, float z, float scale, int quality)
+static void DrawTree(float x, float z, float scale, int quality, int biome)
 {
-    // Ярусная хвойная крона и цельный ствол.
+    // 0 — лесная ель, 1 — заснеженная ель, 2 — песочная пальма.
+    if (biome == 2)
+    {
+        Color trunk = C(133, 101, 61, 255);
+        Color leaf = C(83, 132, 65, 255);
+        DrawCylinderEx((Vector3){x, 0.08f, z},
+                       (Vector3){x+0.20f*scale, 2.75f*scale, z},
+                       0.22f*scale, 0.13f*scale, 7, trunk);
+        for (int arm=0; arm<5; arm++)
+        {
+            float a = arm*1.2566f;
+            Vector3 start = {x+0.20f*scale, 2.55f*scale, z};
+            Vector3 end = {x+0.20f*scale+cosf(a)*1.35f*scale,
+                           2.75f*scale+sinf(a)*0.20f*scale,
+                           z+sinf(a)*1.35f*scale};
+            DrawCylinderEx(start, end, 0.10f*scale, 0.025f*scale, 5, leaf);
+            if (quality >= 1)
+                DrawSphere((Vector3){end.x, end.y+0.06f*scale, end.z},
+                           0.20f*scale, C(111, 151, 73, 255));
+        }
+        return;
+    }
+
+    Color bark = C(105, 69, 40, 255);
+    Color lower = (biome == 1) ? C(202, 218, 222, 255) : C(35, 105, 54, 255);
+    Color middle = (biome == 1) ? C(222, 233, 235, 255) : C(47, 128, 62, 255);
+    Color upper = (biome == 1) ? C(238, 244, 244, 255) : C(66, 145, 72, 255);
     DrawCylinder((Vector3){x, 1.12f*scale, z},
-                 0.16f*scale, 0.23f*scale, 2.25f*scale,
-                 7, C(105, 69, 40, 255));
+                 0.16f*scale, 0.23f*scale, 2.25f*scale, 7, bark);
     DrawCylinder((Vector3){x, 0.18f*scale, z},
-                 0.28f*scale, 0.18f*scale, 0.36f*scale,
-                 7, C(91, 59, 36, 255));
+                 0.28f*scale, 0.18f*scale, 0.36f*scale, 7, C(91, 59, 36, 255));
     DrawCylinder((Vector3){x, 1.75f*scale, z},
-                 0.0f, 1.05f*scale, 1.85f*scale,
-                 7, C(35, 105, 54, 255));
+                 0.0f, 1.05f*scale, 1.85f*scale, 7, lower);
     DrawCylinder((Vector3){x, 2.30f*scale, z},
-                 0.0f, 0.82f*scale, 1.55f*scale,
-                 7, C(47, 128, 62, 255));
+                 0.0f, 0.82f*scale, 1.55f*scale, 7, middle);
     if (quality >= 1)
         DrawCylinder((Vector3){x, 2.82f*scale, z},
-                     0.0f, 0.58f*scale, 1.15f*scale,
-                     7, C(66, 145, 72, 255));
+                     0.0f, 0.58f*scale, 1.15f*scale, 7, upper);
     if (quality >= 2)
     {
         DrawSphere((Vector3){x-0.28f*scale, 1.75f*scale, z+0.18f*scale},
-                   0.34f*scale, C(48, 119, 59, 255));
+                   0.34f*scale, lower);
         DrawSphere((Vector3){x+0.25f*scale, 2.25f*scale, z-0.16f*scale},
-                   0.29f*scale, C(74, 151, 78, 255));
+                   0.29f*scale, middle);
     }
 }
 
@@ -466,7 +487,7 @@ static bool IsBlockedAt(float x, float z,
 {
     const float playerRadius = 0.42f;
     // Берег острова: игрок не может уйти за пределы игровой карты.
-    if (x*x + z*z > 194.0f*194.0f) return true;
+    if (x*x + z*z > 260.0f*260.0f) return true;
 
     // Домики основной деревни.
     for (int i = -3; i <= 3; i++)
@@ -540,7 +561,7 @@ static bool IsBlockedAt(float x, float z,
 static bool IsCameraBlockedAt(float x, float z,
                                  Vector3 *barrels, bool *barrelDestroyed)
 {
-    if (x*x + z*z > 199.0f*199.0f) return true;
+    if (x*x + z*z > 265.0f*265.0f) return true;
     // Камера проходит ближе к объектам, чем игрок: небольшой отступ
     // не позволяет ей резко отскакивать от невидимой широкой зоны.
     const float cameraRadius = 0.12f;
@@ -965,6 +986,7 @@ int main(void)
     Rectangle buildFloorButton = {0}, buildWallButton = {0}, buildDoorButton = {0}, buildRoofButton = {0}, buildPlaceButton = {0};
     Rectangle takeButton = {0};
     Vector3 treePositions[MAX_TREES] = {{0}}, woodDrops[MAX_WOOD_DROPS] = {{0}};
+    int treeBiome[MAX_TREES] = {0};
     int treeHealth[MAX_TREES] = {0}, treeCount = 0;
     bool treeChopped[MAX_TREES] = {false}, woodDropActive[MAX_WOOD_DROPS] = {false};
     int nearbyWoodDrop = -1, targetedTree = -1;
@@ -1009,9 +1031,14 @@ int main(void)
 
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
-    for (int tx=-178; tx<=178 && treeCount<MAX_TREES; tx+=34)
-        for (int tz=-178; tz<=178 && treeCount<MAX_TREES; tz+=34)
-            if (tx*tx+tz*tz < 180*180 && IsVillageClear((float)tx,(float)tz)) { treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz}; treeHealth[treeCount++]=3; }
+    for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=38)
+        for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=38)
+            if (tx*tx+tz*tz < 248*248 && IsVillageClear((float)tx,(float)tz))
+            {
+                treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz};
+                treeBiome[treeCount] = (tz < -82) ? 1 : ((tz > 82) ? 2 : 0);
+                treeHealth[treeCount++]=3;
+            }
 
     while (!WindowShouldClose())
     {
@@ -2321,18 +2348,21 @@ int main(void)
 
         BeginMode3D(camera);
 
-        // Компактный остров: океан вокруг и плитки суши с округлой береговой линией.
-        DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){620, 620}, C(43, 112, 143, 255));
-        for (int ix=-4; ix<=4; ix++)
+        // Большой остров с тремя климатическими поясами: снег, лес и песок.
+        DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){760, 760}, C(43, 112, 143, 255));
+        for (int ix=-6; ix<=6; ix++)
         {
-            for (int iz=-4; iz<=4; iz++)
+            for (int iz=-6; iz<=6; iz++)
             {
                 float px = ix*40.0f;
                 float pz = iz*40.0f;
-                if (px*px+pz*pz > 205.0f*205.0f) continue;
-                bool coast = (px*px+pz*pz > 160.0f*160.0f);
-                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f},
-                          coast ? C(151, 137, 102, 255) : C(73, 139, 76, 255));
+                if (px*px+pz*pz > 270.0f*270.0f) continue;
+                bool coast = (px*px+pz*pz > 225.0f*225.0f);
+                Color biomeGround = (pz < -82.0f) ? C(205, 216, 216, 255) :
+                                    ((pz > 82.0f) ? C(194, 169, 112, 255) :
+                                                    C(73, 139, 76, 255));
+                if (coast) biomeGround = (pz < -82.0f) ? C(176, 190, 190, 255) : C(151, 137, 102, 255);
+                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f}, biomeGround);
             }
         }
 
@@ -2591,7 +2621,7 @@ int main(void)
             int ix = (int)treePositions[t].x;
             int iz = (int)treePositions[t].z;
             float scale = 0.85f + (float)((ix*ix+iz*iz)%5)*0.07f;
-            DrawTree(treePositions[t].x, treePositions[t].z, scale, graphicsQuality);
+            DrawTree(treePositions[t].x, treePositions[t].z, scale, graphicsQuality, treeBiome[t]);
         }
 
         for (int d = 0; d < MAX_WOOD_DROPS; d++)
@@ -3038,7 +3068,7 @@ int main(void)
             for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
             for(int o=0;o<5;o++){float a=o*1.3f+1.0f;DrawCircle((int)(cx+cosf(a)*rr*0.62f),(int)(cy+sinf(a)*rr*0.62f),4,C(205,133,79,255));}
             for(int o=0;o<3;o++){float a=o*1.9f+2.1f;DrawCircle((int)(cx+cosf(a)*rr*0.40f),(int)(cy+sinf(a)*rr*0.40f),4,C(89,220,128,255));}
-            float sc=rr/194.0f,px=cx+player.x*sc,py=cy+player.z*sc;
+            float sc=rr/260.0f,px=cx+player.x*sc,py=cy+player.z*sc;
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("YOU",(int)px+12,(int)py-8,12,RAYWHITE);
             DrawCircle((int)mx+14,(int)(my+ms+18),4,C(205,133,79,255));DrawText("IRON",(int)mx+24,(int)(my+ms+12),11,C(220,155,95,255));
             DrawCircle((int)mx+92,(int)(my+ms+18),4,C(89,220,128,255));DrawText("URANIUM",(int)mx+102,(int)(my+ms+12),11,C(115,225,145,255));
