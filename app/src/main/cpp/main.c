@@ -3215,12 +3215,8 @@ int main(void)
             DrawCircleSector((Vector2){cx-rr*0.55f,cy+rr*0.08f},rr*0.48f,70,260,24,C(139,126,91,220));
             for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
             for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
-            for(int o=0;o<5;o++){float a=o*1.3f+1.0f;DrawCircle((int)(cx+cosf(a)*rr*0.62f),(int)(cy+sinf(a)*rr*0.62f),4,C(205,133,79,255));}
-            for(int o=0;o<3;o++){float a=o*1.9f+2.1f;DrawCircle((int)(cx+cosf(a)*rr*0.40f),(int)(cy+sinf(a)*rr*0.40f),4,C(89,220,128,255));}
             float sc=rr/260.0f,px=cx+player.x*sc,py=cy+player.z*sc;
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("YOU",(int)px+12,(int)py-8,12,RAYWHITE);
-            DrawCircle((int)mx+14,(int)(my+ms+18),4,C(205,133,79,255));DrawText("IRON",(int)mx+24,(int)(my+ms+12),11,C(220,155,95,255));
-            DrawCircle((int)mx+92,(int)(my+ms+18),4,C(89,220,128,255));DrawText("URANIUM",(int)mx+102,(int)(my+ms+12),11,C(115,225,145,255));
             DrawText("Tap MAP to close",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,255));
