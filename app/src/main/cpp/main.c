@@ -1,6 +1,8 @@
 #include "raymob.h"
 #include <math.h>
 
+#define MAX_TOUCHES 10
+
 int main(void)
 {
     InitWindow(0, 0, "My 3D Game");
@@ -14,8 +16,8 @@ int main(void)
     float playerAngle = 0.0f;
     float cameraPitch = 0.0f;
 
-    // Чувствительность камеры
-    float lookSensitivity = 0.004f;
+    // Чувствительность камеры: от 0.1 до 10
+    float lookSensitivity = 3.0f;
 
     Camera3D camera = { 0 };
     camera.up = (Vector3){ 0, 1, 0 };
@@ -33,7 +35,7 @@ int main(void)
         screenHeight - 160.0f
     };
 
-    Vector2 joystickKnob = { 0, 0 };
+    Vector2 joystickKnob = joystickPosition;
 
     bool joystickActive = false;
     int joystickTouchId = -1;
@@ -42,337 +44,434 @@ int main(void)
     bool settingsOpen = false;
     bool editJoystick = false;
     bool draggingJoystick = false;
+    bool draggingSensitivity = false;
 
-    bool pointerWasDown = false;
-
-    // Поворот камеры
+    int sensitivityTouchId = -1;
     int lookTouchId = -1;
+
     Vector2 previousLookPosition = { 0, 0 };
 
     float playerSpeed = 0.08f;
+
+    // Кнопки интерфейса
+    Rectangle settingsButton = {
+        screenWidth - 160, 20, 140, 55
+    };
+
+    Rectangle cameraButton = {
+        screenWidth - 160, 85, 140, 55
+    };
+
+    // Панель настроек
+    float panelWidth = fminf(520.0f, screenWidth - 30.0f);
+    float panelHeight = 440.0f;
+
+    float panelX = (screenWidth - panelWidth) / 2.0f;
+    float panelY = (screenHeight - panelHeight) / 2.0f;
+
+    Rectangle panel = {
+        panelX, panelY, panelWidth, panelHeight
+    };
+
+    Rectangle moveButton = {
+        panelX + 25, panelY + 90,
+        panelWidth - 50, 50
+    };
+
+    Rectangle sizeButton = {
+        panelX + 25, panelY + 155,
+        panelWidth - 50, 50
+    };
+
+    Rectangle sensitivitySlider = {
+        panelX + 45, panelY + 255,
+        panelWidth - 90, 12
+    };
+
+    Rectangle resetButton = {
+        panelX + 25, panelY + 335,
+        (panelWidth - 65) / 2, 55
+    };
+
+    Rectangle closeButton = {
+        panelX + 40 + (panelWidth - 65) / 2,
+        panelY + 335,
+        (panelWidth - 65) / 2, 55
+    };
+
+    Rectangle doneButton = {
+        screenWidth / 2.0f - 100,
+        screenHeight - 100,
+        200, 60
+    };
+
+    // Запоминаем предыдущие касания
+    int previousTouchIds[MAX_TOUCHES];
+
+    for (int i = 0; i < MAX_TOUCHES; i++)
+        previousTouchIds[i] = -1;
 
     while (!WindowShouldClose())
     {
         screenWidth = GetScreenWidth();
         screenHeight = GetScreenHeight();
 
-        // Кнопки интерфейса
-        Rectangle settingsButton = {
-            screenWidth - 160, 30, 130, 60
+        // Обновляем размеры интерфейса
+        settingsButton = (Rectangle){
+            screenWidth - 160, 20, 140, 55
         };
 
-        Rectangle cameraButton = {
-            screenWidth - 160, 105, 130, 60
+        cameraButton = (Rectangle){
+            screenWidth - 160, 85, 140, 55
         };
 
-        Rectangle moveButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 - 150,
-            280, 45
+        panelWidth = fminf(520.0f, screenWidth - 30.0f);
+        panelX = (screenWidth - panelWidth) / 2.0f;
+        panelY = (screenHeight - panelHeight) / 2.0f;
+
+        panel = (Rectangle){
+            panelX, panelY, panelWidth, panelHeight
         };
 
-        Rectangle sizeButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 - 98,
-            280, 45
+        moveButton = (Rectangle){
+            panelX + 25, panelY + 90,
+            panelWidth - 50, 50
         };
 
-        Rectangle sensitivityDownButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 - 46,
-            280, 45
+        sizeButton = (Rectangle){
+            panelX + 25, panelY + 155,
+            panelWidth - 50, 50
         };
 
-        Rectangle sensitivityUpButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 + 6,
-            280, 45
+        sensitivitySlider = (Rectangle){
+            panelX + 45, panelY + 255,
+            panelWidth - 90, 12
         };
 
-        Rectangle resetButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 + 58,
-            280, 45
+        resetButton = (Rectangle){
+            panelX + 25, panelY + 335,
+            (panelWidth - 65) / 2, 55
         };
 
-        Rectangle closeButton = {
-            screenWidth / 2 - 140,
-            screenHeight / 2 + 110,
-            280, 45
+        closeButton = (Rectangle){
+            panelX + 40 + (panelWidth - 65) / 2,
+            panelY + 335,
+            (panelWidth - 65) / 2, 55
         };
 
-        Rectangle doneButton = {
-            screenWidth / 2 - 100,
+        doneButton = (Rectangle){
+            screenWidth / 2.0f - 100,
             screenHeight - 100,
-            200, 55
+            200, 60
         };
 
-        bool touching = GetTouchPointCount() > 0;
+        int touchCount = GetTouchPointCount();
 
-        Vector2 pointer = { 0, 0 };
+        if (touchCount > MAX_TOUCHES)
+            touchCount = MAX_TOUCHES;
 
-        if (touching)
+        int currentTouchIds[MAX_TOUCHES];
+
+        for (int i = 0; i < MAX_TOUCHES; i++)
+            currentTouchIds[i] = -1;
+
+        // Обрабатываем новые касания
+        for (int i = 0; i < touchCount; i++)
         {
-            pointer = GetTouchPosition(0);
-        }
+            int id = GetTouchPointId(i);
+            Vector2 pos = GetTouchPosition(i);
 
-        bool pointerPressed = touching && !pointerWasDown;
+            currentTouchIds[i] = id;
 
-        // Обработка нажатий на кнопки
-        if (pointerPressed)
-        {
+            bool newTouch = true;
+
+            for (int j = 0; j < MAX_TOUCHES; j++)
+            {
+                if (previousTouchIds[j] == id)
+                {
+                    newTouch = false;
+                    break;
+                }
+            }
+
+            if (!newTouch)
+                continue;
+
             if (editJoystick)
             {
-                if (CheckCollisionPointRec(pointer, doneButton))
+                if (CheckCollisionPointRec(pos, doneButton))
                 {
                     editJoystick = false;
                     draggingJoystick = false;
                 }
                 else
                 {
-                    float dx = pointer.x - joystickPosition.x;
-                    float dy = pointer.y - joystickPosition.y;
+                    float dx = pos.x - joystickPosition.x;
+                    float dy = pos.y - joystickPosition.y;
 
-                    if (sqrtf(dx * dx + dy * dy) <
-                        joystickRadius + 60.0f)
+                    if (sqrtf(dx * dx + dy * dy) < 150)
                     {
                         draggingJoystick = true;
+                        joystickTouchId = id;
                     }
                 }
             }
-            else if (CheckCollisionPointRec(pointer, cameraButton))
+            else if (CheckCollisionPointRec(pos, settingsButton))
+            {
+                settingsOpen = !settingsOpen;
+                joystickActive = false;
+                joystickTouchId = -1;
+                lookTouchId = -1;
+            }
+            else if (CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
             }
-            else if (CheckCollisionPointRec(pointer, settingsButton))
-            {
-                settingsOpen = !settingsOpen;
-
-                joystickActive = false;
-                joystickTouchId = -1;
-            }
             else if (settingsOpen)
             {
-                if (CheckCollisionPointRec(pointer, moveButton))
+                if (CheckCollisionPointRec(pos, moveButton))
                 {
                     editJoystick = true;
+                    settingsOpen = false;
                 }
-                else if (CheckCollisionPointRec(pointer, sizeButton))
+                else if (CheckCollisionPointRec(pos, sizeButton))
                 {
-                    joystickRadius += 20.0f;
-                    knobRadius += 7.0f;
+                    joystickRadius += 15.0f;
 
-                    if (joystickRadius > 200.0f)
-                    {
-                        joystickRadius = 80.0f;
-                        knobRadius = 35.0f;
-                    }
+                    if (joystickRadius > 180.0f)
+                        joystickRadius = 90.0f;
+
+                    knobRadius = joystickRadius * 0.42f;
                 }
-                else if (CheckCollisionPointRec(
-                    pointer, sensitivityDownButton))
+                else if (CheckCollisionPointRec(pos, sensitivitySlider))
                 {
-                    lookSensitivity -= 0.001f;
-
-                    if (lookSensitivity < 0.001f)
-                        lookSensitivity = 0.001f;
+                    draggingSensitivity = true;
+                    sensitivityTouchId = id;
                 }
-                else if (CheckCollisionPointRec(
-                    pointer, sensitivityUpButton))
-                {
-                    lookSensitivity += 0.001f;
-
-                    if (lookSensitivity > 0.015f)
-                        lookSensitivity = 0.015f;
-                }
-                else if (CheckCollisionPointRec(pointer, resetButton))
+                else if (CheckCollisionPointRec(pos, resetButton))
                 {
                     joystickRadius = 120.0f;
                     knobRadius = 50.0f;
 
-                    joystickPosition.x = 150.0f;
-                    joystickPosition.y = screenHeight - 160.0f;
+                    joystickPosition = (Vector2){
+                        150.0f,
+                        screenHeight - 160.0f
+                    };
 
-                    lookSensitivity = 0.004f;
+                    lookSensitivity = 3.0f;
                 }
-                else if (CheckCollisionPointRec(pointer, closeButton))
+                else if (CheckCollisionPointRec(pos, closeButton))
                 {
                     settingsOpen = false;
                 }
             }
             else
             {
-                float dx = pointer.x - joystickPosition.x;
-                float dy = pointer.y - joystickPosition.y;
-
-                if (sqrtf(dx * dx + dy * dy) <
-                    joystickRadius + 80.0f)
+                // Левая часть экрана — джойстик
+                if (pos.x < screenWidth * 0.48f &&
+                    pos.y > screenHeight * 0.25f)
                 {
-                    joystickActive = true;
-                    joystickTouchId = GetTouchPointId(0);
+                    float dx = pos.x - joystickPosition.x;
+                    float dy = pos.y - joystickPosition.y;
+
+                    if (sqrtf(dx * dx + dy * dy) < joystickRadius + 100)
+                    {
+                        joystickActive = true;
+                        joystickTouchId = id;
+                    }
+                }
+                // Правая часть — поворот камеры
+                else if (pos.x > screenWidth * 0.48f &&
+                         pos.y > 155)
+                {
+                    lookTouchId = id;
+                    previousLookPosition = pos;
                 }
             }
         }
 
-        // Перемещение джойстика в режиме настройки
-        if (editJoystick && touching && draggingJoystick)
+        // Ищем положение пальца джойстика
+        if (joystickActive)
         {
-            joystickPosition.x = pointer.x;
-            joystickPosition.y = pointer.y;
-        }
+            bool found = false;
 
-        if (!touching)
-        {
-            draggingJoystick = false;
-        }
-
-        // Поиск пальца, управляющего джойстиком
-        bool joystickFound = false;
-
-        if (joystickActive && !settingsOpen && !editJoystick)
-        {
-            for (int i = 0; i < GetTouchPointCount(); i++)
+            for (int i = 0; i < touchCount; i++)
             {
                 if (GetTouchPointId(i) == joystickTouchId)
                 {
-                    Vector2 touchPosition = GetTouchPosition(i);
+                    Vector2 pos = GetTouchPosition(i);
 
-                    float dx = touchPosition.x - joystickPosition.x;
-                    float dy = touchPosition.y - joystickPosition.y;
+                    float dx = pos.x - joystickPosition.x;
+                    float dy = pos.y - joystickPosition.y;
 
-                    float distance = sqrtf(dx * dx + dy * dy);
+                    float length = sqrtf(dx * dx + dy * dy);
 
-                    if (distance > joystickRadius)
+                    if (length > joystickRadius)
                     {
-                        dx = dx / distance * joystickRadius;
-                        dy = dy / distance * joystickRadius;
+                        dx = dx / length * joystickRadius;
+                        dy = dy / length * joystickRadius;
                     }
 
-                    joystickKnob.x = dx;
-                    joystickKnob.y = dy;
+                    joystickKnob = (Vector2){
+                        joystickPosition.x + dx,
+                        joystickPosition.y + dy
+                    };
 
-                    float forward = -dy / joystickRadius;
-                    float sideways = dx / joystickRadius;
+                    float moveX = dx / joystickRadius;
+                    float moveY = dy / joystickRadius;
 
                     player.x += (
-                        sideways * cosf(playerAngle) +
-                        forward * sinf(playerAngle)
+                        cosf(playerAngle) * moveX +
+                        sinf(playerAngle) * moveY
                     ) * playerSpeed;
 
                     player.z += (
-                        -sideways * sinf(playerAngle) -
-                        forward * cosf(playerAngle)
+                        sinf(playerAngle) * moveX -
+                        cosf(playerAngle) * moveY
                     ) * playerSpeed;
 
-                    joystickFound = true;
+                    found = true;
                     break;
                 }
             }
 
-            if (!joystickFound)
+            if (!found)
             {
                 joystickActive = false;
                 joystickTouchId = -1;
-                joystickKnob = (Vector2){ 0, 0 };
+                joystickKnob = joystickPosition;
             }
         }
 
-        // Поворот камеры правой стороной экрана
-        bool lookFound = false;
-
-        if (!settingsOpen && !editJoystick)
+        // Перемещение джойстика в режиме настройки
+        if (draggingJoystick)
         {
-            // Продолжаем движение уже выбранного пальца
-            if (lookTouchId != -1)
+            bool found = false;
+
+            for (int i = 0; i < touchCount; i++)
             {
-                for (int i = 0; i < GetTouchPointCount(); i++)
+                if (GetTouchPointId(i) == joystickTouchId)
                 {
-                    if (GetTouchPointId(i) == lookTouchId)
-                    {
-                        Vector2 currentPosition =
-                            GetTouchPosition(i);
-
-                        float dx = currentPosition.x -
-                                   previousLookPosition.x;
-
-                        float dy = currentPosition.y -
-                                   previousLookPosition.y;
-
-                        playerAngle += dx * lookSensitivity;
-                        cameraPitch -= dy * lookSensitivity;
-
-                        previousLookPosition = currentPosition;
-
-                        lookFound = true;
-                        break;
-                    }
+                    joystickPosition = GetTouchPosition(i);
+                    joystickKnob = joystickPosition;
+                    found = true;
+                    break;
                 }
             }
 
-            // Если палец отпущен, ищем новый справа
-            if (!lookFound)
+            if (!found)
             {
-                lookTouchId = -1;
+                draggingJoystick = false;
+                joystickTouchId = -1;
+            }
+        }
 
-                for (int i = 0; i < GetTouchPointCount(); i++)
+        // Работа ползунка чувствительности
+        if (draggingSensitivity)
+        {
+            bool found = false;
+
+            for (int i = 0; i < touchCount; i++)
+            {
+                if (GetTouchPointId(i) == sensitivityTouchId)
                 {
                     Vector2 pos = GetTouchPosition(i);
 
-                    if (pos.x > screenWidth * 0.5f &&
-                        pos.y > 180.0f)
-                    {
-                        lookTouchId = GetTouchPointId(i);
-                        previousLookPosition = pos;
-                        lookFound = true;
-                        break;
-                    }
+                    float value =
+                        (pos.x - sensitivitySlider.x) /
+                        sensitivitySlider.width;
+
+                    if (value < 0.0f) value = 0.0f;
+                    if (value > 1.0f) value = 1.0f;
+
+                    lookSensitivity = 0.1f + value * 9.9f;
+
+                    found = true;
+                    break;
                 }
             }
+
+            if (!found)
+            {
+                draggingSensitivity = false;
+                sensitivityTouchId = -1;
+            }
         }
-        else
+
+        // Поворот камеры
+        if (!settingsOpen && !editJoystick &&
+            lookTouchId != -1)
         {
-            lookTouchId = -1;
+            bool found = false;
+
+            for (int i = 0; i < touchCount; i++)
+            {
+                if (GetTouchPointId(i) == lookTouchId)
+                {
+                    Vector2 pos = GetTouchPosition(i);
+
+                    float dx = pos.x - previousLookPosition.x;
+                    float dy = pos.y - previousLookPosition.y;
+
+                    float sensitivity = lookSensitivity * 0.004f;
+
+                    playerAngle += dx * sensitivity;
+                    cameraPitch -= dy * sensitivity;
+
+                    if (cameraPitch > 1.2f)
+                        cameraPitch = 1.2f;
+
+                    if (cameraPitch < -1.2f)
+                        cameraPitch = -1.2f;
+
+                    previousLookPosition = pos;
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                lookTouchId = -1;
         }
 
-        // Ограничение наклона камеры
-        if (cameraPitch > 1.2f)
-            cameraPitch = 1.2f;
+        if (settingsOpen || editJoystick)
+            lookTouchId = -1;
 
-        if (cameraPitch < -1.2f)
-            cameraPitch = -1.2f;
-
-        pointerWasDown = touching;
+        // Сохраняем касания для следующего кадра
+        for (int i = 0; i < MAX_TOUCHES; i++)
+            previousTouchIds[i] = currentTouchIds[i];
 
         // Направление камеры
         float dirX = sinf(playerAngle) * cosf(cameraPitch);
         float dirY = sinf(cameraPitch);
         float dirZ = -cosf(playerAngle) * cosf(cameraPitch);
 
-        // Камера от первого лица
         if (firstPerson)
         {
             camera.position = (Vector3){
                 player.x,
-                1.7f,
+                player.y + 1.6f,
                 player.z
             };
 
             camera.target = (Vector3){
-                player.x + dirX,
-                1.7f + dirY,
-                player.z + dirZ
+                player.x + dirX * 10,
+                player.y + 1.6f + dirY * 10,
+                player.z + dirZ * 10
             };
         }
         else
         {
             camera.position = (Vector3){
-                player.x - dirX * 7.0f,
-                3.0f - dirY * 7.0f,
-                player.z - dirZ * 7.0f
+                player.x - dirX * 7,
+                player.y + 3.0f - dirY * 7,
+                player.z - dirZ * 7
             };
 
             camera.target = (Vector3){
                 player.x,
-                1.4f,
+                player.y + 1.4f,
                 player.z
             };
         }
@@ -380,219 +479,268 @@ int main(void)
         // Рисование
         BeginDrawing();
 
-        ClearBackground(SKYBLUE);
+        ClearBackground((Color){ 135, 190, 235, 255 });
 
         BeginMode3D(camera);
 
+        // Земля
         DrawPlane(
-            (Vector3){ 0, 0, 0 },
-            (Vector2){ 100, 100 },
-            GREEN
+            (Vector3){ 0, -0.05f, 0 },
+            (Vector2){ 200, 200 },
+            (Color){ 75, 145, 75, 255 }
         );
 
         DrawGrid(40, 1.0f);
 
-        // Игрок
+        // Деревья
+        for (int x = -20; x <= 20; x += 8)
+        {
+            for (int z = -20; z <= 20; z += 8)
+            {
+                if (x == 0 && z == 0)
+                    continue;
+
+                DrawCylinder(
+                    (Vector3){ x, 1.0f, z },
+                    0.25f, 0.25f, 2.0f,
+                    8, BROWN
+                );
+
+                DrawSphere(
+                    (Vector3){ x, 2.8f, z },
+                    1.2f, DARKGREEN
+                );
+            }
+        }
+
+        // Игрок в третьем лице
         if (!firstPerson)
         {
             DrawCylinder(
-                (Vector3){ player.x, 0.9f, player.z },
-                0.35f, 0.35f, 1.3f,
+                (Vector3){ player.x, player.y + 0.65f, player.z },
+                0.4f, 0.4f, 1.3f,
                 12, BLUE
             );
 
             DrawSphere(
-                (Vector3){ player.x, 1.8f, player.z },
+                (Vector3){ player.x, player.y + 1.55f, player.z },
                 0.35f, BEIGE
-            );
-        }
-
-        // Деревья
-        for (int i = -5; i <= 5; i++)
-        {
-            DrawCylinder(
-                (Vector3){ i * 3.0f, 1.0f, -6.0f },
-                0.2f, 0.2f, 2.0f,
-                8, BROWN
-            );
-
-            DrawSphere(
-                (Vector3){ i * 3.0f, 2.5f, -6.0f },
-                1.0f, DARKGREEN
             );
         }
 
         EndMode3D();
 
-        // Кнопка настроек
+        // Джойстик
+        DrawCircleV(
+            joystickPosition,
+            joystickRadius,
+            (Color){ 20, 20, 20, 100 }
+        );
+
+        DrawCircleV(
+            joystickKnob,
+            knobRadius,
+            (Color){ 220, 220, 220, 180 }
+        );
+
+        // Кнопки интерфейса
         DrawRectangleRounded(
-            settingsButton, 0.2f, 8, DARKGRAY
+            settingsButton, 0.25f, 12,
+            (Color){ 25, 30, 42, 220 }
         );
 
         DrawText(
             "SETTINGS",
-            settingsButton.x + 10,
-            settingsButton.y + 20,
-            20, WHITE
+            settingsButton.x + 25,
+            settingsButton.y + 18,
+            20, RAYWHITE
         );
 
-        // Переключение камеры
         DrawRectangleRounded(
-            cameraButton, 0.2f, 8, DARKBLUE
+            cameraButton, 0.25f, 12,
+            (Color){ 25, 30, 42, 220 }
         );
 
         DrawText(
             firstPerson ? "1 PERSON" : "3 PERSON",
-            cameraButton.x + 10,
-            cameraButton.y + 20,
-            20, WHITE
+            cameraButton.x + 20,
+            cameraButton.y + 18,
+            20, RAYWHITE
         );
 
-        // Джойстик
-        if (!settingsOpen || editJoystick)
-        {
-            DrawCircleV(
-                joystickPosition,
-                joystickRadius,
-                Fade(DARKGRAY, 0.65f)
-            );
-
-            DrawCircleV(
-                (Vector2){
-                    joystickPosition.x + joystickKnob.x,
-                    joystickPosition.y + joystickKnob.y
-                },
-                knobRadius,
-                LIGHTGRAY
-            );
-        }
-
-        // Меню настроек
-        if (settingsOpen && !editJoystick)
+        // Современное меню настроек
+        if (settingsOpen)
         {
             DrawRectangle(
-                screenWidth / 2 - 165,
-                screenHeight / 2 - 200,
-                330, 410,
-                Fade(BLACK, 0.88f)
+                0, 0, screenWidth, screenHeight,
+                (Color){ 0, 0, 0, 170 }
+            );
+
+            // Основная панель
+            DrawRectangleRounded(
+                panel, 0.08f, 16,
+                (Color){ 24, 29, 42, 255 }
+            );
+
+            // Заголовок
+            DrawText(
+                "SETTINGS",
+                panelX + 30,
+                panelY + 25,
+                30, RAYWHITE
             );
 
             DrawText(
-                "SETTINGS",
-                screenWidth / 2 - 75,
-                screenHeight / 2 - 185,
-                28, WHITE
+                "Customize your game",
+                panelX + 30,
+                panelY + 60,
+                16, GRAY
             );
 
-            DrawRectangleRounded(moveButton, 0.2f, 8, BLUE);
+            // Перемещение джойстика
+            DrawRectangleRounded(
+                moveButton, 0.25f, 12,
+                (Color){ 45, 55, 75, 255 }
+            );
 
             DrawText(
                 "MOVE JOYSTICK",
-                moveButton.x + 65,
-                moveButton.y + 12,
-                20, WHITE
+                moveButton.x + 18,
+                moveButton.y + 16,
+                19, RAYWHITE
             );
 
-            DrawRectangleRounded(sizeButton, 0.2f, 8, DARKGREEN);
-
-            DrawText(
-                "CHANGE SIZE",
-                sizeButton.x + 75,
-                sizeButton.y + 12,
-                20, WHITE
-            );
-
+            // Размер джойстика
             DrawRectangleRounded(
-                sensitivityDownButton, 0.2f, 8, DARKBLUE
+                sizeButton, 0.25f, 12,
+                (Color){ 45, 55, 75, 255 }
             );
 
             DrawText(
-                "SENSITIVITY -",
-                sensitivityDownButton.x + 75,
-                sensitivityDownButton.y + 12,
-                20, WHITE
+                "JOYSTICK SIZE",
+                sizeButton.x + 18,
+                sizeButton.y + 16,
+                19, RAYWHITE
             );
 
+            // Чувствительность
+            DrawText(
+                "CAMERA SENSITIVITY",
+                panelX + 30,
+                panelY + 215,
+                18, RAYWHITE
+            );
+
+            DrawText(
+                TextFormat("%.1f", lookSensitivity),
+                panelX + panelWidth - 85,
+                panelY + 215,
+                22, SKYBLUE
+            );
+
+            // Фон ползунка
             DrawRectangleRounded(
-                sensitivityUpButton, 0.2f, 8, DARKBLUE
+                (Rectangle){
+                    sensitivitySlider.x,
+                    sensitivitySlider.y - 5,
+                    sensitivitySlider.width,
+                    22
+                },
+                0.5f, 10,
+                (Color){ 55, 65, 85, 255 }
             );
 
-            DrawText(
-                "SENSITIVITY +",
-                sensitivityUpButton.x + 75,
-                sensitivityUpButton.y + 12,
-                20, WHITE
-            );
-
-            DrawText(
-                TextFormat("VALUE: %.3f", lookSensitivity),
-                screenWidth / 2 - 65,
-                screenHeight / 2 + 55,
-                18, WHITE
-            );
-
-            DrawRectangleRounded(resetButton, 0.2f, 8, ORANGE);
-
-            DrawText(
-                "RESET",
-                resetButton.x + 115,
-                resetButton.y + 12,
-                20, WHITE
-            );
-
-            DrawRectangleRounded(closeButton, 0.2f, 8, RED);
-
-            DrawText(
-                "CLOSE",
-                closeButton.x + 115,
-                closeButton.y + 12,
-                20, WHITE
-            );
-        }
-
-        // Окно перемещения джойстика
-        if (editJoystick)
-        {
-            DrawRectangle(
-                0, 0,
-                screenWidth,
-                screenHeight,
-                Fade(BLACK, 0.55f)
-            );
+            // Заполненная часть ползунка
+            float sliderValue =
+                (lookSensitivity - 0.1f) / 9.9f;
 
             DrawRectangleRounded(
                 (Rectangle){
-                    screenWidth / 2 - 200,
-                    screenHeight / 2 - 130,
-                    400, 280
+                    sensitivitySlider.x,
+                    sensitivitySlider.y - 5,
+                    sensitivitySlider.width * sliderValue,
+                    22
                 },
-                0.15f, 8,
-                Fade(DARKGRAY, 0.95f)
+                0.5f, 10,
+                SKYBLUE
+            );
+
+            // Круглый бегунок
+            DrawCircle(
+                sensitivitySlider.x +
+                sensitivitySlider.width * sliderValue,
+                sensitivitySlider.y + 6,
+                15,
+                RAYWHITE
             );
 
             DrawText(
-                "MOVE JOYSTICK",
-                screenWidth / 2 - 130,
-                screenHeight / 2 - 110,
-                25, WHITE
+                "0.1",
+                sensitivitySlider.x,
+                sensitivitySlider.y + 28,
+                16, GRAY
             );
 
             DrawText(
-                "DRAG THE JOYSTICK",
-                screenWidth / 2 - 125,
-                screenHeight / 2 - 65,
-                20, LIGHTGRAY
+                "10",
+                sensitivitySlider.x +
+                sensitivitySlider.width - 20,
+                sensitivitySlider.y + 28,
+                16, GRAY
+            );
+
+            // Сброс
+            DrawRectangleRounded(
+                resetButton, 0.25f, 12,
+                (Color){ 45, 55, 75, 255 }
+            );
+
+            DrawText(
+                "RESET",
+                resetButton.x + resetButton.width / 2 - 35,
+                resetButton.y + 18,
+                19, RAYWHITE
+            );
+
+            // Закрыть
+            DrawRectangleRounded(
+                closeButton, 0.25f, 12,
+                (Color){ 35, 125, 220, 255 }
+            );
+
+            DrawText(
+                "CLOSE",
+                closeButton.x + closeButton.width / 2 - 35,
+                closeButton.y + 18,
+                19, RAYWHITE
+            );
+        }
+
+        // Редактирование положения джойстика
+        if (editJoystick)
+        {
+            DrawRectangle(
+                0, 0, screenWidth, screenHeight,
+                (Color){ 0, 0, 0, 130 }
             );
 
             DrawRectangleRounded(
-                doneButton, 0.2f, 8, DARKGREEN
+                doneButton, 0.25f, 12,
+                (Color){ 35, 125, 220, 255 }
             );
 
             DrawText(
                 "DONE",
-                doneButton.x + 70,
-                doneButton.y + 17,
-                22, WHITE
+                doneButton.x + 65,
+                doneButton.y + 19,
+                22, RAYWHITE
+            );
+
+            DrawText(
+                "DRAG JOYSTICK",
+                screenWidth / 2 - 100,
+                40,
+                22, RAYWHITE
             );
         }
 
