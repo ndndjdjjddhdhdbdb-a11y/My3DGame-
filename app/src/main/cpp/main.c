@@ -1372,20 +1372,12 @@ int main(void)
                     float nx = pos.x+dragOffset.x;
                     float ny = pos.y+dragOffset.y;
 
-                    if (nx < joystickRadius+8)
-                        nx = joystickRadius+8;
-
-                    if (nx > screenWidth-joystickRadius-8)
-                        nx = screenWidth-joystickRadius-8;
-
-                    if (ny < joystickRadius+8)
-                        ny = joystickRadius+8;
-
-                    if (ny > screenHeight-joystickRadius-8)
-                        ny = screenHeight-joystickRadius-8;
-
                     if (dragTarget == 1)
                     {
+                        nx = fmaxf(joystickRadius+8.0f,
+                                   fminf(nx, screenWidth-joystickRadius-8.0f));
+                        ny = fmaxf(joystickRadius+8.0f,
+                                   fminf(ny, screenHeight-joystickRadius-8.0f));
                         joystickPosition = (Vector2){nx, ny};
                         joystickKnob = joystickPosition;
                     }
@@ -1394,7 +1386,6 @@ int main(void)
                         settingsButton.x = fmaxf(
                             8, fminf(nx, screenWidth-settingsButton.width-8)
                         );
-
                         settingsButton.y = fmaxf(
                             8, fminf(ny, screenHeight-settingsButton.height-8)
                         );
@@ -1404,7 +1395,6 @@ int main(void)
                         cameraButton.x = fmaxf(
                             8, fminf(nx, screenWidth-cameraButton.width-8)
                         );
-
                         cameraButton.y = fmaxf(
                             8, fminf(ny, screenHeight-cameraButton.height-8)
                         );
