@@ -251,7 +251,7 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
 }
 
 static void DrawPlayer(Vector3 player, float angle,
-                       float walkPhase, bool moving)
+                       float walkPhase, bool moving, float attackProgress)
 {
     float swing = moving ? sinf(walkPhase) * 0.34f : 0.0f;
 
@@ -288,8 +288,8 @@ static void DrawPlayer(Vector3 player, float angle,
     Vector3 handL = PlayerPoint(player, angle, -0.47f, 0.76f, -swing*0.9f);
 
     Vector3 shoulderR = PlayerPoint(player, angle, 0.39f, 1.35f, 0);
-    Vector3 elbowR = PlayerPoint(player, angle, 0.48f, 0.98f, swing*0.65f);
-    Vector3 handR = PlayerPoint(player, angle, 0.47f, 0.76f, swing*0.9f);
+    Vector3 elbowR = PlayerPoint(player, angle, 0.48f, 0.98f, swing*0.65f-attackProgress*0.30f);
+    Vector3 handR = PlayerPoint(player, angle, 0.47f, 0.76f, swing*0.9f-attackProgress*0.85f);
 
     DrawCylinderEx(shoulderL, elbowL, 0.12f, 0.095f, 8, shirt);
     DrawCylinderEx(elbowL, handL, 0.09f, 0.075f, 8, skin);
@@ -1636,7 +1636,8 @@ int main(void)
         if (!firstPerson)
         {
             DrawPlayer(
-                player, playerAngle, walkPhase, playerMoving
+                player, playerAngle, walkPhase, playerMoving,
+                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f
             );
         }
         else
