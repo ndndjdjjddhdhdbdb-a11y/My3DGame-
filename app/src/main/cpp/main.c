@@ -6,6 +6,9 @@ int main(void)
     InitWindow(0, 0, "My 3D Game");
     SetTargetFPS(60);
 
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
     Vector3 player = { 0.0f, 0.0f, 0.0f };
 
     Camera3D camera = { 0 };
@@ -18,22 +21,25 @@ int main(void)
     float joystickRadius = 120.0f;
     float knobRadius = 50.0f;
 
-    Vector2 joystickPosition = { 150.0f, 0.0f };
+    Vector2 joystickPosition = {
+        150.0f,
+        screenHeight - 160.0f
+    };
+
     Vector2 joystickKnob = { 0.0f, 0.0f };
 
     bool joystickActive = false;
     bool settingsOpen = false;
     bool editJoystick = false;
+    bool draggingJoystick = false;
     bool pointerWasDown = false;
 
     float playerSpeed = 0.08f;
 
     while (!WindowShouldClose())
     {
-        int screenWidth = GetScreenWidth();
-        int screenHeight = GetScreenHeight();
-
-        joystickPosition.y = screenHeight - 160.0f;
+        screenWidth = GetScreenWidth();
+        screenHeight = GetScreenHeight();
 
         Rectangle settingsButton = {
             screenWidth - 160, 30, 130, 60
@@ -63,6 +69,12 @@ int main(void)
             300, 55
         };
 
+        Rectangle doneButton = {
+            screenWidth / 2 - 100,
+            screenHeight / 2 + 100,
+            200, 55
+        };
+
         bool touching = GetTouchPointCount() > 0;
         Vector2 pointer = { 0, 0 };
 
@@ -75,10 +87,27 @@ int main(void)
 
         if (pointerPressed)
         {
-            if (CheckCollisionPointRec(pointer, settingsButton))
+            if (editJoystick)
+            {
+                if (CheckCollisionPointRec(pointer, doneButton))
+                {
+                    editJoystick = false;
+                    draggingJoystick = false;
+                }
+                else
+                {
+                    float dx = pointer.x - joystickPosition.x;
+                    float dy = pointer.y - joystickPosition.y;
+
+                    if (sqrtf(dx * dx + dy * dy) < joystickRadius + 50.0f)
+                    {
+                        draggingJoystick = true;
+                    }
+                }
+            }
+            else if (CheckCollisionPointRec(pointer, settingsButton))
             {
                 settingsOpen = !settingsOpen;
-                editJoystick = false;
                 joystickActive = false;
             }
             else if (settingsOpen)
@@ -102,17 +131,14 @@ int main(void)
                 {
                     joystickRadius = 120.0f;
                     knobRadius = 50.0f;
+
                     joystickPosition.x = 150.0f;
                     joystickPosition.y = screenHeight - 160.0f;
-                    editJoystick = false;
                 }
                 else if (CheckCollisionPointRec(pointer, closeButton))
-{
-    settingsOpen = false;
-    editJoystick = false;
-    joystickActive = false;
-    pointerWasDown = true;
-}
+                {
+                    settingsOpen = false;
+                }
             }
             else
             {
@@ -126,12 +152,25 @@ int main(void)
             }
         }
 
-        if (touching && settingsOpen && editJoystick)
+        if (editJoystick && touching && draggingJoystick)
         {
-            joystickPosition = pointer;
+            joystickPosition.x = pointer.x;
+            joystickPosition.y = pointer.y;
         }
 
-        if (touching && joystickActive && !settingsOpen)
+        if (!touching)
+        {
+            draggingJoystick = false;
+
+            if (!editJoystick)
+            {
+                joystickActive = false;
+                joystickKnob = (Vector2){ 0, 0 };
+            }
+        }
+
+        if (touching && joystickActive &&
+            !settingsOpen && !editJoystick)
         {
             float dx = pointer.x - joystickPosition.x;
             float dy = pointer.y - joystickPosition.y;
@@ -149,12 +188,6 @@ int main(void)
 
             player.x += dx / joystickRadius * playerSpeed;
             player.z += dy / joystickRadius * playerSpeed;
-        }
-
-        if (!touching)
-        {
-            joystickActive = false;
-            joystickKnob = (Vector2){ 0, 0 };
         }
 
         pointerWasDown = touching;
@@ -186,17 +219,12 @@ int main(void)
         // Игрок
         DrawCylinder(
             (Vector3){ player.x, 0.9f, player.z },
-            0.35f,
-            0.35f,
-            1.3f,
-            12,
-            BLUE
+            0.35f, 0.35f, 1.3f, 12, BLUE
         );
 
         DrawSphere(
             (Vector3){ player.x, 1.8f, player.z },
-            0.35f,
-            BEIGE
+            0.35f, BEIGE
         );
 
         // Деревья
@@ -209,8 +237,7 @@ int main(void)
 
             DrawSphere(
                 (Vector3){ i * 3.0f, 2.5f, -6.0f },
-                1.0f,
-                DARKGREEN
+                1.0f, DARKGREEN
             );
         }
 
@@ -230,7 +257,7 @@ int main(void)
         );
 
         // Джойстик
-        if (!settingsOpen)
+        if (!settingsOpen || editJoystick)
         {
             DrawCircleV(
                 joystickPosition,
@@ -248,14 +275,13 @@ int main(void)
             );
         }
 
-        // Меню настроек
-        if (settingsOpen)
+        // Обычные настройки
+        if (settingsOpen && !editJoystick)
         {
             DrawRectangle(
                 screenWidth / 2 - 180,
                 screenHeight / 2 - 180,
-                360,
-                370,
+                360, 370,
                 Fade(BLACK, 0.85f)
             );
 
@@ -263,8 +289,7 @@ int main(void)
                 "SETTINGS",
                 screenWidth / 2 - 75,
                 screenHeight / 2 - 160,
-                30,
-                WHITE
+                30, WHITE
             );
 
             DrawRectangleRounded(moveButton, 0.2f, 8, BLUE);
@@ -272,8 +297,7 @@ int main(void)
                 "MOVE JOYSTICK",
                 moveButton.x + 65,
                 moveButton.y + 17,
-                22,
-                WHITE
+                22, WHITE
             );
 
             DrawRectangleRounded(sizeButton, 0.2f, 8, DARKGREEN);
@@ -281,8 +305,7 @@ int main(void)
                 "CHANGE SIZE",
                 sizeButton.x + 70,
                 sizeButton.y + 17,
-                22,
-                WHITE
+                22, WHITE
             );
 
             DrawRectangleRounded(resetButton, 0.2f, 8, ORANGE);
@@ -290,8 +313,7 @@ int main(void)
                 "RESET",
                 resetButton.x + 115,
                 resetButton.y + 17,
-                22,
-                WHITE
+                22, WHITE
             );
 
             DrawRectangleRounded(closeButton, 0.2f, 8, RED);
@@ -299,8 +321,54 @@ int main(void)
                 "CLOSE",
                 closeButton.x + 115,
                 closeButton.y + 17,
-                22,
-                WHITE
+                22, WHITE
+            );
+        }
+
+        // Окно перемещения джойстика
+        if (editJoystick)
+        {
+            DrawRectangle(
+                0, 0,
+                screenWidth,
+                screenHeight,
+                Fade(BLACK, 0.55f)
+            );
+
+            DrawRectangleRounded(
+                (Rectangle){
+                    screenWidth / 2 - 200,
+                    screenHeight / 2 - 130,
+                    400, 280
+                },
+                0.15f, 8,
+                Fade(DARKGRAY, 0.95f)
+            );
+
+            DrawText(
+                "MOVE JOYSTICK",
+                screenWidth / 2 - 130,
+                screenHeight / 2 - 110,
+                25, WHITE
+            );
+
+            DrawText(
+                "DRAG THE JOYSTICK",
+                screenWidth / 2 - 125,
+                screenHeight / 2 - 65,
+                20, LIGHTGRAY
+            );
+
+            DrawRectangleRounded(
+                doneButton,
+                0.2f, 8, DARKGREEN
+            );
+
+            DrawText(
+                "DONE",
+                doneButton.x + 70,
+                doneButton.y + 17,
+                22, WHITE
             );
         }
 
