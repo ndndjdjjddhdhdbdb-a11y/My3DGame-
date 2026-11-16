@@ -389,6 +389,53 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
              C(91, 72, 52, 255));
 }
 
+static void DrawGasCrate(Vector3 p, bool weapon)
+{
+    Color base=weapon?C(75,91,76,255):C(119,83,49,255);
+    Color edge=weapon?C(42,55,47,255):C(75,51,34,255);
+    DrawCube(p,1.05f,0.82f,0.9f,base);
+    DrawCube((Vector3){p.x,p.y+0.43f,p.z},1.1f,0.10f,0.95f,edge);
+    DrawCube((Vector3){p.x,p.y,p.z-0.47f},0.12f,0.72f,0.045f,edge);
+    DrawCube((Vector3){p.x-0.48f,p.y,p.z},0.045f,0.72f,0.12f,edge);
+    if(weapon) DrawCube((Vector3){p.x,p.y+0.02f,p.z-0.51f},0.48f,0.24f,0.025f,C(166,133,66,255));
+}
+
+static void DrawMiniGasStation(float x,float z,int quality)
+{
+    Color wall=C(116,112,99,255),red=C(151,61,48,255),metal=C(48,54,55,255);
+    DrawCube((Vector3){x,1.65f,z},8.6f,3.3f,5.8f,wall);
+    DrawCube((Vector3){x,3.36f,z},8.9f,0.22f,6.1f,metal);
+    DrawCube((Vector3){x,3.62f,z-0.1f},8.7f,0.24f,0.34f,red);
+    DrawCube((Vector3){x,2.45f,z-2.96f},2.2f,1.15f,0.08f,C(66,104,111,230));
+    DrawCube((Vector3){x-2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
+    DrawCube((Vector3){x+2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
+    DrawCube((Vector3){x,1.0f,z-2.99f},1.05f,2.0f,0.12f,C(68,58,47,255));
+    DrawCube((Vector3){x,3.95f,z-3.05f},5.4f,0.48f,0.22f,red);
+    DrawCube((Vector3){x,4.15f,z+7.0f},15.0f,0.35f,11.0f,C(89,86,76,255));
+    DrawCube((Vector3){x,4.36f,z+7.0f},14.7f,0.12f,10.7f,red);
+    for(int side=-1;side<=1;side+=2)for(int row=0;row<2;row++)
+        DrawCube((Vector3){x+side*6.7f,2.05f,z+3.1f+row*7.7f},0.22f,4.1f,0.22f,metal);
+    for(int pump=0;pump<2;pump++)
+    {
+        float px=x+(pump==0?-2.8f:2.8f),pz=z+6.0f;
+        DrawCube((Vector3){px,1.05f,pz},0.95f,1.9f,0.82f,C(151,145,126,255));
+        DrawCube((Vector3){px,1.63f,pz-0.43f},0.58f,0.42f,0.035f,C(29,43,42,255));
+        DrawCube((Vector3){px,1.64f,pz-0.46f},0.42f,0.19f,0.025f,C(95,174,132,255));
+        DrawCylinderEx((Vector3){px+0.49f,1.7f,pz},(Vector3){px+0.72f,1.0f,pz-0.18f},0.055f,0.045f,6,C(25,27,27,255));
+    }
+    // Лестница на крышу с правой стороны здания.
+    for(int rung=0;rung<9;rung++)
+        DrawCube((Vector3){x+4.55f,0.28f+rung*0.39f,z-1.55f},0.12f,0.09f,0.9f,C(105,108,101,255));
+    DrawCylinderEx((Vector3){x+4.48f,0.1f,z-2.0f},(Vector3){x+4.48f,3.45f,z-2.0f},0.07f,0.07f,6,metal);
+    DrawCylinderEx((Vector3){x+4.48f,0.1f,z-1.1f},(Vector3){x+4.48f,3.45f,z-1.1f},0.07f,0.07f,6,metal);
+    // Три обычных ящика внутри и один оружейный наверху.
+    DrawGasCrate((Vector3){x-2.4f,0.48f,z+0.7f},false);
+    DrawGasCrate((Vector3){x,0.48f,z+0.7f},false);
+    DrawGasCrate((Vector3){x+2.4f,0.48f,z+0.7f},false);
+    DrawGasCrate((Vector3){x,3.95f,z},true);
+    DrawCube((Vector3){x,0.015f,z+5.0f},19.0f,0.035f,19.0f,C(62,65,61,255));
+}
+
 static bool IsVillageClear(float x, float z)
 {
     if (fabsf(x) < 7.0f || fabsf(z) < 7.0f) return false;
