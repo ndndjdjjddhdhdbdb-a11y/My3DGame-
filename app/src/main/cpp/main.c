@@ -895,7 +895,7 @@ int main(void)
             {
                 firstPerson = !firstPerson;
             }
-            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
             {
                 sprintEnabled = !sprintEnabled;
@@ -906,6 +906,10 @@ int main(void)
                 inventoryOpen = !inventoryOpen;
                 joystickActive = false;
                 lookTouchId = -1;
+            }
+            else if (inventoryOpen)
+            {
+                // Пока открыт инвентарь, игровые касания игнорируются.
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
@@ -1097,7 +1101,7 @@ int main(void)
             {
                 firstPerson = !firstPerson;
             }
-            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, sprintButton))
             {
                 sprintEnabled = !sprintEnabled;
@@ -1108,6 +1112,10 @@ int main(void)
                 inventoryOpen = !inventoryOpen;
                 joystickActive = false;
                 lookTouchId = -1;
+            }
+            else if (inventoryOpen)
+            {
+                // Пока открыт инвентарь, игровые касания игнорируются.
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
