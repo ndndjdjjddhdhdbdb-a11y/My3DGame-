@@ -17,7 +17,7 @@ int main(void)
 
     Vector2 joystickCenter = { 90, 0 };
     Vector2 joystickKnob = { 0, 0 };
-    float joystickRadius = 55;
+    float joystickRadius = 80;
 
     while (!WindowShouldClose())
     {
@@ -32,7 +32,7 @@ int main(void)
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) ||
             GetTouchPointCount() > 0)
         {
-            if (touch.x < 180 && touch.y > screenHeight - 180)
+            if (touch.x < 220 && touch.y > screenHeight - 220)
             {
                 float dx = touch.x - joystickCenter.x;
                 float dy = touch.y - joystickCenter.y;
@@ -108,7 +108,7 @@ int main(void)
                 joystickCenter.x + joystickKnob.x,
                 joystickCenter.y + joystickKnob.y
             },
-            25,
+            35,
             WHITE
         );
 
