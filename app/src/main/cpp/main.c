@@ -2357,7 +2357,6 @@ int main(void)
                     DrawRectangleRoundedLinesEx(r, 0.16f, 8, slot == selectedHotbarSlot ? 2.5f : 1.4f,
                         slot == selectedHotbarSlot ? C(117, 210, 255, 255) : C(91, 145, 184, 220));
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 11, C(160, 205, 235, 255));
-                    int nw = MeasureText(hotbarNames[slot], 10);
                     const char *slotName = itemNames[hotbarItemIds[slot]];
                     int nw = MeasureText(slotName, 10);
                     DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
