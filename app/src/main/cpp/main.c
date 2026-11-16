@@ -623,8 +623,10 @@ int main(void)
     bool sprintEnabled = false;
     bool inventoryOpen = false;
     int selectedHotbarSlot = 0;
-    const char *hotbarNames[4] = {"AXE", "MED", "FOOD", "WATER"};
-    const int hotbarCounts[4] = {1, 1, 3, 3};
+    // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE.
+    const char *itemNames[6] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE"};
+    int itemCounts[6] = {1, 1, 3, 3, 0, 0};
+    const int hotbarItemIds[4] = {0, 1, 2, 3};
 
     // Главное меню.
     bool mainMenuOpen = true;
@@ -1115,7 +1117,30 @@ int main(void)
             }
             else if (inventoryOpen)
             {
-                // Пока открыт инвентарь, игровые касания игнорируются.
+                // Еду и воду можно использовать касанием карточки в рюкзаке.
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
+                                      screenWidth*0.84f, screenHeight*0.60f};
+                for (int item = 2; item <= 3; item++)
+                {
+                    float w = (invPanel.width-50.0f)/2.0f;
+                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
+                                   invPanel.y+72+(item/2)*52, w, 44};
+                    if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
+                    {
+                        if (item == 2)
+                        {
+                            foodLevel += 25.0f;
+                            if (foodLevel > 100.0f) foodLevel = 100.0f;
+                        }
+                        else
+                        {
+                            waterLevel += 25.0f;
+                            if (waterLevel > 100.0f) waterLevel = 100.0f;
+                        }
+                        itemCounts[item]--;
+                        break;
+                    }
+                }
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
@@ -1367,7 +1392,30 @@ int main(void)
             }
             else if (inventoryOpen)
             {
-                // Пока открыт инвентарь, игровые касания игнорируются.
+                // Еду и воду можно использовать касанием карточки в рюкзаке.
+                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.20f,
+                                      screenWidth*0.84f, screenHeight*0.60f};
+                for (int item = 2; item <= 3; item++)
+                {
+                    float w = (invPanel.width-50.0f)/2.0f;
+                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
+                                   invPanel.y+72+(item/2)*52, w, 44};
+                    if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
+                    {
+                        if (item == 2)
+                        {
+                            foodLevel += 25.0f;
+                            if (foodLevel > 100.0f) foodLevel = 100.0f;
+                        }
+                        else
+                        {
+                            waterLevel += 25.0f;
+                            if (waterLevel > 100.0f) waterLevel = 100.0f;
+                        }
+                        itemCounts[item]--;
+                        break;
+                    }
+                }
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
@@ -1835,18 +1883,11 @@ int main(void)
                     barrelHealth[targetedBarrel] = 0;
                     barrelDestroyed[targetedBarrel] = true;
 
-                    // В бочках находятся припасы: нечётные дают воду,
-                    // чётные — еду.
-                    if (targetedBarrel % 2 == 0)
-                    {
-                        waterLevel += 30.0f;
-                        if (waterLevel > 100.0f) waterLevel = 100.0f;
-                    }
-                    else
-                    {
-                        foodLevel += 30.0f;
-                        if (foodLevel > 100.0f) foodLevel = 100.0f;
-                    }
+                    // Бочки выдают припасы в инвентарь: еду, воду, дерево или камень.
+                    int lootType = 2 + (targetedBarrel % 4);
+                    int lootAmount = 2 + (targetedBarrel % 3);
+                    itemCounts[lootType] += lootAmount;
+                    if (itemCounts[lootType] > 99) itemCounts[lootType] = 99;
                     targetedBarrel = -1;
                 }
             }
@@ -2317,8 +2358,10 @@ int main(void)
                         slot == selectedHotbarSlot ? C(117, 210, 255, 255) : C(91, 145, 184, 220));
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 11, C(160, 205, 235, 255));
                     int nw = MeasureText(hotbarNames[slot], 10);
-                    DrawText(hotbarNames[slot], (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
-                    DrawText(TextFormat("x%d", hotbarCounts[slot]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
+                    const char *slotName = itemNames[hotbarItemIds[slot]];
+                    int nw = MeasureText(slotName, 10);
+                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
+                    DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
                 }
                 DrawSurvivalButtonAlpha(inventoryButton, "BAG", 13, false, (unsigned char)actionButtonAlpha[2]);
                 DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
@@ -2403,17 +2446,22 @@ int main(void)
                 DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
                 DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
-                for (int slot = 0; slot < 4; slot++)
+                for (int item = 0; item < 6; item++)
                 {
                     float w = (invPanel.width-50.0f)/2.0f;
-                    Rectangle r = {invPanel.x+16+(slot%2)*(w+12), invPanel.y+78+(slot/2)*76, w, 64};
-                    DrawRectangleRounded(r, 0.12f, 8, C(19, 42, 67, 255));
+                    Rectangle r = {invPanel.x+16+(item%2)*(w+12),
+                                   invPanel.y+72+(item/2)*52, w, 44};
+                    DrawRectangleRounded(r, 0.12f, 8,
+                        (item == 2 || item == 3) ? C(24, 61, 86, 255) : C(19, 42, 67, 255));
                     DrawRectangleRoundedLinesEx(r, 0.12f, 8, 1.5f, C(100, 170, 215, 230));
-                    DrawText(hotbarNames[slot], (int)r.x+9, (int)r.y+10, 14, RAYWHITE);
-                    DrawText(TextFormat("COUNT: %d", hotbarCounts[slot]), (int)r.x+9, (int)r.y+34, 10, C(160, 205, 235, 255));
+                    DrawText(itemNames[item], (int)r.x+9, (int)r.y+6, 13, RAYWHITE);
+                    DrawText(TextFormat("COUNT: %d", itemCounts[item]),
+                        (int)r.x+9, (int)r.y+25, 10, C(160, 205, 235, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
-                DrawText("TAP BAG TO CLOSE", (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26), 10, C(145, 190, 220, 255));
+                DrawText("TAP FOOD / WATER TO CONSUME",
+                    (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
+                    10, C(145, 190, 220, 255));
             }
         }
 
