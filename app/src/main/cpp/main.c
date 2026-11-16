@@ -2992,6 +2992,9 @@ int main(void)
             DrawCircle((int)mx+14,(int)(my+ms+18),4,C(205,133,79,255));DrawText("IRON",(int)mx+24,(int)(my+ms+12),11,C(220,155,95,255));
             DrawCircle((int)mx+92,(int)(my+ms+18),4,C(89,220,128,255));DrawText("URANIUM",(int)mx+102,(int)(my+ms+12),11,C(115,225,145,255));
             DrawText("Tap MAP to close",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
+            DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
+            DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,255));
+            DrawText("CLOSE MAP",mapButton.x+mapButton.width/2-MeasureText("CLOSE MAP",16)/2,mapButton.y+23,16,RAYWHITE);
         }
 
         // Главное меню boltSurvival.
