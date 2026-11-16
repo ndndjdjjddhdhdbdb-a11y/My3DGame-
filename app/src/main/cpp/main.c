@@ -1344,30 +1344,6 @@ int main(void)
         {
             attackCooldown = attackCooldownDuration;
             attackAnimation = 0.24f;
-            DrawRectangleRounded(
-                interactButton, 0.25f, 14,
-                attackCooldown <= 0.0f ? C(185, 75, 55, 245) : C(75, 83, 91, 245)
-            );
-            DrawRectangleRoundedLinesEx(
-                interactButton, 0.25f, 14, 2, C(230, 190, 160, 240)
-            );
-            DrawText(
-                "HIT",
-                (int)(interactButton.x+interactButton.width/2-MeasureText("HIT", 20)/2),
-                (int)(interactButton.y+9), 20, RAYWHITE
-            );
-            float cooldownRatio = attackCooldown/attackCooldownDuration;
-            DrawRectangleRounded(
-                (Rectangle){interactButton.x+12, interactButton.y+39,
-                            (interactButton.width-24)*(1.0f-cooldownRatio), 8},
-                0.5f, 6, C(105, 225, 150, 255)
-            );
-            DrawText(
-                attackCooldown <= 0.0f ? "READY" : TextFormat("%.1f s", attackCooldown),
-                (int)(interactButton.x+interactButton.width/2-MeasureText(attackCooldown <= 0.0f ? "READY" : TextFormat("%.1f s", attackCooldown), 13)/2),
-                (int)(interactButton.y+49), 13, RAYWHITE
-            );
-
             if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
                 barrelHealth[targetedBarrel] -= 10;
@@ -1755,6 +1731,39 @@ int main(void)
                 knobRadius,
                 C(220, 239, 255, 205)
             );
+
+            // Кнопка удара всегда видна во время игры.
+            if (!settingsOpen && !editControls)
+            {
+                Color hitColor = attackCooldown <= 0.0f ?
+                    C(185, 75, 55, 245) : C(75, 83, 91, 245);
+                DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
+                DrawRectangleRoundedLinesEx(
+                    interactButton, 0.25f, 14, 2,
+                    C(230, 190, 160, 240)
+                );
+                DrawText(
+                    "HIT",
+                    (int)(interactButton.x+interactButton.width/2-
+                          MeasureText("HIT", 20)/2),
+                    (int)(interactButton.y+7), 20, RAYWHITE
+                );
+
+                float cooldownRatio = attackCooldown/attackCooldownDuration;
+                DrawRectangleRounded(
+                    (Rectangle){interactButton.x+12, interactButton.y+34,
+                                (interactButton.width-24)*(1.0f-cooldownRatio), 7},
+                    0.5f, 6, C(105, 225, 150, 255)
+                );
+                const char *cooldownLabel = attackCooldown <= 0.0f ?
+                    "READY" : TextFormat("%.1f s", attackCooldown);
+                DrawText(
+                    cooldownLabel,
+                    (int)(interactButton.x+interactButton.width/2-
+                          MeasureText(cooldownLabel, 13)/2),
+                    (int)(interactButton.y+44), 13, RAYWHITE
+                );
+            }
 
             if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
