@@ -2767,6 +2767,19 @@ int main(void)
                 actionButtonAlpha[selectedActionControl]*100/255),
                 12, 194, 14, C(190, 220, 240, 255));
 
+            // Показываем сами кнопки в режиме редактирования, чтобы было
+            // понятно, какую именно область пользователь перетаскивает.
+            DrawRectangleRounded(interactButton, 0.25f, 14,
+                C(185, 75, 55, (unsigned char)actionButtonAlpha[0]));
+            DrawText("HIT",
+                (int)(interactButton.x+interactButton.width/2-MeasureText("HIT", 20)/2),
+                (int)(interactButton.y+interactButton.height/2-10), 20,
+                C(255, 255, 255, (unsigned char)actionButtonAlpha[0]));
+            DrawSurvivalButtonAlpha(sprintButton, "RUN", 18, false,
+                (unsigned char)actionButtonAlpha[1]);
+            DrawSurvivalButtonAlpha(inventoryButton, "BAG", 13, false,
+                (unsigned char)actionButtonAlpha[2]);
+
             DrawRectangleLinesEx(interactButton, 2, C(255, 210, 120, 230));
             DrawRectangleLinesEx(sprintButton, 2, C(255, 210, 120, 230));
             DrawRectangleLinesEx(inventoryButton, 2, C(255, 210, 120, 230));
