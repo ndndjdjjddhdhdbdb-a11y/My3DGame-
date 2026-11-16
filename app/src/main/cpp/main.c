@@ -999,3 +999,4 @@ int main(void)
     UnloadRenderTexture(sceneTexture);
     CloseWindow();
     return 0;
+}
