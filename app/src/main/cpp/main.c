@@ -2620,6 +2620,14 @@ int main(void)
                 );
             }
 
+            if (targetedTree >= 0 && !treeChopped[targetedTree])
+            {
+                DrawRectangleRounded((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, C(18, 31, 44, 225));
+                DrawRectangleRoundedLinesEx((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, 2, C(90, 165, 105, 240));
+                DrawText(TextFormat("TREE  -  %d/3", treeHealth[targetedTree]), (int)(screenWidth/2.0f-105.0f), 119, 19, RAYWHITE);
+                DrawText("HIT TO CHOP", (int)(screenWidth/2.0f+15.0f), 122, 13, C(175, 220, 175, 255));
+            }
+
             if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
                 float hudX = screenWidth/2.0f-130.0f;
@@ -3231,8 +3239,6 @@ int main(void)
                 cameraButton, 3,
                 C(80, 200, 255, 255)
             );
-
-            if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen) DrawSurvivalButton(takeButton, "TAKE WOOD +3", 13, true);
 
             DrawCircleLines(
                 (int)joystickPosition.x,
