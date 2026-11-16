@@ -32,7 +32,8 @@ static int LoadStorageValue(int position)
         return 0;
     }
 
-    int value = ((int *)data)[position];
+    int value = 0;
+    memcpy(&value, data + position*sizeof(int), sizeof(value));
     UnloadFileData(data);
     return value;
 }
