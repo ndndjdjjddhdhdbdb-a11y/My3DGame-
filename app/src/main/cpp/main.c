@@ -2605,27 +2605,7 @@ int main(void)
                 );
             }
 
-            int nearbyDoor = -1;
-            float doorDistance = 3.2f;
-            for (int i = 0; i < buildPieceCount; i++)
-            {
-                if (buildPieceTypes[i] != 2) continue;
-                float dx = buildPieces[i].x-player.x;
-                float dz = buildPieces[i].z-player.z;
-                float distance = sqrtf(dx*dx+dz*dz);
-                float dot = distance > 0.001f ?
-                    (dx*sinf(playerAngle)-dz*cosf(playerAngle))/distance : 1.0f;
-                if (distance < doorDistance && dot > 0.15f)
-                { nearbyDoor = i; doorDistance = distance; }
-            }
-            if (nearbyDoor >= 0)
-            {
-                buildDoorOpen[nearbyDoor] = !buildDoorOpen[nearbyDoor];
-                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
-                              buildPieceCount, itemCounts[4]);
-                attackAnimation = 0.0f;
-            }
-            else if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
+            if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
                 float hudX = screenWidth/2.0f-130.0f;
                 Rectangle barrelHud = {hudX, 105, 260, 76};
