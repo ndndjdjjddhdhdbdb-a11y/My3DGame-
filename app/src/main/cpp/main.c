@@ -13,14 +13,15 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
 
 static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, bool selected)
 {
-    Color fill = selected ? C(83, 103, 67, 250) : C(31, 43, 39, 245);
-    Color edge = selected ? C(220, 177, 91, 255) : C(112, 128, 105, 230);
-    DrawRectangleRounded((Rectangle){r.x+2, r.y+4, r.width, r.height}, 0.16f, 10, C(0, 0, 0, 75));
-    DrawRectangleRounded(r, 0.16f, 10, fill);
-    DrawRectangleRoundedLinesEx(r, 0.16f, 10, selected ? 2.5f : 1.5f, edge);
-    DrawRectangle((int)(r.x+10), (int)(r.y+9), 4, (int)(r.height-18), edge);
+    Color fill = selected ? C(39, 83, 119, 250) : C(17, 31, 55, 248);
+    Color edge = selected ? C(157, 225, 255, 255) : C(105, 157, 202, 235);
+    DrawRectangleRounded((Rectangle){r.x+3, r.y+5, r.width, r.height}, 0.14f, 10, C(0, 0, 0, 115));
+    DrawRectangleRounded(r, 0.14f, 10, fill);
+    DrawRectangleRounded((Rectangle){r.x+4, r.y+4, r.width-8, 3}, 0.5f, 4, C(180, 224, 255, selected ? 115 : 55));
+    DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
+    DrawRectangle((int)(r.x+9), (int)(r.y+8), 4, (int)(r.height-16), edge);
     int tw = MeasureText(label, fontSize);
-    DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(238, 237, 220, 255));
+    DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, 255));
 }
 
 static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
@@ -649,36 +650,19 @@ int main(void)
 
         panel = (Rectangle){panelX, panelY, panelWidth, panelHeight};
 
-        // Размеры кнопок главного меню.
-        float menuWidth = fminf(360.0f, screenWidth - 40.0f);
+        // Компактная сетка главного меню в стиле sci-fi панели.
+        float menuWidth = fminf(390.0f, screenWidth - 40.0f);
         float menuX = (screenWidth - menuWidth) / 2.0f;
+        float menuGap = 10.0f;
+        float menuButtonWidth = (menuWidth-menuGap)/2.0f;
+        float menuButtonHeight = fminf(58.0f, fmaxf(42.0f, screenHeight*0.15f));
+        float menuGridHeight = menuButtonHeight*2.0f+menuGap;
+        float menuStartY = fmaxf(128.0f, (screenHeight+90.0f-menuGridHeight)/2.0f);
 
-        float menuButtonHeight = fminf(55.0f,
-            fmaxf(40.0f, screenHeight * 0.13f));
-
-        float menuGap = 9.0f;
-        float menuStartY = 145.0f +
-            (screenHeight - 145.0f -
-            (menuButtonHeight * 4 + menuGap * 3)) / 2.0f;
-
-        menuPlayButton = (Rectangle){
-            menuX, menuStartY, menuWidth, menuButtonHeight
-        };
-
-        menuServersButton = (Rectangle){
-            menuX, menuStartY + menuButtonHeight + menuGap,
-            menuWidth, menuButtonHeight
-        };
-
-        menuShopButton = (Rectangle){
-            menuX, menuStartY + (menuButtonHeight + menuGap) * 2,
-            menuWidth, menuButtonHeight
-        };
-
-        menuSettingsButton = (Rectangle){
-            menuX, menuStartY + (menuButtonHeight + menuGap) * 3,
-            menuWidth, menuButtonHeight
-        };
+        menuPlayButton = (Rectangle){menuX, menuStartY, menuButtonWidth, menuButtonHeight};
+        menuServersButton = (Rectangle){menuX+menuButtonWidth+menuGap, menuStartY, menuButtonWidth, menuButtonHeight};
+        menuShopButton = (Rectangle){menuX, menuStartY+menuButtonHeight+menuGap, menuButtonWidth, menuButtonHeight};
+        menuSettingsButton = (Rectangle){menuX+menuButtonWidth+menuGap, menuStartY+menuButtonHeight+menuGap, menuButtonWidth, menuButtonHeight};
 
         menuBackButton = menuShopButton;
 
@@ -2065,16 +2049,20 @@ int main(void)
         // Главное меню boltSurvival.
         if (mainMenuOpen)
         {
-            DrawRectangleGradientV(
-                0, 0, screenWidth, screenHeight,
-                C(13, 20, 17, 248),
-                C(35, 48, 36, 248)
-            );
-
-            DrawRectangle(
-                0, 0, screenWidth, screenHeight,
-                C(0, 0, 0, 65)
-            );
+            // Холодный сине-графитовый фон с техническими линиями.
+            DrawRectangleGradientV(0, 0, screenWidth, screenHeight,
+                                   C(13, 24, 48, 255), C(29, 43, 72, 255));
+            DrawRectangle(0, 0, screenWidth, screenHeight, C(2, 8, 22, 75));
+            for (int stripe = 0; stripe < 9; stripe++)
+            {
+                float sx = (float)stripe*screenWidth/8.0f;
+                DrawLineEx((Vector2){sx, 0}, (Vector2){sx, screenHeight},
+                           1.0f, C(105, 158, 205, 22));
+            }
+            DrawRectangle(12, 0, 18, screenHeight, C(75, 125, 177, 35));
+            DrawRectangle(screenWidth-30, 0, 18, screenHeight, C(75, 125, 177, 35));
+            DrawRectangleLinesEx((Rectangle){28, 12, screenWidth-56, screenHeight-24},
+                                 2.0f, C(111, 174, 220, 90));
 
             const char *title = "boltSurvival";
             int titleSize = (int)fminf(48.0f, screenWidth*0.095f);
@@ -2096,29 +2084,22 @@ int main(void)
                 screenWidth/2-subtitleWidth/2,
                 100,
                 15,
-                C(145, 190, 215, 255)
+                C(157, 204, 239, 255)
             );
 
             if (menuPage == 0)
             {
-                Rectangle buttons[4] = {
-                    menuPlayButton,
-                    menuServersButton,
-                    menuShopButton,
-                    menuSettingsButton
-                };
+                Rectangle menuPanel = {menuX-14, menuStartY-15,
+                                        menuWidth+28, menuGridHeight+30};
+                DrawRectangleRounded(menuPanel, 0.08f, 12, C(5, 13, 29, 190));
+                DrawRectangleRoundedLinesEx(menuPanel, 0.08f, 12, 2.0f,
+                                            C(112, 177, 222, 165));
 
-                const char *labels[4] = {
-                    "PLAY",
-                    "SERVERS",
-                    "SHOP",
-                    "SETTINGS"
-                };
-
+                Rectangle buttons[4] = {menuPlayButton, menuServersButton,
+                                        menuShopButton, menuSettingsButton};
+                const char *labels[4] = {"PLAY", "SERVERS", "SHOP", "SETTINGS"};
                 for (int i = 0; i < 4; i++)
-                {
-                    DrawSurvivalButton(buttons[i], labels[i], 20, i == 0);
-                }
+                    DrawSurvivalButton(buttons[i], labels[i], 18, i == 0);
             }
             else
             {
@@ -2208,12 +2189,12 @@ int main(void)
 
             DrawRectangleRounded(
                 panel, 0.08f, 20,
-                C(25, 34, 28, 252)
+                C(13, 25, 45, 252)
             );
 
             DrawRectangleRoundedLinesEx(
                 panel, 0.08f, 20, 2,
-                C(190, 157, 91, 235)
+                C(111, 177, 222, 235)
             );
 
             DrawText(
