@@ -379,15 +379,35 @@ static void DrawRock(float x, float y, float z, float size)
                size*0.52f, C(145, 151, 145, 255));
 }
 
-// Небольшая горная группа из нескольких крупных каменных форм.
+// Невысокие холмы с пологими склонами и небольшими каменными уступами.
 static void DrawMountain(float x, float z, float scale, bool snowy)
 {
-    Color base = snowy ? C(105, 116, 119, 255) : C(91, 103, 99, 255);
-    Color peak = snowy ? C(224, 232, 231, 255) : C(126, 132, 122, 255);
-    DrawSphere((Vector3){x, 5.0f*scale, z}, 10.0f*scale, base);
-    DrawSphere((Vector3){x-6.0f*scale, 3.6f*scale, z+3.0f*scale}, 7.0f*scale, base);
-    DrawSphere((Vector3){x+6.0f*scale, 3.8f*scale, z-2.0f*scale}, 7.5f*scale, base);
-    DrawSphere((Vector3){x, 12.0f*scale, z}, 4.2f*scale, peak);
+    Color slope = snowy ? C(116, 127, 126, 255) : C(91, 112, 83, 255);
+    Color ledge = snowy ? C(153, 163, 160, 255) : C(112, 119, 105, 255);
+    Color rock = snowy ? C(190, 199, 196, 255) : C(126, 132, 122, 255);
+
+    // Низкие широкие основания формируют плавные подгорки.
+    DrawCylinderEx((Vector3){x, 0.0f, z},
+                   (Vector3){x+1.0f*scale, 4.2f*scale, z+1.0f*scale},
+                   15.0f*scale, 5.0f*scale, 10, slope);
+    DrawCylinderEx((Vector3){x-10.0f*scale, 0.0f, z+7.0f*scale},
+                   (Vector3){x-9.0f*scale, 2.7f*scale, z+7.5f*scale},
+                   9.0f*scale, 3.0f*scale, 9, slope);
+    DrawCylinderEx((Vector3){x+11.0f*scale, 0.0f, z-5.0f*scale},
+                   (Vector3){x+11.5f*scale, 3.2f*scale, z-5.0f*scale},
+                   10.0f*scale, 3.5f*scale, 9, slope);
+
+    // Небольшие уступы и обнажённые каменные пласты.
+    DrawCube((Vector3){x-5.5f*scale, 1.65f*scale, z+5.0f*scale},
+             8.0f*scale, 0.65f*scale, 2.0f*scale, ledge);
+    DrawCube((Vector3){x+5.0f*scale, 2.35f*scale, z-2.5f*scale},
+             6.0f*scale, 0.55f*scale, 2.2f*scale, ledge);
+    DrawRock(x+2.5f*scale, 2.0f*scale, z-7.0f*scale, 1.25f*scale);
+    DrawRock(x-8.0f*scale, 1.0f*scale, z-3.0f*scale, 0.9f*scale);
+
+    if (snowy)
+        DrawSphere((Vector3){x+1.0f*scale, 4.0f*scale, z+1.0f*scale},
+                   2.2f*scale, rock);
 }
 
 // Цветные прожилки помогают отличать железо от урана издалека.
