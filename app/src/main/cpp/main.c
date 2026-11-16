@@ -257,7 +257,7 @@ static void DrawCloud(float x, float y, float z, float s)
 
 int main(void)
 {
-    InitWindow(0, 0, "My 3D World");
+    InitWindow(0, 0, "boltSurvival");
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -277,12 +277,22 @@ int main(void)
     bool settingsOpen = false;
     bool editControls = false;
 
+    // Главное меню.
+    bool mainMenuOpen = true;
+    int menuPage = 0;
+
+    Rectangle menuPlayButton;
+    Rectangle menuServersButton;
+    Rectangle menuShopButton;
+    Rectangle menuSettingsButton;
+    Rectangle menuBackButton;
+    Rectangle menuReturnButton;
+
     int graphicsQuality = 0;
     int targetFps = 30;
     int detailLevel = 2;
     int resolutionLevel = 2;
 
-    // Дальность прорисовки чанков от 2 до 20.
     int chunkDistance = 4;
 
     SetTargetFPS(30);
@@ -378,6 +388,43 @@ int main(void)
             cameraButton.y = screenHeight-cameraButton.height-8;
 
         panel = (Rectangle){panelX, panelY, panelWidth, panelHeight};
+
+        // Размеры кнопок главного меню.
+        float menuWidth = fminf(360.0f, screenWidth - 40.0f);
+        float menuX = (screenWidth - menuWidth) / 2.0f;
+
+        float menuButtonHeight = fminf(55.0f,
+            fmaxf(40.0f, screenHeight * 0.13f));
+
+        float menuGap = 9.0f;
+        float menuStartY = 145.0f +
+            (screenHeight - 145.0f -
+            (menuButtonHeight * 4 + menuGap * 3)) / 2.0f;
+
+        menuPlayButton = (Rectangle){
+            menuX, menuStartY, menuWidth, menuButtonHeight
+        };
+
+        menuServersButton = (Rectangle){
+            menuX, menuStartY + menuButtonHeight + menuGap,
+            menuWidth, menuButtonHeight
+        };
+
+        menuShopButton = (Rectangle){
+            menuX, menuStartY + (menuButtonHeight + menuGap) * 2,
+            menuWidth, menuButtonHeight
+        };
+
+        menuSettingsButton = (Rectangle){
+            menuX, menuStartY + (menuButtonHeight + menuGap) * 3,
+            menuWidth, menuButtonHeight
+        };
+
+        menuBackButton = menuShopButton;
+
+        menuReturnButton = (Rectangle){
+            screenWidth - 155, 18, 135, 55
+        };
 
         moveButtonsButton = (Rectangle){
             panelX+20, panelY+75, panelWidth-40, 44
@@ -532,13 +579,51 @@ int main(void)
                     }
                 }
             }
-            else if (IsSettingsButtonHit(pos, settingsButton))
+            else if (mainMenuOpen && !settingsOpen)
+            {
+                if (menuPage == 0)
+                {
+                    if (CheckCollisionPointRec(pos, menuPlayButton))
+                    {
+                        mainMenuOpen = false;
+                    }
+                    else if (CheckCollisionPointRec(pos, menuServersButton))
+                    {
+                        menuPage = 1;
+                    }
+                    else if (CheckCollisionPointRec(pos, menuShopButton))
+                    {
+                        menuPage = 2;
+                    }
+                    else if (CheckCollisionPointRec(pos, menuSettingsButton))
+                    {
+                        settingsOpen = true;
+                    }
+                }
+                else
+                {
+                    if (CheckCollisionPointRec(pos, menuBackButton))
+                        menuPage = 0;
+                }
+            }
+            else if (!mainMenuOpen && !settingsOpen &&
+                     CheckCollisionPointRec(pos, menuReturnButton))
+            {
+                mainMenuOpen = true;
+                menuPage = 0;
+                joystickActive = false;
+                lookTouchId = -1;
+                joystickKnob = joystickPosition;
+            }
+            else if (!mainMenuOpen &&
+                     IsSettingsButtonHit(pos, settingsButton))
             {
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
                 lookTouchId = -1;
             }
-            else if (CheckCollisionPointRec(pos, cameraButton))
+            else if (!mainMenuOpen &&
+                     CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
             }
@@ -683,14 +768,41 @@ int main(void)
         {
             Vector2 pos = GetMousePosition();
 
-            if (!editControls &&
-                IsSettingsButtonHit(pos, settingsButton))
+            if (mainMenuOpen && !settingsOpen && !editControls)
+            {
+                if (menuPage == 0)
+                {
+                    if (CheckCollisionPointRec(pos, menuPlayButton))
+                        mainMenuOpen = false;
+                    else if (CheckCollisionPointRec(pos, menuServersButton))
+                        menuPage = 1;
+                    else if (CheckCollisionPointRec(pos, menuShopButton))
+                        menuPage = 2;
+                    else if (CheckCollisionPointRec(pos, menuSettingsButton))
+                        settingsOpen = true;
+                }
+                else if (CheckCollisionPointRec(pos, menuBackButton))
+                {
+                    menuPage = 0;
+                }
+            }
+            else if (!mainMenuOpen && !settingsOpen &&
+                     CheckCollisionPointRec(pos, menuReturnButton))
+            {
+                mainMenuOpen = true;
+                menuPage = 0;
+                joystickActive = false;
+                lookTouchId = -1;
+                joystickKnob = joystickPosition;
+            }
+            else if (!mainMenuOpen && !editControls &&
+                     IsSettingsButtonHit(pos, settingsButton))
             {
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
                 lookTouchId = -1;
             }
-            else if (!settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
                 firstPerson = !firstPerson;
@@ -880,7 +992,7 @@ int main(void)
 
         playerMoving = false;
 
-        if (joystickActive)
+        if (joystickActive && !mainMenuOpen && !settingsOpen && !editControls)
         {
             bool found = false;
 
@@ -952,6 +1064,11 @@ int main(void)
                 joystickKnob = joystickPosition;
             }
         }
+        else if (mainMenuOpen || settingsOpen || editControls)
+        {
+            joystickActive = false;
+            joystickKnob = joystickPosition;
+        }
 
         if (draggingSlider)
         {
@@ -982,7 +1099,8 @@ int main(void)
             }
         }
 
-        if (!settingsOpen && !editControls && lookTouchId != -1)
+        if (!mainMenuOpen && !settingsOpen && !editControls &&
+            lookTouchId != -1)
         {
             bool found = false;
 
@@ -1014,7 +1132,7 @@ int main(void)
                 lookTouchId = -1;
         }
 
-        if (settingsOpen || editControls)
+        if (settingsOpen || editControls || mainMenuOpen)
             lookTouchId = -1;
 
         for (int i = 0; i < MAX_TOUCHES; i++)
@@ -1117,11 +1235,9 @@ int main(void)
                   (Vector2){520, 5.2f},
                   C(164, 145, 111, 255));
 
-        // Дальность прорисовки чанков.
         float chunkView = chunkDistance*50.0f;
         float chunkView2 = chunkView*chunkView;
 
-        // Дома вдоль центральной дороги.
         int houseStep =
             (graphicsQuality == 0 || detailLevel >= 2) ? 2 : 1;
 
@@ -1136,22 +1252,15 @@ int main(void)
             float hz1 = hz-player.z;
 
             if (hx1*hx1+hz1*hz1 < chunkView2)
-            {
                 DrawRustHouse(-18.0f, hz, sc, i+4);
-            }
 
             float hx2 = 18.0f-player.x;
             float hz2 = hz+22.0f-player.z;
 
             if (hx2*hx2+hz2*hz2 < chunkView2)
-            {
-                DrawRustHouse(
-                    18.0f, hz+22.0f, sc*0.92f, i+7
-                );
-            }
+                DrawRustHouse(18.0f, hz+22.0f, sc*0.92f, i+7);
         }
 
-        // Дополнительные домики у боковых дорог.
         const Vector3 extraHouses[3] = {
             {-42.0f, 0, -120.0f},
             {48.0f, 0, 120.0f},
@@ -1174,7 +1283,6 @@ int main(void)
             }
         }
 
-        // Дальний холмистый горизонт.
         for (int i = -5; i <= 5; i++)
         {
             DrawSphere(
@@ -1198,7 +1306,6 @@ int main(void)
             );
         }
 
-        // Солнце и облака.
         DrawSphere(
             (Vector3){-28, 28, -45},
             5.0f, C(255, 226, 125, 255)
@@ -1213,7 +1320,6 @@ int main(void)
         if (graphicsQuality >= 2)
             DrawCloud(32, 17, 12, 2.1f);
 
-        // Деревья.
         int treeStep =
             (graphicsQuality == 0) ? 46 :
             ((graphicsQuality == 1) ? 34 : 27);
@@ -1248,7 +1354,6 @@ int main(void)
             }
         }
 
-        // Камни и кусты.
         if (graphicsQuality >= 1)
         {
             DrawRock(-5, 0.35f, -8, 0.65f);
@@ -1271,7 +1376,6 @@ int main(void)
         if (graphicsQuality >= 2)
             DrawRock(-10, 0.25f, 9, 0.42f);
 
-        // Цветы.
         if (graphicsQuality >= 1 && detailLevel < 2)
         {
             int flowerStep =
@@ -1346,93 +1450,252 @@ int main(void)
             WHITE
         );
 
-        // Информационная панель.
-        DrawRectangleRounded(
-            (Rectangle){18, 16, 210, 48},
-            0.35f, 12,
-            C(20, 35, 48, 165)
-        );
+        // Игровой интерфейс скрывается в главном меню.
+        if (!mainMenuOpen)
+        {
+            DrawRectangleRounded(
+                (Rectangle){18, 16, 210, 48},
+                0.35f, 12,
+                C(20, 35, 48, 165)
+            );
 
-        DrawCircle(42, 40, 7, C(103, 230, 135, 255));
+            DrawCircle(42, 40, 7, C(103, 230, 135, 255));
 
-        DrawText("GREEN VALLEY", 58, 29, 19, RAYWHITE);
+            DrawText("GREEN VALLEY", 58, 29, 19, RAYWHITE);
 
-        // Кнопка настроек.
-        DrawRectangleRounded(
-            settingsButton, 0.30f, 16,
-            C(20, 34, 52, 235)
-        );
+            DrawRectangleRounded(
+                settingsButton, 0.30f, 16,
+                C(20, 34, 52, 235)
+            );
 
-        DrawRectangleRoundedLinesEx(
-            settingsButton, 0.30f, 16, 2,
-            C(130, 205, 255, 240)
-        );
+            DrawRectangleRoundedLinesEx(
+                settingsButton, 0.30f, 16, 2,
+                C(130, 205, 255, 240)
+            );
 
-        DrawText(
-            "SETTINGS",
-            settingsButton.x+18,
-            settingsButton.y+22,
-            19,
-            RAYWHITE
-        );
+            DrawText(
+                "SETTINGS",
+                settingsButton.x+18,
+                settingsButton.y+22,
+                19,
+                RAYWHITE
+            );
 
-        // Кнопка камеры.
-        DrawRectangleRounded(
-            cameraButton, 0.30f, 16,
-            C(20, 34, 52, 235)
-        );
+            DrawRectangleRounded(
+                cameraButton, 0.30f, 16,
+                C(20, 34, 52, 235)
+            );
 
-        DrawRectangleRoundedLinesEx(
-            cameraButton, 0.30f, 16, 2,
-            C(130, 205, 255, 220)
-        );
+            DrawRectangleRoundedLinesEx(
+                cameraButton, 0.30f, 16, 2,
+                C(130, 205, 255, 220)
+            );
 
-        DrawText(
-            firstPerson ? "FIRST PERSON" : "THIRD PERSON",
-            cameraButton.x+10,
-            cameraButton.y+19,
-            17,
-            RAYWHITE
-        );
+            DrawText(
+                firstPerson ? "FIRST PERSON" : "THIRD PERSON",
+                cameraButton.x+10,
+                cameraButton.y+19,
+                17,
+                RAYWHITE
+            );
 
-        // Джойстик.
-        DrawCircleV(
-            joystickPosition,
-            joystickRadius+5,
-            C(10, 25, 35, 65)
-        );
+            DrawCircleV(
+                joystickPosition,
+                joystickRadius+5,
+                C(10, 25, 35, 65)
+            );
 
-        DrawCircleV(
-            joystickPosition,
-            joystickRadius,
-            C(20, 35, 48, 105)
-        );
+            DrawCircleV(
+                joystickPosition,
+                joystickRadius,
+                C(20, 35, 48, 105)
+            );
 
-        DrawCircleLines(
-            (int)joystickPosition.x,
-            (int)joystickPosition.y,
-            joystickRadius-4,
-            C(220, 240, 255, 145)
-        );
+            DrawCircleLines(
+                (int)joystickPosition.x,
+                (int)joystickPosition.y,
+                joystickRadius-4,
+                C(220, 240, 255, 145)
+            );
 
-        DrawCircleV(
-            joystickKnob,
-            knobRadius+5,
-            C(10, 20, 30, 90)
-        );
+            DrawCircleV(
+                joystickKnob,
+                knobRadius+5,
+                C(10, 20, 30, 90)
+            );
 
-        DrawCircleV(
-            joystickKnob,
-            knobRadius,
-            C(220, 239, 255, 205)
-        );
+            DrawCircleV(
+                joystickKnob,
+                knobRadius,
+                C(220, 239, 255, 205)
+            );
 
-        DrawCircleLines(
-            (int)joystickKnob.x,
-            (int)joystickKnob.y,
-            knobRadius-3,
-            C(255, 255, 255, 230)
-        );
+            DrawCircleLines(
+                (int)joystickKnob.x,
+                (int)joystickKnob.y,
+                knobRadius-3,
+                C(255, 255, 255, 230)
+            );
+
+            // Кнопка возврата в главное меню.
+            DrawRectangleRounded(
+                menuReturnButton, 0.25f, 12,
+                C(20, 34, 52, 235)
+            );
+
+            DrawRectangleRoundedLinesEx(
+                menuReturnButton, 0.25f, 12, 2,
+                C(130, 205, 255, 240)
+            );
+
+            DrawText(
+                "MENU",
+                menuReturnButton.x+42,
+                menuReturnButton.y+17,
+                19,
+                RAYWHITE
+            );
+        }
+
+        // Главное меню boltSurvival.
+        if (mainMenuOpen)
+        {
+            DrawRectangleGradientV(
+                0, 0, screenWidth, screenHeight,
+                C(9, 18, 30, 245),
+                C(17, 39, 55, 245)
+            );
+
+            DrawRectangle(
+                0, 0, screenWidth, screenHeight,
+                C(0, 0, 0, 65)
+            );
+
+            const char *title = "boltSurvival";
+            int titleSize = (int)fminf(48.0f, screenWidth*0.095f);
+            int titleWidth = MeasureText(title, titleSize);
+
+            DrawText(
+                title,
+                screenWidth/2-titleWidth/2,
+                42,
+                titleSize,
+                RAYWHITE
+            );
+
+            const char *subtitle = "SURVIVE  -  EXPLORE  -  BUILD";
+            int subtitleWidth = MeasureText(subtitle, 15);
+
+            DrawText(
+                subtitle,
+                screenWidth/2-subtitleWidth/2,
+                100,
+                15,
+                C(145, 190, 215, 255)
+            );
+
+            if (menuPage == 0)
+            {
+                Rectangle buttons[4] = {
+                    menuPlayButton,
+                    menuServersButton,
+                    menuShopButton,
+                    menuSettingsButton
+                };
+
+                const char *labels[4] = {
+                    "PLAY",
+                    "SERVERS",
+                    "SHOP",
+                    "SETTINGS"
+                };
+
+                for (int i = 0; i < 4; i++)
+                {
+                    Color buttonColor = (i == 0) ?
+                        C(35, 139, 105, 255) :
+                        C(35, 57, 76, 245);
+
+                    DrawRectangleRounded(
+                        buttons[i], 0.25f, 14,
+                        buttonColor
+                    );
+
+                    DrawRectangleRoundedLinesEx(
+                        buttons[i], 0.25f, 14, 2,
+                        C(105, 180, 215, 220)
+                    );
+
+                    int textWidth = MeasureText(labels[i], 20);
+
+                    DrawText(
+                        labels[i],
+                        buttons[i].x+buttons[i].width/2-textWidth/2,
+                        buttons[i].y+buttons[i].height/2-10,
+                        20,
+                        RAYWHITE
+                    );
+                }
+            }
+            else
+            {
+                const char *pageTitle =
+                    (menuPage == 1) ? "SERVERS" : "SHOP";
+
+                int pageTitleWidth = MeasureText(pageTitle, 27);
+
+                DrawText(
+                    pageTitle,
+                    screenWidth/2-pageTitleWidth/2,
+                    menuStartY+15,
+                    27,
+                    RAYWHITE
+                );
+
+                const char *message =
+                    (menuPage == 1) ?
+                    "NO SERVERS YET" :
+                    "COMING SOON";
+
+                int messageWidth = MeasureText(message, 18);
+
+                DrawText(
+                    message,
+                    screenWidth/2-messageWidth/2,
+                    menuStartY+75,
+                    18,
+                    C(165, 190, 210, 255)
+                );
+
+                DrawRectangleRounded(
+                    menuBackButton, 0.25f, 14,
+                    C(35, 57, 76, 245)
+                );
+
+                DrawRectangleRoundedLinesEx(
+                    menuBackButton, 0.25f, 14, 2,
+                    C(105, 180, 215, 220)
+                );
+
+                int backWidth = MeasureText("BACK", 19);
+
+                DrawText(
+                    "BACK",
+                    menuBackButton.x+menuBackButton.width/2-backWidth/2,
+                    menuBackButton.y+menuBackButton.height/2-9,
+                    19,
+                    RAYWHITE
+                );
+            }
+
+            DrawText(
+                "ALPHA VERSION",
+                18,
+                screenHeight-35,
+                14,
+                C(130, 160, 180, 255)
+            );
+        }
 
         // Меню настроек.
         if (settingsOpen)
@@ -1675,7 +1938,6 @@ int main(void)
                 15, RAYWHITE
             );
 
-            // Настройка дальности чанков.
             DrawRectangleRounded(
                 chunkButton, 0.22f, 12,
                 C(42, 75, 105, 255)
@@ -1688,7 +1950,6 @@ int main(void)
                 17, RAYWHITE
             );
 
-            // Чувствительность камеры.
             DrawText(
                 "CAMERA SENSITIVITY",
                 panelX+25, panelY+510,
