@@ -375,6 +375,26 @@ static void DrawRock(float x, float y, float z, float size)
                size*0.52f, C(145, 151, 145, 255));
 }
 
+// Небольшая горная группа из нескольких крупных каменных форм.
+static void DrawMountain(float x, float z, float scale, bool snowy)
+{
+    Color base = snowy ? C(105, 116, 119, 255) : C(91, 103, 99, 255);
+    Color peak = snowy ? C(224, 232, 231, 255) : C(126, 132, 122, 255);
+    DrawSphere((Vector3){x, 5.0f*scale, z}, 10.0f*scale, base);
+    DrawSphere((Vector3){x-6.0f*scale, 3.6f*scale, z+3.0f*scale}, 7.0f*scale, base);
+    DrawSphere((Vector3){x+6.0f*scale, 3.8f*scale, z-2.0f*scale}, 7.5f*scale, base);
+    DrawSphere((Vector3){x, 12.0f*scale, z}, 4.2f*scale, peak);
+}
+
+// Цветные прожилки помогают отличать железо от урана издалека.
+static void DrawOreNode(float x, float z, bool uranium)
+{
+    Color ore = uranium ? C(87, 190, 112, 255) : C(190, 112, 72, 255);
+    DrawRock(x, 0.42f, z, 0.72f);
+    DrawCube((Vector3){x-0.18f, 0.64f, z-0.24f}, 0.24f, 0.12f, 0.10f, ore);
+    DrawCube((Vector3){x+0.20f, 0.48f, z+0.12f}, 0.18f, 0.10f, 0.12f, ore);
+}
+
 static void DrawGrassPatch(float x, float z, float size, int seed)
 {
     Color grassA = C(55, 125, 62, 235);
@@ -418,6 +438,8 @@ static bool IsBlockedAt(float x, float z,
                            Vector3 *barrels, bool *barrelDestroyed)
 {
     const float playerRadius = 0.42f;
+    // Берег острова: игрок не может уйти за пределы игровой карты.
+    if (x*x + z*z > 194.0f*194.0f) return true;
 
     // Домики основной деревни.
     for (int i = -3; i <= 3; i++)
@@ -470,6 +492,7 @@ static bool IsBlockedAt(float x, float z,
 static bool IsCameraBlockedAt(float x, float z,
                                  Vector3 *barrels, bool *barrelDestroyed)
 {
+    if (x*x + z*z > 199.0f*199.0f) return true;
     // Камера проходит ближе к объектам, чем игрок: небольшой отступ
     // не позволяет ей резко отскакивать от невидимой широкой зоны.
     const float cameraRadius = 0.12f;
@@ -936,8 +959,8 @@ int main(void)
 
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
-    for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=34)
-        for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=34)
+    for (int tx=-178; tx<=178 && treeCount<MAX_TREES; tx+=34)
+        for (int tz=-178; tz<=178 && treeCount<MAX_TREES; tz+=34)
             if (IsVillageClear((float)tx,(float)tz)) { treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz}; treeHealth[treeCount++]=3; }
 
     while (!WindowShouldClose())
@@ -2239,23 +2262,33 @@ int main(void)
 
         BeginMode3D(camera);
 
-        // Мягкая многослойная поверхность мира.
-        DrawPlane((Vector3){0, -0.08f, 0},
-                  (Vector2){520, 520},
-                  C(73, 139, 76, 255));
+        // Компактный остров: океан вокруг и плитки суши с округлой береговой линией.
+        DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){620, 620}, C(43, 112, 143, 255));
+        for (int ix=-4; ix<=4; ix++)
+        {
+            for (int iz=-4; iz<=4; iz++)
+            {
+                float px = ix*40.0f;
+                float pz = iz*40.0f;
+                if (px*px+pz*pz > 205.0f*205.0f) continue;
+                bool coast = (px*px+pz*pz > 160.0f*160.0f);
+                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f},
+                          coast ? C(151, 137, 102, 255) : C(73, 139, 76, 255));
+            }
+        }
 
         // Широкая грунтовая дорога через поселение.
         DrawPlane((Vector3){0, -0.055f, 0},
-                  (Vector2){12.5f, 520},
+                  (Vector2){12.5f, 380},
                   C(126, 111, 83, 255));
         DrawPlane((Vector3){0, -0.049f, 0},
-                  (Vector2){9.2f, 520},
+                  (Vector2){9.2f, 380},
                   C(157, 137, 101, 255));
         DrawPlane((Vector3){0, -0.055f, 0},
-                  (Vector2){520, 12.5f},
+                  (Vector2){380, 12.5f},
                   C(126, 111, 83, 255));
         DrawPlane((Vector3){0, -0.049f, 0},
-                  (Vector2){520, 9.2f},
+                  (Vector2){380, 9.2f},
                   C(157, 137, 101, 255));
 
         // Небольшие естественные пятна травы вокруг игрока.
@@ -2278,27 +2311,27 @@ int main(void)
         }
 
         DrawPlane((Vector3){0, -0.052f, 0},
-                  (Vector2){9.5f, 520},
+                  (Vector2){9.5f, 380},
                   C(116, 105, 84, 255));
 
         DrawPlane((Vector3){0, -0.048f, 0},
-                  (Vector2){7.0f, 520},
+                  (Vector2){7.0f, 380},
                   C(164, 145, 111, 255));
 
         DrawPlane((Vector3){0, -0.052f, 0},
-                  (Vector2){520, 9.5f},
+                  (Vector2){380, 9.5f},
                   C(116, 105, 84, 255));
 
         DrawPlane((Vector3){0, -0.048f, 0},
-                  (Vector2){520, 7.0f},
+                  (Vector2){380, 7.0f},
                   C(164, 145, 111, 255));
 
         DrawPlane((Vector3){0, -0.052f, -120},
-                  (Vector2){520, 7.5f},
+                  (Vector2){380, 7.5f},
                   C(116, 105, 84, 255));
 
         DrawPlane((Vector3){0, -0.048f, -120},
-                  (Vector2){520, 5.2f},
+                  (Vector2){380, 5.2f},
                   C(164, 145, 111, 255));
 
         DrawPlane((Vector3){0, -0.052f, 120},
@@ -2425,16 +2458,39 @@ int main(void)
                 DrawLootBarrel(barrelPositions[b]);
         }
 
-        // Дальние декоративные холмы отключаем на низком качестве.
-        if (graphicsQuality >= 1)
+        // Горные районы по краям острова. На низкой графике остаются простые формы.
+        const Vector3 mountainSites[7] = {
+            {-132,0,-112}, {-158,0,-42}, {-126,0,102},
+            {132,0,-118}, {158,0,18}, {122,0,122}, {12,0,166}
+        };
+        for (int m=0; m<7; m++)
         {
-            for (int i = -5; i <= 5; i++)
-            {
-                DrawSphere((Vector3){i*48.0f, -8.0f, -265.0f}, 34.0f, C(101, 174, 105, 255));
-                DrawSphere((Vector3){i*48.0f, -8.0f, 265.0f}, 34.0f, C(91, 160, 94, 255));
-                DrawSphere((Vector3){-265.0f, -8.0f, i*48.0f}, 34.0f, C(101, 174, 105, 255));
-                DrawSphere((Vector3){265.0f, -8.0f, i*48.0f}, 34.0f, C(91, 160, 94, 255));
-            }
+            float dx=mountainSites[m].x-player.x, dz=mountainSites[m].z-player.z;
+            if (dx*dx+dz*dz > chunkView2) continue;
+            DrawMountain(mountainSites[m].x, mountainSites[m].z,
+                         0.72f+(float)(m%3)*0.12f, m==3 || m==4 || m==6);
+        }
+
+        // Рудные выходы: железо — рыжее, уран — зелёные прожилки.
+        const Vector3 ironSites[10] = {
+            {-112,0,-72}, {-145,0,42}, {-82,0,132}, {-34,0,158},
+            {78,0,-142}, {142,0,-76}, {154,0,78}, {92,0,138},
+            {-156,0,-8}, {42,0,148}
+        };
+        const Vector3 uraniumSites[5] = {
+            {118,0,-112}, {154,0,36}, {-132,0,112}, {-92,0,-142}, {32,0,-166}
+        };
+        for (int ore=0; ore<10; ore++)
+        {
+            float dx=ironSites[ore].x-player.x, dz=ironSites[ore].z-player.z;
+            if (dx*dx+dz*dz < chunkView2 && graphicsQuality >= 1)
+                DrawOreNode(ironSites[ore].x, ironSites[ore].z, false);
+        }
+        for (int ore=0; ore<5; ore++)
+        {
+            float dx=uraniumSites[ore].x-player.x, dz=uraniumSites[ore].z-player.z;
+            if (dx*dx+dz*dz < chunkView2 && graphicsQuality >= 1)
+                DrawOreNode(uraniumSites[ore].x, uraniumSites[ore].z, true);
         }
 
         DrawSphere(
