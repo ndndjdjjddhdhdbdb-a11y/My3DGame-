@@ -1319,7 +1319,7 @@ int main(void)
             {
                 if (settingsOpen)
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
@@ -1499,7 +1499,7 @@ int main(void)
                     targetFps = 30;
                     SetTargetFPS(targetFps);
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
@@ -1585,7 +1585,7 @@ int main(void)
                 {
                     settingsOpen = false;
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
@@ -1851,7 +1851,7 @@ int main(void)
                     targetFps = 30;
                     SetTargetFPS(targetFps);
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
@@ -1860,7 +1860,7 @@ int main(void)
                 {
                     settingsOpen = false;
                     SaveGameSettings(joystickPosition, joystickRadius,
-                        settingsButton, cameraButton, actionButtonCenters,
+                        settingsButton, cameraButton, mapButton, actionButtonCenters,
                         actionButtonScale, actionButtonAlpha, lookSensitivity,
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
