@@ -615,6 +615,38 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
                    2.2f*scale, rock);
 }
 
+ // Горный проход: каменные боковые стены и верхняя арка, центр остаётся свободным.
+static void DrawMountainPassage(float x, float z, float scale, bool snowy)
+{
+    Color stone = snowy ? C(157, 169, 170, 255) : C(105, 116, 105, 255);
+    Color light = snowy ? C(194, 204, 202, 255) : C(132, 139, 124, 255);
+    DrawSphere((Vector3){x-4.0f*scale, 2.0f*scale, z}, 3.4f*scale, stone);
+    DrawSphere((Vector3){x+4.0f*scale, 2.0f*scale, z}, 3.4f*scale, stone);
+    DrawSphere((Vector3){x-2.0f*scale, 4.5f*scale, z}, 3.0f*scale, light);
+    DrawSphere((Vector3){x+2.0f*scale, 4.5f*scale, z}, 3.0f*scale, light);
+    DrawSphere((Vector3){x, 5.1f*scale, z+0.2f*scale}, 2.6f*scale, stone);
+    // Каменные склоны по обе стороны прохода.
+    DrawSphere((Vector3){x-6.5f*scale, 1.8f*scale, z+4.0f*scale}, 4.0f*scale, stone);
+    DrawSphere((Vector3){x+6.5f*scale, 1.8f*scale, z-4.0f*scale}, 4.0f*scale, stone);
+}
+
+// Гора с большим тёмным отверстием на склоне.
+static void DrawMountainHole(float x, float z, float scale, bool snowy)
+{
+    Color stone = snowy ? C(148, 160, 160, 255) : C(91, 105, 91, 255);
+    Color light = snowy ? C(190, 201, 199, 255) : C(125, 135, 119, 255);
+    Color dark = C(22, 27, 29, 255);
+    // Основная масса и боковые края отверстия.
+    DrawSphere((Vector3){x, 3.0f*scale, z+2.0f*scale}, 7.0f*scale, stone);
+    DrawSphere((Vector3){x-4.2f*scale, 2.0f*scale, z-1.0f*scale}, 3.8f*scale, light);
+    DrawSphere((Vector3){x+4.2f*scale, 2.0f*scale, z-1.0f*scale}, 3.8f*scale, light);
+    DrawSphere((Vector3){x, 5.4f*scale, z-1.0f*scale}, 3.8f*scale, light);
+    // Тёмная глубина отверстия находится за его входом.
+    DrawSphere((Vector3){x, 2.5f*scale, z-0.2f*scale}, 2.35f*scale, dark);
+    DrawSphere((Vector3){x-6.0f*scale, 1.7f*scale, z+3.0f*scale}, 3.6f*scale, stone);
+    DrawSphere((Vector3){x+6.0f*scale, 1.7f*scale, z+3.0f*scale}, 3.6f*scale, stone);
+}
+
 // Более крупные залежи с хорошо заметными цветными вкраплениями.
 static void DrawOreNode(float x, float z, int type)
 {
@@ -2816,6 +2848,23 @@ int main(void)
 
         float chunkView = chunkDistance*50.0f;
         float chunkView2 = chunkView*chunkView;
+
+        // Два типа гор добавлены в мир и отрисовываются по дистанции чанков.
+        const Vector3 passageMountains[2] = {{-118,0,-112}, {132,0,94}};
+        const Vector3 holeMountains[2] = {{108,0,-126}, {-142,0,78}};
+        for (int mi=0; mi<2; mi++)
+        {
+            float dx=passageMountains[mi].x-player.x;
+            float dz=passageMountains[mi].z-player.z;
+            if (dx*dx+dz*dz < chunkView2)
+                DrawMountainPassage(passageMountains[mi].x, passageMountains[mi].z,
+                                    1.0f, mi==1);
+            dx=holeMountains[mi].x-player.x;
+            dz=holeMountains[mi].z-player.z;
+            if (dx*dx+dz*dz < chunkView2)
+                DrawMountainHole(holeMountains[mi].x, holeMountains[mi].z,
+                                 1.0f, mi==0);
+        }
 
         float stationDx=player.x,stationDz=-22.0f-player.z;
         if(stationDx*stationDx+stationDz*stationDz<chunkView2)
