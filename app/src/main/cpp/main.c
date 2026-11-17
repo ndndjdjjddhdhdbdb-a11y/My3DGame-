@@ -1107,6 +1107,15 @@ static void DrawCloud(float x, float y, float z, float s)
 int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
+
+    // Стандартный шрифт Raylib не содержит кириллицу. Загружаем Roboto
+    // Android с явным набором русских символов для сообщений интерфейса.
+    int cyrillicCodepoints[191];
+    int cpIndex = 0;
+    for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
+    for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
+    Font cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
+                                   cyrillicCodepoints, cpIndex);
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -3209,19 +3218,21 @@ int main(void)
         if (nearGasStation && !mainMenuOpen && !settingsOpen && !inventoryOpen)
         {
             const char *msg = "СТРОИТЕЛЬСТВО ЗАПРЕЩЕНО";
-            int tw=MeasureText(msg,20);
+            float tw=MeasureTextEx(cyrillicFont,msg,20,1.0f).x;
             DrawRectangleRounded((Rectangle){screenWidth/2-tw/2-14,82,tw+28,36},
                                  0.25f,8,C(75,25,20,225));
-            DrawText(msg,screenWidth/2-tw/2,91,20,C(255,210,190,255));
+            DrawTextEx(cyrillicFont,msg,(Vector2){screenWidth/2-tw/2,91},
+                       20,1.0f,C(255,210,190,255));
         }
         if(buildMessageTimer>0.0f && !mainMenuOpen)
         {
             const char *msg = buildMessageType==1 ? "СТРОИТЕЛЬСТВО ЗАПРЕЩЕНО" :
                               "ФУНДАМЕНТ НЕЛЬЗЯ РАЗМЕСТИТЬ: МЕШАЮТ ОБЪЕКТЫ";
-            int tw=MeasureText(msg,16);
+            float tw=MeasureTextEx(cyrillicFont,msg,16,1.0f).x;
             DrawRectangleRounded((Rectangle){screenWidth/2-tw/2-12,124,tw+24,32},
                                  0.22f,8,C(60,25,20,220));
-            DrawText(msg,screenWidth/2-tw/2,132,16,C(255,220,205,255));
+            DrawTextEx(cyrillicFont,msg,(Vector2){screenWidth/2-tw/2,132},
+                       16,1.0f,C(255,220,205,255));
         }
 
         // Игровой интерфейс скрывается в главном меню.
@@ -4217,6 +4228,7 @@ int main(void)
     }
 
     UnloadRenderTexture(sceneTexture);
+    UnloadFont(cyrillicFont);
     CloseWindow();
 
     return 0;
