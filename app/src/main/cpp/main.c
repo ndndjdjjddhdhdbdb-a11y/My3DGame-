@@ -3555,6 +3555,39 @@ int main(void)
             // Кнопка возврата в главное меню.
             DrawSurvivalButton(menuReturnButton, "MENU", 19, false);
 
+            if(commandChatOpen || commandConsoleOpen)
+            {
+                DrawRectangle(0,0,screenWidth,screenHeight,C(0,4,12,190));
+                Rectangle cp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,190};
+                DrawRectangleRounded(cp,0.08f,10,C(18,29,42,250));
+                DrawRectangleRoundedLinesEx(cp,0.08f,10,2,C(105,170,210,255));
+                DrawTextEx(cyrillicFont,commandChatOpen?"ЧАТ КОМАНД":"КОНСОЛЬ",(Vector2){cp.x+14,cp.y+12},20,1,RAYWHITE);
+                Rectangle inputBox={cp.x+14,cp.y+58,cp.width-28,42};
+                DrawRectangleRounded(inputBox,0.12f,8,C(7,14,23,255));
+                DrawRectangleRoundedLinesEx(inputBox,0.12f,8,1,C(90,145,180,255));
+                DrawTextEx(cyrillicFont,commandInput[0]?commandInput:"Введите команду...",(Vector2){inputBox.x+10,inputBox.y+12},16,1,RAYWHITE);
+                DrawSurvivalButton((Rectangle){cp.x+14,cp.y+116,100,42},"CLOSE",13,false);
+                DrawSurvivalButton((Rectangle){cp.x+cp.width-128,cp.y+116,114,42},"SEND",13,true);
+                DrawTextEx(cyrillicFont,commandOutput,(Vector2){cp.x+14,cp.y+164},13,1,C(170,210,235,255));
+            }
+            if(resourcePanelOpen)
+            {
+                DrawRectangle(0,0,screenWidth,screenHeight,C(0,4,12,205));
+                Rectangle rp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,screenHeight*0.78f};
+                DrawRectangleRounded(rp,0.06f,10,C(24,31,35,252));
+                DrawRectangleRoundedLinesEx(rp,0.06f,10,2,C(130,165,125,255));
+                DrawTextEx(cyrillicFont,"ВЫДАЧА РЕСУРСОВ",(Vector2){rp.x+14,rp.y+12},20,1,RAYWHITE);
+                DrawSurvivalButton((Rectangle){rp.x+rp.width-82,rp.y+10,68,34},"X",16,false);
+                float rowH=(rp.height-76.0f)/12.0f;
+                for(int item=0;item<12;item++)
+                {
+                    float ry=rp.y+58+item*rowH;
+                    DrawText(itemNames[item],(int)rp.x+16,(int)ry+5,14,RAYWHITE);
+                    DrawText(TextFormat("x%d",itemCounts[item]),(int)(rp.x+rp.width-178),(int)ry+5,14,C(190,220,175,255));
+                    DrawSurvivalButton((Rectangle){rp.x+rp.width-126,ry,48,rowH-4},"-10",11,false);
+                    DrawSurvivalButton((Rectangle){rp.x+rp.width-70,ry,48,rowH-4},"+10",11,true);
+                }
+            }
             if (inventoryOpen)
             {
                 DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
