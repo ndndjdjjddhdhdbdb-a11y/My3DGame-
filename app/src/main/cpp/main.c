@@ -69,6 +69,12 @@ static void DrawUiText(const char *text, int x, int y, int fontSize, Color color
 }
 static void DrawUiTextBold(const char *text, int x, int y, int fontSize, Color color)
 {
+    DrawUiText(text,x,y,fontSize,color);
+    DrawUiText(text,x+1,y,fontSize,color);
+    DrawUiText(text,x,y+1,fontSize,color);
+}
+static void DrawUiTextBold(const char *text, int x, int y, int fontSize, Color color)
+{
     // Небольшое смещение нескольких слоёв делает системный шрифт визуально жирнее.
     DrawTextEx(cyrillicFont,text,(Vector2){(float)x+0.55f,(float)y},(float)fontSize,1.0f,color);
     DrawTextEx(cyrillicFont,text,(Vector2){(float)x,(float)y+0.55f},(float)fontSize,1.0f,color);
@@ -1242,76 +1248,44 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
 
 static void DrawWildAnimal(Vector3 p, int type, float phase)
 {
-    // Модели ориентированы мордой в сторону -Z.
-    float bob=sinf(phase)*0.025f;
-    bool deer=(type==0);
-    Color fur=deer?C(145,103,65,255):C(83,67,53,255);
-    Color dark=deer?C(91,62,40,255):C(48,40,34,255);
-    Color belly=deer?C(190,163,125,255):C(119,91,69,255);
+    bool deer=(type==0); float bob=sinf(phase)*0.025f;
+    Color fur=deer?C(145,101,59,255):C(82,65,50,255), dark=deer?C(76,51,34,255):C(43,36,30,255), light=deer?C(195,165,125,255):C(125,93,69,255);
     DrawCylinder((Vector3){p.x,0.025f,p.z},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
-
-    if(deer)
-    {
-        // Стройное вытянутое туловище, грудь и поднятая шея.
-        DrawSphere((Vector3){p.x,0.91f+bob,p.z+0.08f},0.43f,fur);
-        DrawSphere((Vector3){p.x,0.83f+bob,p.z+0.12f},0.34f,belly);
-        DrawSphere((Vector3){p.x,1.12f+bob,p.z-0.30f},0.25f,fur);
-        DrawCylinderEx((Vector3){p.x,0.92f+bob,p.z-0.28f},
-                       (Vector3){p.x,1.43f+bob,p.z-0.57f},0.19f,0.13f,9,fur);
-        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.61f},0.19f,fur);
-        DrawSphere((Vector3){p.x,1.40f+bob,p.z-0.79f},0.105f,dark);
-        DrawSphere((Vector3){p.x-0.17f,1.57f+bob,p.z-0.58f},0.075f,fur);
-        DrawSphere((Vector3){p.x+0.17f,1.57f+bob,p.z-0.58f},0.075f,fur);
-        DrawSphere((Vector3){p.x,0.99f+bob,p.z+0.49f},0.13f,belly);
-        for(int side=-1;side<=1;side+=2)
-        {
-            DrawCylinderEx((Vector3){p.x+side*0.12f,1.57f+bob,p.z-0.60f},
-                           (Vector3){p.x+side*0.25f,1.94f+bob,p.z-0.63f},
-                           0.045f,0.032f,6,C(190,166,126,255));
-            DrawCylinderEx((Vector3){p.x+side*0.25f,1.78f+bob,p.z-0.62f},
-                           (Vector3){p.x+side*0.43f,1.88f+bob,p.z-0.65f},
-                           0.032f,0.018f,5,C(190,166,126,255));
-            DrawCylinderEx((Vector3){p.x+side*0.25f,1.86f+bob,p.z-0.63f},
-                           (Vector3){p.x+side*0.20f,2.04f+bob,p.z-0.63f},
-                           0.028f,0.015f,5,C(190,166,126,255));
+    if(deer){
+        DrawSphere((Vector3){p.x,0.91f+bob,p.z+0.10f},(Vector3){0.39f,0.43f,0.72f},fur);
+        DrawSphere((Vector3){p.x,0.66f+bob,p.z+0.10f},(Vector3){0.28f,0.16f,0.49f},light);
+        DrawCylinderEx((Vector3){p.x,0.95f+bob,p.z-0.38f},(Vector3){p.x,1.43f+bob,p.z-0.65f},0.19f,0.12f,9,fur);
+        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.69f},(Vector3){0.18f,0.20f,0.24f},fur);
+        DrawSphere((Vector3){p.x,1.39f+bob,p.z-0.89f},(Vector3){0.11f,0.09f,0.18f},dark);
+        DrawSphere((Vector3){p.x-0.16f,1.57f+bob,p.z-0.68f},(Vector3){0.07f,0.045f,0.19f},fur);
+        DrawSphere((Vector3){p.x+0.16f,1.57f+bob,p.z-0.68f},(Vector3){0.07f,0.045f,0.19f},fur);
+        DrawSphere((Vector3){p.x,1.38f+bob,p.z-1.00f},0.035f,dark);
+        for(int side=-1;side<=1;side+=2){
+            Vector3 base={p.x+side*0.11f,1.62f+bob,p.z-0.69f}, fork={p.x+side*0.25f,1.82f+bob,p.z-0.70f};
+            DrawCylinderEx(base,fork,0.045f,0.030f,6,C(198,177,140,255));
+            DrawCylinderEx(fork,(Vector3){p.x+side*0.43f,1.91f+bob,p.z-0.70f},0.030f,0.016f,5,C(198,177,140,255));
+            DrawCylinderEx((Vector3){p.x+side*0.21f,1.77f+bob,p.z-0.70f},(Vector3){p.x+side*0.19f,2.02f+bob,p.z-0.70f},0.026f,0.012f,5,C(198,177,140,255));
         }
+    }else{
+        DrawSphere((Vector3){p.x,0.73f+bob,p.z+0.12f},(Vector3){0.56f,0.45f,0.78f},fur);
+        DrawSphere((Vector3){p.x,0.53f+bob,p.z+0.10f},(Vector3){0.43f,0.16f,0.60f},light);
+        DrawSphere((Vector3){p.x,0.81f+bob,p.z-0.48f},(Vector3){0.40f,0.34f,0.43f},fur);
+        DrawSphere((Vector3){p.x,0.69f+bob,p.z-0.77f},(Vector3){0.27f,0.20f,0.27f},fur);
+        DrawSphere((Vector3){p.x,0.64f+bob,p.z-0.99f},(Vector3){0.19f,0.13f,0.10f},C(120,82,68,255));
+        for(int side=-1;side<=1;side+=2){
+            DrawCylinderEx((Vector3){p.x+side*0.23f,0.94f+bob,p.z-0.57f},(Vector3){p.x+side*0.36f,1.17f+bob,p.z-0.61f},0.13f,0.025f,6,dark);
+            DrawSphere((Vector3){p.x+side*0.20f,0.72f+bob,p.z-0.85f},0.035f,C(22,19,17,255));
+            DrawCylinderEx((Vector3){p.x+side*0.18f,0.53f+bob,p.z-0.88f},(Vector3){p.x+side*0.23f,0.70f+bob,p.z-0.94f},0.060f,0.014f,6,C(230,215,180,255));
+        }
+        DrawCylinderEx((Vector3){p.x,0.72f+bob,p.z+0.78f},(Vector3){p.x,0.86f+bob,p.z+1.02f},0.055f,0.025f,6,dark);
     }
-    else
-    {
-        // Низкий тяжёлый кабан с широкой спиной, плечами и пятачком.
-        DrawSphere((Vector3){p.x,0.76f+bob,p.z+0.08f},0.59f,fur);
-        DrawSphere((Vector3){p.x,0.70f+bob,p.z+0.25f},0.47f,belly);
-        DrawSphere((Vector3){p.x,0.86f+bob,p.z-0.34f},0.48f,fur);
-        DrawSphere((Vector3){p.x,0.80f+bob,p.z-0.68f},0.30f,fur);
-        DrawSphere((Vector3){p.x,0.75f+bob,p.z-0.91f},0.19f,dark);
-        DrawCube((Vector3){p.x,0.76f+bob,p.z-1.075f},0.29f,0.20f,0.10f,C(115,77,66,255));
-        for(int side=-1;side<=1;side+=2)
-        {
-            DrawSphere((Vector3){p.x+side*0.27f,1.04f+bob,p.z-0.55f},0.12f,dark);
-            DrawCylinderEx((Vector3){p.x+side*0.25f,0.68f+bob,p.z-0.82f},
-                           (Vector3){p.x+side*0.34f,0.91f+bob,p.z-0.91f},
-                           0.075f,0.015f,6,C(226,211,174,255));
-        }
-        DrawSphere((Vector3){p.x,1.10f+bob,p.z+0.48f},0.13f,dark);
+    for(int side=-1;side<=1;side+=2) for(int leg=0;leg<2;leg++){
+        float lx=p.x+side*(deer?0.24f:0.36f), lz=p.z+(leg==0?-0.39f:0.43f);
+        float top=deer?0.79f:0.60f, knee=deer?0.40f:0.34f;
+        DrawCylinderEx((Vector3){lx,top+bob,lz},(Vector3){lx+side*0.015f,knee+bob,lz+0.02f},deer?0.065f:0.105f,deer?0.048f:0.075f,7,fur);
+        DrawCylinderEx((Vector3){lx+side*0.015f,knee+bob,lz+0.02f},(Vector3){lx,0.12f,lz+0.03f},deer?0.045f:0.075f,deer?0.035f:0.055f,7,dark);
+        DrawCube((Vector3){lx,0.08f,lz+0.03f},deer?0.12f:0.17f,0.12f,0.16f,C(35,30,26,255));
     }
-
-    // Четыре отдельные ноги с небольшими суставами и копытами.
-    for(int side=-1;side<=1;side+=2)
-        for(int leg=0;leg<2;leg++)
-        {
-            float lx=p.x+side*(deer?0.25f:0.34f);
-            float lz=p.z+(leg==0?-0.34f:0.39f);
-            float hipY=deer?0.78f:0.67f;
-            float kneeY=deer?0.42f:0.39f;
-            float footY=0.12f;
-            DrawCylinderEx((Vector3){lx,hipY+bob,lz},
-                           (Vector3){lx+side*0.015f,kneeY+bob,lz+0.015f},
-                           deer?0.075f:0.105f,deer?0.055f:0.075f,7,fur);
-            DrawCylinderEx((Vector3){lx+side*0.015f,kneeY+bob,lz+0.015f},
-                           (Vector3){lx,footY,lz+0.025f},
-                           deer?0.052f:0.075f,deer?0.038f:0.055f,7,dark);
-            DrawCube((Vector3){lx,0.085f,lz+0.025f},deer?0.12f:0.17f,0.12f,0.16f,C(39,34,29,255));
-        }
 }
 
 static void DrawBiomeAtmosphere(Vector3 player, int biome, float time, int quality)
@@ -2248,7 +2222,7 @@ int main(void)
                 Rectangle close={cratePanel.x+cratePanel.width-48.0f,cratePanel.y+4.0f,42.0f,40.0f};
                 float crateContentY=cratePanel.y+50.0f;
                 float crateContentH=cratePanel.height-58.0f;
-                if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
+                if(CheckCollisionPointRec(pos,closeHit)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
                 else if(openedGasCrate>=0 && crateTakeCooldown<=0.0f){
                     int cols=4, rows=2;
                     float gap=4.0f;
