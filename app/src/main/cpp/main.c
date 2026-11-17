@@ -1655,7 +1655,7 @@ int main(void)
                         else if(strcmp(commandInput,"/update")==0)strcpy(commandOutput,"git pull --ff-only origin master && ./gradlew assembleDebug");
                         else strcpy(commandOutput,"Команды: /give или /update");
                     }
-                    commandInput[0]='\\0';
+                    commandInput[0]='\0';
                 }
             }
             else if (editControls)
@@ -1798,7 +1798,7 @@ int main(void)
             { if (CheckCollisionPointRec(pos,mapButton)) mapOpen=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos,chatButton))
             {
-                commandChatOpen=true;commandConsoleOpen=false;commandInput[0]='\\0';
+                commandChatOpen=true;commandConsoleOpen=false;commandInput[0]='\0';
                 strcpy(commandOutput,"Введите /console");ShowSoftKeyboard();
             }
             else if (!mainMenuOpen &&
