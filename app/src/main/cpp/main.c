@@ -1,4 +1,5 @@
 #include "raymob.h"
+#include "rlgl.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1240,46 +1241,133 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
     }
 }
 
-static void DrawWildAnimal(Vector3 p, int type, float phase)
+enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4 };
+
+static Sound gBoarAlertSound = {0};
+static bool gAnimalAudioReady = false;
+
+static void InitAnimalAudio(void)
 {
-    bool deer=(type==0); float bob=sinf(phase)*0.025f;
-    Color fur=deer?C(145,101,59,255):C(82,65,50,255), dark=deer?C(76,51,34,255):C(43,36,30,255), light=deer?C(195,165,125,255):C(125,93,69,255);
-    DrawCylinder((Vector3){p.x,0.025f,p.z},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
+    InitAudioDevice();
+    if (!IsAudioDeviceReady()) return;
+
+    // Короткий синтезированный низкий хриплый хрюк, без внешнего аудиофайла.
+    const unsigned int sampleRate = 22050;
+    const unsigned int frameCount = sampleRate*7/10;
+    short *samples = (short *)malloc(sizeof(short)*frameCount);
+    if (samples == NULL) return;
+
+    unsigned int noise = 0x51A7u;
+    for (unsigned int i=0; i<frameCount; i++)
+    {
+        float t=(float)i/(float)sampleRate;
+        float pulse1=fmaxf(0.0f,1.0f-fabsf(t-0.16f)/0.16f);
+        float pulse2=fmaxf(0.0f,1.0f-fabsf(t-0.48f)/0.18f);
+        float envelope=fmaxf(pulse1,pulse2);
+        float phase=6.2831853f*(82.0f*t-22.0f*t*t);
+        noise=noise*1664525u+1013904223u;
+        float grit=((float)((noise>>16)&0xFFFFu)/32767.5f)-1.0f;
+        float growl=sinf(phase)+0.38f*sinf(phase*2.07f)+0.24f*grit;
+        float value=growl*envelope*0.52f;
+        if(value>1.0f)value=1.0f;
+        if(value< -1.0f)value=-1.0f;
+        samples[i]=(short)(value*32767.0f);
+    }
+
+    Wave wave={0};
+    wave.frameCount=frameCount;
+    wave.sampleRate=sampleRate;
+    wave.sampleSize=16;
+    wave.channels=1;
+    wave.data=samples;
+    gBoarAlertSound=LoadSoundFromWave(wave);
+    free(samples);
+    gAnimalAudioReady=(gBoarAlertSound.frameCount>0);
+}
+
+static bool IsAnimalBlockedAt(float x, float z, Vector3 animals[MAX_WILD_ANIMALS],
+                              int animalTypes[MAX_WILD_ANIMALS], int ignoreAnimal)
+{
+    for(int i=0;i<MAX_WILD_ANIMALS;i++)
+    {
+        if(i==ignoreAnimal)continue;
+        float dx=x-animals[i].x, dz=z-animals[i].z;
+        float radius=0.42f+(animalTypes[i]==0?0.52f:0.66f);
+        if(dx*dx+dz*dz<radius*radius)return true;
+    }
+    return false;
+}
+
+static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
+                           int state, float headYaw)
+{
+    bool deer=(type==0);
+    bool moving=(state==ANIMAL_WANDER || state==ANIMAL_CHASE);
+    float gait= moving ? sinf(phase)*(state==ANIMAL_CHASE?0.34f:0.15f) : 0.0f;
+    float bob=moving?fabsf(sinf(phase*2.0f))*0.045f:sinf(phase*0.45f)*0.012f;
+    float headDown=(state==ANIMAL_GRAZE)?0.30f:0.0f;
+    float headShift=sinf(headYaw)*0.20f;
+    Color fur=deer?C(145,101,59,255):C(82,65,50,255);
+    Color dark=deer?C(76,51,34,255):C(43,36,30,255);
+    Color light=deer?C(195,165,125,255):C(125,93,69,255);
+
+    rlPushMatrix();
+    rlTranslatef(p.x,0.0f,p.z);
+    rlRotatef(-heading*57.2957795f,0.0f,1.0f,0.0f);
+
+    DrawCylinder((Vector3){0,0.025f,0},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
     if(deer){
-        DrawCubeV((Vector3){p.x,0.91f+bob,p.z+0.10f},(Vector3){0.78f,0.86f,1.44f},fur);
-        DrawCubeV((Vector3){p.x,0.66f+bob,p.z+0.10f},(Vector3){0.56f,0.32f,0.98f},light);
-        DrawCylinderEx((Vector3){p.x,0.95f+bob,p.z-0.38f},(Vector3){p.x,1.43f+bob,p.z-0.65f},0.19f,0.12f,9,fur);
-        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.69f},0.22f,fur);
-        DrawSphere((Vector3){p.x,1.39f+bob,p.z-0.89f},0.15f,dark);
-        DrawCylinderEx((Vector3){p.x-0.16f,1.57f+bob,p.z-0.84f},(Vector3){p.x-0.16f,1.57f+bob,p.z-0.52f},0.055f,0.035f,6,fur);
-        DrawCylinderEx((Vector3){p.x+0.16f,1.57f+bob,p.z-0.84f},(Vector3){p.x+0.16f,1.57f+bob,p.z-0.52f},0.055f,0.035f,6,fur);
-        DrawSphere((Vector3){p.x,1.38f+bob,p.z-1.00f},0.035f,dark);
+        DrawCubeV((Vector3){0,0.91f+bob,0.10f},(Vector3){0.78f,0.86f,1.44f},fur);
+        DrawCubeV((Vector3){0,0.66f+bob,0.10f},(Vector3){0.56f,0.32f,0.98f},light);
+        DrawCylinderEx((Vector3){headShift*0.35f,0.95f+bob, -0.38f},
+                       (Vector3){headShift,1.43f+bob-headDown,-0.65f},0.19f,0.12f,9,fur);
+        DrawSphere((Vector3){headShift,1.49f+bob-headDown,-0.69f},0.22f,fur);
+        DrawSphere((Vector3){headShift,1.39f+bob-headDown,-0.89f},0.15f,dark);
+        DrawCylinderEx((Vector3){headShift-0.16f,1.57f+bob-headDown,-0.84f},
+                       (Vector3){headShift-0.16f,1.57f+bob-headDown,-0.52f},0.055f,0.035f,6,fur);
+        DrawCylinderEx((Vector3){headShift+0.16f,1.57f+bob-headDown,-0.84f},
+                       (Vector3){headShift+0.16f,1.57f+bob-headDown,-0.52f},0.055f,0.035f,6,fur);
+        DrawSphere((Vector3){headShift,1.38f+bob-headDown,-1.00f},0.035f,dark);
         for(int side=-1;side<=1;side+=2){
-            Vector3 base={p.x+side*0.11f,1.62f+bob,p.z-0.69f}, fork={p.x+side*0.25f,1.82f+bob,p.z-0.70f};
+            Vector3 base={headShift+side*0.11f,1.62f+bob-headDown,-0.69f};
+            Vector3 fork={headShift+side*0.25f,1.82f+bob-headDown,-0.70f};
             DrawCylinderEx(base,fork,0.045f,0.030f,6,C(198,177,140,255));
-            DrawCylinderEx(fork,(Vector3){p.x+side*0.43f,1.91f+bob,p.z-0.70f},0.030f,0.016f,5,C(198,177,140,255));
-            DrawCylinderEx((Vector3){p.x+side*0.21f,1.77f+bob,p.z-0.70f},(Vector3){p.x+side*0.19f,2.02f+bob,p.z-0.70f},0.026f,0.012f,5,C(198,177,140,255));
+            DrawCylinderEx(fork,(Vector3){headShift+side*0.43f,1.91f+bob-headDown,-0.70f},0.030f,0.016f,5,C(198,177,140,255));
+            DrawCylinderEx((Vector3){headShift+side*0.21f,1.77f+bob-headDown,-0.70f},
+                           (Vector3){headShift+side*0.19f,2.02f+bob-headDown,-0.70f},0.026f,0.012f,5,C(198,177,140,255));
         }
     }else{
-        DrawCubeV((Vector3){p.x,0.73f+bob,p.z+0.12f},(Vector3){1.12f,0.90f,1.56f},fur);
-        DrawCubeV((Vector3){p.x,0.53f+bob,p.z+0.10f},(Vector3){0.86f,0.32f,1.20f},light);
-        DrawSphere((Vector3){p.x,0.81f+bob,p.z-0.48f},0.42f,fur);
-        DrawSphere((Vector3){p.x,0.69f+bob,p.z-0.77f},0.28f,fur);
-        DrawSphere((Vector3){p.x,0.64f+bob,p.z-0.99f},0.19f,C(120,82,68,255));
+        DrawCubeV((Vector3){0,0.73f+bob,0.12f},(Vector3){1.12f,0.90f,1.56f},fur);
+        DrawCubeV((Vector3){0,0.53f+bob,0.10f},(Vector3){0.86f,0.32f,1.20f},light);
+        DrawSphere((Vector3){headShift*0.5f,0.81f+bob-headDown,-0.48f},0.42f,fur);
+        DrawSphere((Vector3){headShift,0.69f+bob-headDown,-0.77f},0.28f,fur);
+        DrawSphere((Vector3){headShift,0.64f+bob-headDown,-0.99f},0.19f,C(120,82,68,255));
         for(int side=-1;side<=1;side+=2){
-            DrawCylinderEx((Vector3){p.x+side*0.23f,0.94f+bob,p.z-0.57f},(Vector3){p.x+side*0.36f,1.17f+bob,p.z-0.61f},0.13f,0.025f,6,dark);
-            DrawSphere((Vector3){p.x+side*0.20f,0.72f+bob,p.z-0.85f},0.035f,C(22,19,17,255));
-            DrawCylinderEx((Vector3){p.x+side*0.18f,0.53f+bob,p.z-0.88f},(Vector3){p.x+side*0.23f,0.70f+bob,p.z-0.94f},0.060f,0.014f,6,C(230,215,180,255));
+            DrawCylinderEx((Vector3){headShift+side*0.23f,0.94f+bob-headDown,-0.57f},
+                           (Vector3){headShift+side*0.36f,1.17f+bob-headDown,-0.61f},0.13f,0.025f,6,dark);
+            DrawSphere((Vector3){headShift+side*0.20f,0.72f+bob-headDown,-0.85f},0.035f,C(22,19,17,255));
+            DrawCylinderEx((Vector3){side*0.18f,0.53f+bob, -0.88f},
+                           (Vector3){side*0.23f,0.70f+bob,-0.94f},0.060f,0.014f,6,C(230,215,180,255));
         }
-        DrawCylinderEx((Vector3){p.x,0.72f+bob,p.z+0.78f},(Vector3){p.x,0.86f+bob,p.z+1.02f},0.055f,0.025f,6,dark);
+        DrawCylinderEx((Vector3){0,0.72f+bob,0.78f},
+                       (Vector3){0,0.86f+bob,1.02f},0.055f,0.025f,6,dark);
     }
+
     for(int side=-1;side<=1;side+=2) for(int leg=0;leg<2;leg++){
-        float lx=p.x+side*(deer?0.24f:0.36f), lz=p.z+(leg==0?-0.39f:0.43f);
+        float lx=side*(deer?0.24f:0.36f);
+        float swing=moving?gait*(leg==0?1.0f:-1.0f)*(side==1?1.0f:-1.0f):0.0f;
+        float lz=(leg==0?-0.39f:0.43f)+swing;
         float top=deer?0.79f:0.60f, knee=deer?0.40f:0.34f;
-        DrawCylinderEx((Vector3){lx,top+bob,lz},(Vector3){lx+side*0.015f,knee+bob,lz+0.02f},deer?0.065f:0.105f,deer?0.048f:0.075f,7,fur);
-        DrawCylinderEx((Vector3){lx+side*0.015f,knee+bob,lz+0.02f},(Vector3){lx,0.12f,lz+0.03f},deer?0.045f:0.075f,deer?0.035f:0.055f,7,dark);
-        DrawCube((Vector3){lx,0.08f,lz+0.03f},deer?0.12f:0.17f,0.12f,0.16f,C(35,30,26,255));
+        DrawCylinderEx((Vector3){lx,top+bob, lz},
+                       (Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
+                       deer?0.065f:0.105f,deer?0.048f:0.075f,7,fur);
+        DrawCylinderEx((Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
+                       (Vector3){lx,0.12f,lz+0.03f+swing},
+                       deer?0.045f:0.075f,deer?0.035f:0.055f,7,dark);
+        DrawCube((Vector3){lx,0.08f,lz+0.03f+swing},
+                 deer?0.12f:0.17f,0.12f,0.16f,C(35,30,26,255));
     }
+    rlPopMatrix();
 }
 
 static void DrawBiomeAtmosphere(Vector3 player, int biome, float time, int quality)
@@ -1366,6 +1454,7 @@ int main(void)
     cyrillicFont = LoadAndroidCyrillicFont(64, cyrillicCodepoints, cpIndex);
     if (cyrillicFont.texture.id != 0) SetTextureFilter(cyrillicFont.texture, TEXTURE_FILTER_BILINEAR);
     SetTargetFPS(60);
+    InitAnimalAudio();
 
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -1534,6 +1623,14 @@ int main(void)
     Vector3 treePositions[MAX_TREES] = {{0}}, woodDrops[MAX_WOOD_DROPS] = {{0}};
     Vector3 wildAnimals[MAX_WILD_ANIMALS] = {{0}};
     int wildAnimalTypes[MAX_WILD_ANIMALS] = {0};
+    int wildAnimalState[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalHeading[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalTimer[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalLookTimer[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalGrazeTimer[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalHeadYaw[MAX_WILD_ANIMALS] = {0};
+    double wildAnimalLastChase[MAX_WILD_ANIMALS];
+    double wildAnimalChaseStarted[MAX_WILD_ANIMALS];
     int treeBiome[MAX_TREES] = {0};
     int treeHealth[MAX_TREES] = {0}, treeCount = 0;
     bool treeChopped[MAX_TREES] = {false}, woodDropActive[MAX_WOOD_DROPS] = {false};
@@ -1621,6 +1718,18 @@ int main(void)
             wildAnimalTypes[animal]=animal%2;
             placed=true;
         }
+    }
+
+    for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
+    {
+        wildAnimalState[animal]=ANIMAL_WANDER;
+        wildAnimalHeading[animal]=((float)rand()/(float)RAND_MAX)*6.2831853f;
+        wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*4.0f;
+        wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*9.0f;
+        wildAnimalGrazeTimer[animal]=20.0f+((float)rand()/(float)RAND_MAX)*10.0f;
+        wildAnimalHeadYaw[animal]=0.0f;
+        wildAnimalLastChase[animal]=-1000.0;
+        wildAnimalChaseStarted[animal]=0.0;
     }
 
     // По четыре залежи каждого вида. Руды размещаются вне деревни и дорог.
@@ -2988,9 +3097,11 @@ int main(void)
                     }
 
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
-                    if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed))
+                    if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed) &&
+                        !IsAnimalBlockedAt(nextX,player.z,wildAnimals,wildAnimalTypes,-1))
                         player.x = nextX;
-                    if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed))
+                    if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed) &&
+                        !IsAnimalBlockedAt(player.x,nextZ,wildAnimals,wildAnimalTypes,-1))
                         player.z = nextZ;
 
                     if (playerMoving)
@@ -3076,9 +3187,11 @@ int main(void)
                     }
                 }
 
-                if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed))
+                if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed) &&
+                    !IsAnimalBlockedAt(nextX,player.z,wildAnimals,wildAnimalTypes,-1))
                     player.x = nextX;
-                if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed))
+                if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed) &&
+                    !IsAnimalBlockedAt(player.x,nextZ,wildAnimals,wildAnimalTypes,-1))
                     player.z = nextZ;
 
                 playerMoving = true;
@@ -3088,6 +3201,144 @@ int main(void)
                 while (angleDiff > 3.14159265f) angleDiff -= 6.28318530f;
                 while (angleDiff < -3.14159265f) angleDiff += 6.28318530f;
                 playerAngle += angleDiff*0.22f;
+            }
+        }
+
+        // Дикая жизнь: блуждание, осмотр, проверка цели, погоня и выпас.
+        if(!mainMenuOpen && !loadingScreen)
+        {
+            double animalNow=GetTime();
+            for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
+            {
+                Vector3 *a=&wildAnimals[animal];
+                float dx=player.x-a->x, dz=player.z-a->z;
+                float distance=sqrtf(dx*dx+dz*dz);
+                float vision=(wildAnimalTypes[animal]==0)?17.0f:21.0f;
+                float forwardX=sinf(wildAnimalHeading[animal]);
+                float forwardZ=-cosf(wildAnimalHeading[animal]);
+                float sightDot=(distance>0.001f)?(dx*forwardX+dz*forwardZ)/distance:1.0f;
+                bool seesPlayer=(distance<vision && distance>0.001f &&
+                                 sightDot>cosf(0.62f) && player.y<2.8f);
+
+                wildAnimalTimer[animal]-=frameTime;
+                wildAnimalLookTimer[animal]-=frameTime;
+                wildAnimalGrazeTimer[animal]-=frameTime;
+
+                if(wildAnimalState[animal]==ANIMAL_CHASE)
+                {
+                    if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>24.0)
+                    {
+                        wildAnimalState[animal]=ANIMAL_WANDER;
+                        wildAnimalLastChase[animal]=animalNow;
+                        wildAnimalGrazeTimer[animal]=60.0f+((float)rand()/(float)RAND_MAX)*60.0f;
+                        wildAnimalLookTimer[animal]=4.0f+((float)rand()/(float)RAND_MAX)*7.0f;
+                        wildAnimalTimer[animal]=2.0f;
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_INSPECT)
+                {
+                    wildAnimalHeading[animal]=atan2f(dx,-dz);
+                    wildAnimalHeadYaw[animal]=0.0f;
+                    if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_CHASE;
+                        wildAnimalChaseStarted[animal]=animalNow;
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_LOOK)
+                {
+                    wildAnimalHeadYaw[animal]=sinf((float)animalNow*3.4f+animal)*0.62f;
+                    if(seesPlayer)
+                    {
+                        wildAnimalState[animal]=ANIMAL_INSPECT;
+                        wildAnimalTimer[animal]=1.15f;
+                        wildAnimalHeading[animal]=atan2f(dx,-dz);
+                        wildAnimalHeadYaw[animal]=0.0f;
+                        if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
+                    }
+                    else if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_WANDER;
+                        wildAnimalHeadYaw[animal]=0.0f;
+                        wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*10.0f;
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_GRAZE)
+                {
+                    wildAnimalHeadYaw[animal]=sinf((float)animalNow*1.8f+animal)*0.06f;
+                    if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_WANDER;
+                        wildAnimalHeadYaw[animal]=0.0f;
+                        wildAnimalGrazeTimer[animal]=(animalNow-wildAnimalLastChase[animal]<600.0)?
+                            60.0f+((float)rand()/(float)RAND_MAX)*60.0f:30.0f;
+                        wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*10.0f;
+                        wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*3.0f;
+                    }
+                }
+                else
+                {
+                    if(seesPlayer)
+                    {
+                        wildAnimalState[animal]=ANIMAL_CHASE;
+                        wildAnimalChaseStarted[animal]=animalNow;
+                        if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
+                    }
+                    else if(wildAnimalLookTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_LOOK;
+                        wildAnimalTimer[animal]=1.6f;
+                    }
+                    else if(wildAnimalGrazeTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_GRAZE;
+                        wildAnimalTimer[animal]=3.0f+((float)rand()/(float)RAND_MAX)*2.0f;
+                        wildAnimalHeadYaw[animal]=0.0f;
+                    }
+                    else if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalHeading[animal]=((float)rand()/(float)RAND_MAX)*6.2831853f;
+                        wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*4.0f;
+                    }
+                }
+
+                if(wildAnimalState[animal]==ANIMAL_CHASE)
+                {
+                    dx=player.x-a->x; dz=player.z-a->z;
+                    distance=sqrtf(dx*dx+dz*dz);
+                    if(distance>1.35f)
+                        wildAnimalHeading[animal]=atan2f(dx,-dz);
+                }
+
+                float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
+                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f);
+                if(animalSpeed>0.0f)
+                {
+                    float moveX=sinf(wildAnimalHeading[animal])*animalSpeed*frameTime;
+                    float moveZ=-cosf(wildAnimalHeading[animal])*animalSpeed*frameTime;
+                    float nextX=a->x+moveX, nextZ=a->z+moveZ;
+                    float px=nextX-player.x, pz=nextZ-player.z;
+                    bool tooClose=(px*px+pz*pz<1.55f*1.55f);
+                    bool blocked=(nextX*nextX+nextZ*nextZ>258.0f*258.0f) ||
+                                 IsAnimalBlockedAt(nextX,nextZ,wildAnimals,wildAnimalTypes,animal) ||
+                                 IsGasStationBlocked(nextX,nextZ,0.65f,0.0f) ||
+                                 IsMountainBlockedAt(nextX,nextZ,0.65f);
+                    for(int t=0;t<treeCount && !blocked;t++)
+                    {
+                        if(treeChopped[t])continue;
+                        float tx=nextX-treePositions[t].x, tz=nextZ-treePositions[t].z;
+                        if(tx*tx+tz*tz<1.15f*1.15f)blocked=true;
+                    }
+                    if(!tooClose && !blocked)
+                    {
+                        a->x=nextX;
+                        a->z=nextZ;
+                    }
+                    else if(wildAnimalState[animal]==ANIMAL_WANDER)
+                    {
+                        wildAnimalHeading[animal]+=1.25f;
+                    }
+                }
             }
         }
 
@@ -3665,7 +3916,10 @@ int main(void)
         {
             float adx=wildAnimals[animal].x-player.x, adz=wildAnimals[animal].z-player.z;
             if(adx*adx+adz*adz>chunkView2) continue;
-            DrawWildAnimal(wildAnimals[animal],wildAnimalTypes[animal],(float)GetTime()*2.0f+animal*1.7f);
+            DrawWildAnimal(wildAnimals[animal],wildAnimalTypes[animal],
+                           (float)GetTime()*((wildAnimalState[animal]==ANIMAL_CHASE)?10.0f:6.0f)+animal*1.7f,
+                           wildAnimalHeading[animal],wildAnimalState[animal],
+                           wildAnimalHeadYaw[animal]);
         }
 
         for (int t = 0; t < treeCount; t++)
@@ -5017,6 +5271,8 @@ int main(void)
 
     UnloadRenderTexture(sceneTexture);
     UnloadFont(cyrillicFont);
+    if(gAnimalAudioReady)UnloadSound(gBoarAlertSound);
+    if(IsAudioDeviceReady())CloseAudioDevice();
     CloseWindow();
 
     return 0;
