@@ -1484,6 +1484,21 @@ static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
     ClearLastSoftKey();
 }
 
+static int GetInventorySlotAt(Vector2 pos, int screenWidth, int screenHeight)
+{
+    Rectangle panel={screenWidth*0.10f,screenHeight*0.12f,screenWidth*0.80f,screenHeight*0.76f};
+    float gap=8.0f;
+    float cell=fminf(54.0f,(panel.width-32.0f-gap*3.0f)/4.0f);
+    float gridWidth=cell*4.0f+gap*3.0f;
+    float gridX=panel.x+(panel.width-gridWidth)*0.5f;
+    for(int slot=0;slot<12;slot++)
+    {
+        Rectangle r={gridX+(slot%4)*(cell+gap),panel.y+72+(slot/4)*58,cell,cell};
+        if(CheckCollisionPointRec(pos,r)) return slot;
+    }
+    return -1;
+}
+
 int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
@@ -1908,11 +1923,11 @@ int main(void)
         {
             if (gOreActive[ore] || GetTime() < oreRespawnAt[ore]) continue;
             bool placed = false;
-            int type = ore/4;
+            int type = ore/8;
             for (int attempt=0; attempt<250 && !placed; attempt++)
             {
                 float angle=((float)rand()/(float)RAND_MAX)*6.2831853f;
-                float radius=24.0f+((float)rand()/(float)RAND_MAX)*205.0f;
+                float radius=35.0f+((float)rand()/(float)RAND_MAX)*470.0f;
                 float x=cosf(angle)*radius, z=sinf(angle)*radius;
                 if (!IsVillageClear(x,z)) continue;
                 bool clear=true;
@@ -3938,7 +3953,7 @@ int main(void)
             }
             else if (targetedOre >= 0 && gOreActive[targetedOre])
             {
-                int type = targetedOre/4;
+                int type = targetedOre/8;
                 // Кремний добывается только киркой ORF PIXCADE.
                 if (type != 3 || (itemCounts[7] > 0 && hotbarItemIds[selectedHotbarSlot] == 7))
                 {
