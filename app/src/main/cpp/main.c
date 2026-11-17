@@ -1147,6 +1147,9 @@ int main(void)
     bool sprintEnabled = false;
     bool inventoryOpen = false;
     bool mapOpen = false;
+    bool commandChatOpen = false, commandConsoleOpen = false, resourcePanelOpen = false;
+    char commandInput[80] = {0};
+    char commandOutput[180] = "Введите /console";
     bool buildMode = false;
     float buildMessageTimer = 0.0f;
     int buildMessageType = 0; // 1 — запрет зоны, 2 — мешают объекты
@@ -1215,6 +1218,7 @@ int main(void)
     Rectangle settingsButton = {screenWidth - 190, 18, 170, 64};
     Rectangle cameraButton = {screenWidth - 190, 92, 170, 64};
     Rectangle mapButton = {screenWidth - 190, 166, 170, 64};
+    Rectangle chatButton = {screenWidth - 190, 240, 170, 64};
 
     float panelWidth = fminf(540, screenWidth - 30);
     float panelHeight = 650;
@@ -1364,6 +1368,7 @@ int main(void)
             loadingProgress += frameTime/2.4f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
+        if(commandChatOpen || commandConsoleOpen) SoftKeyboardEditText(commandInput,sizeof(commandInput));
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
@@ -1581,6 +1586,7 @@ int main(void)
         buildDoorButton = (Rectangle){28+buildChoiceW*3, 220, buildChoiceW, 38};
         buildPlaceButton = (Rectangle){14, 266, 142, 42};
         takeButton = (Rectangle){screenWidth/2.0f-76.0f, screenHeight-150.0f, 152.0f, 46.0f};
+        chatButton = (Rectangle){screenWidth-190.0f, 240.0f, 170.0f, 64.0f};
 
         int touchCount = GetTouchPointCount();
 
@@ -1612,7 +1618,47 @@ int main(void)
 
             if (!newTouch) continue;
 
-            if (editControls)
+            if (resourcePanelOpen)
+            {
+                Rectangle rp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,screenHeight*0.78f};
+                Rectangle closeRp={rp.x+rp.width-82,rp.y+10,68,34};
+                float rowH=(rp.height-76.0f)/12.0f;
+                if(CheckCollisionPointRec(pos,closeRp)) resourcePanelOpen=false;
+                else for(int item=0;item<12;item++)
+                {
+                    float ry=rp.y+58+item*rowH;
+                    Rectangle minus={rp.x+rp.width-126,ry,48,rowH-4};
+                    Rectangle plus={rp.x+rp.width-70,ry,48,rowH-4};
+                    if(CheckCollisionPointRec(pos,minus)){itemCounts[item]-=10;if(itemCounts[item]<0)itemCounts[item]=0;break;}
+                    if(CheckCollisionPointRec(pos,plus)){itemCounts[item]+=10;if(itemCounts[item]>9999)itemCounts[item]=9999;break;}
+                }
+            }
+            else if(commandChatOpen || commandConsoleOpen)
+            {
+                Rectangle cp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,190};
+                Rectangle inputBox={cp.x+14,cp.y+58,cp.width-28,42};
+                Rectangle sendButton={cp.x+cp.width-128,cp.y+116,114,42};
+                Rectangle closeCmd={cp.x+14,cp.y+116,100,42};
+                if(CheckCollisionPointRec(pos,closeCmd)){commandChatOpen=false;commandConsoleOpen=false;HideSoftKeyboard();}
+                else if(CheckCollisionPointRec(pos,inputBox)) ShowSoftKeyboard();
+                else if(CheckCollisionPointRec(pos,sendButton))
+                {
+                    HideSoftKeyboard();
+                    if(commandChatOpen)
+                    {
+                        if(strcmp(commandInput,"/console")==0){commandChatOpen=false;commandConsoleOpen=true;strcpy(commandOutput,"Консоль открыта: /give или /update");}
+                        else strcpy(commandOutput,"Введите /console");
+                    }
+                    else if(commandConsoleOpen)
+                    {
+                        if(strcmp(commandInput,"/give")==0){commandConsoleOpen=false;resourcePanelOpen=true;strcpy(commandOutput,"Панель ресурсов открыта");}
+                        else if(strcmp(commandInput,"/update")==0)strcpy(commandOutput,"git pull --ff-only origin master && ./gradlew assembleDebug");
+                        else strcpy(commandOutput,"Команды: /give или /update");
+                    }
+                    commandInput[0]='\\0';
+                }
+            }
+            else if (editControls)
             {
                 if (CheckCollisionPointRec(pos, doneButton))
                 {
@@ -1750,6 +1796,11 @@ int main(void)
             { mapOpen=true; joystickActive=false; lookTouchId=-1; }
             else if (mapOpen)
             { if (CheckCollisionPointRec(pos,mapButton)) mapOpen=false; }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos,chatButton))
+            {
+                commandChatOpen=true;commandConsoleOpen=false;commandInput[0]='\\0';
+                strcpy(commandOutput,"Введите /console");ShowSoftKeyboard();
+            }
             else if (!mainMenuOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
@@ -3325,6 +3376,7 @@ int main(void)
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,220));
             DrawText("MAP",mapButton.x+mapButton.width/2-MeasureText("MAP",19)/2,mapButton.y+22,19,RAYWHITE);
+            if(!settingsOpen && !inventoryOpen && !gasCrateOpen) DrawSurvivalButton(chatButton,"CHAT",18,false);
 
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
