@@ -3345,9 +3345,46 @@ int main(void)
                         wildAnimalHeading[animal]=atan2f(-dx,dz);
                 }
 
+                // Животные стараются не идти прямо друг в друга.
+                // Олень обходит соседа дугой, кабан при тесном сближении
+                // предпочитает остановиться, а не толкаться и застревать.
+                float nearestAnimalDist2=999999.0f;
+                float avoidX=0.0f, avoidZ=0.0f;
+                for(int other=0;other<MAX_WILD_ANIMALS;other++)
+                {
+                    if(other==animal)continue;
+                    float ox=a->x-wildAnimals[other].x;
+                    float oz=a->z-wildAnimals[other].z;
+                    float d2=ox*ox+oz*oz;
+                    if(d2<2.6f*2.6f && d2>0.0001f)
+                    {
+                        float d=sqrtf(d2);
+                        float strength=(2.6f-d)/2.6f;
+                        avoidX+=(ox/d)*strength;
+                        avoidZ+=(oz/d)*strength;
+                        if(d2<nearestAnimalDist2)nearestAnimalDist2=d2;
+                    }
+                }
+                bool isDeer=(wildAnimalTypes[animal]==0);
+                if(nearestAnimalDist2<999998.0f && (avoidX*avoidX+avoidZ*avoidZ)>0.0001f)
+                {
+                    if(isDeer)
+                    {
+                        float desiredX=avoidX, desiredZ=avoidZ;
+                        // Небольшой боковой компонент помогает именно обходить,
+                        // а не пятиться назад от другого животного.
+                        float side=(animal%2==0)?1.0f:-1.0f;
+                        float steerX=desiredX-side*avoidZ*0.65f;
+                        float steerZ=desiredZ+side*avoidX*0.65f;
+                        wildAnimalHeading[animal]=atan2f(steerX,-steerZ);
+                    }
+                }
+
                 float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
                                   (wildAnimalState[animal]==ANIMAL_FLEE?5.0f:
                                   (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
+                if(!isDeer && nearestAnimalDist2<1.30f*1.30f)
+                    animalSpeed=0.0f;
                 if(animalSpeed>0.0f)
                 {
                     float moveX=sinf(wildAnimalHeading[animal])*animalSpeed*frameTime;
