@@ -52,9 +52,14 @@ if(BOLT_MOUSE_PATCHED EQUAL -1)
     }
 
 ]=])
+    string(FIND "${RAYLIB_ANDROID_SOURCE}" "${BOLT_MOUSE_MARKER}" BOLT_MOUSE_MARKER_POS)
+    if(BOLT_MOUSE_MARKER_POS EQUAL -1)
+        message(FATAL_ERROR "Raylib Android input source has an unexpected layout")
+    endif()
     string(REPLACE "${BOLT_MOUSE_MARKER}" "${BOLT_MOUSE_HANDLER}\n${BOLT_MOUSE_MARKER}"
                    RAYLIB_ANDROID_SOURCE "${RAYLIB_ANDROID_SOURCE}")
-    if(RAYLIB_ANDROID_SOURCE STREQUAL "")
+    string(FIND "${RAYLIB_ANDROID_SOURCE}" "BOLT_SURVIVAL_ANDROID_MOUSE_INPUT" BOLT_MOUSE_VERIFY)
+    if(BOLT_MOUSE_VERIFY EQUAL -1)
         message(FATAL_ERROR "Failed to patch Raylib Android mouse input")
     endif()
     file(WRITE "${RAYLIB_ANDROID_INPUT}" "${RAYLIB_ANDROID_SOURCE}")
