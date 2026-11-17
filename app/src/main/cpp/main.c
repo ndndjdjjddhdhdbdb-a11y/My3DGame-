@@ -3322,7 +3322,9 @@ int main(void)
             for (int k=0; k<4; k++)
                 DrawLineEx(screenCorners[k], screenCorners[(k+1)%4], 5.0f, markerColor);
             DrawCircleLines(screenWidth/2, screenHeight/2, 13.0f, markerColor);
-            DrawText("МЕСТО СТРОИТЕЛЬСТВА", screenWidth/2-58, screenHeight/2+22, 18, markerColor);
+            const char *buildTargetLabel = "МЕСТО СТРОИТЕЛЬСТВА";
+            DrawText(buildTargetLabel, screenWidth/2-MeasureText(buildTargetLabel,18)/2,
+                     screenHeight/2+22, 18, markerColor);
         }
 
         if(buildMessageTimer>0.0f) buildMessageTimer-=GetFrameTime();
@@ -3432,7 +3434,7 @@ int main(void)
             );
 
             DrawText(
-                firstPerson ? "ОТ ПЕРВОГО ЛИЦА" : "ОТ ТРЕТЬЕГО ЛИЦА",
+                firstPerson ? "ВИД: 1-Е ЛИЦО" : "ВИД: 3-Е ЛИЦО",
                 cameraButton.x+10, cameraButton.y+19, 17, RAYWHITE
             );
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
