@@ -103,63 +103,6 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
-/* Android IME bridge: получает готовую Unicode-строку из EditText. */
-static const char *GetAndroidCyrillicFontPath(void)
-{
-    JNIEnv *env = AttachCurrentThread();
-    jobject activity = GetNativeLoaderInstance();
-    if (!env || !activity) return NULL;
-    jclass cls = (*env)->GetObjectClass(env, activity);
-    jmethodID method = (*env)->GetMethodID(env, cls, "getCyrillicFontPath", "()Ljava/lang/String;");
-    jstring value = method ? (jstring)(*env)->CallObjectMethod(env, activity, method) : NULL;
-    const char *path = value ? (*env)->GetStringUTFChars(env, value, NULL) : NULL;
-    static char fontPath[512];
-    if (path) {
-        snprintf(fontPath, sizeof(fontPath), "%s", path);
-        (*env)->ReleaseStringUTFChars(env, value, path);
-    } else fontPath[0] = '\\0';
-    if (value) (*env)->DeleteLocalRef(env, value);
-    (*env)->DeleteLocalRef(env, cls);
-    (*env)->DeleteLocalRef(env, activity);
-    DetachCurrentThread();
-    return fontPath[0] ? fontPath : NULL;
-}
-
-static void ShowAndroidTextInput(const char *initialText)
-{
-    JNIEnv *env = AttachCurrentThread();
-    jobject activity = GetNativeLoaderInstance();
-    if (!env || !activity) return;
-    jclass cls = (*env)->GetObjectClass(env, activity);
-    jmethodID method = (*env)->GetMethodID(env, cls, "showGameTextInput", "(Ljava/lang/String;)V");
-    jstring value = (*env)->NewStringUTF(env, initialText ? initialText : "");
-    if (method && value) (*env)->CallVoidMethod(env, activity, method, value);
-    if (value) (*env)->DeleteLocalRef(env, value);
-    (*env)->DeleteLocalRef(env, cls);
-    (*env)->DeleteLocalRef(env, activity);
-    DetachCurrentThread();
-}
-
-static void PollAndroidTextInput(char *destination, unsigned int size)
-{
-    JNIEnv *env = AttachCurrentThread();
-    jobject activity = GetNativeLoaderInstance();
-    if (!env || !activity || size == 0) return;
-    jclass cls = (*env)->GetObjectClass(env, activity);
-    jmethodID method = (*env)->GetMethodID(env, cls, "takeGameTextInput", "()Ljava/lang/String;");
-    jstring value = method ? (jstring)(*env)->CallObjectMethod(env, activity, method) : NULL;
-    if (value) {
-        const char *utf8 = (*env)->GetStringUTFChars(env, value, NULL);
-        if (utf8) {
-            snprintf(destination, size, "%s", utf8);
-            (*env)->ReleaseStringUTFChars(env, value, utf8);
-        }
-        (*env)->DeleteLocalRef(env, value);
-    }
-    (*env)->DeleteLocalRef(env, cls);
-    (*env)->DeleteLocalRef(env, activity);
-    DetachCurrentThread();
-}
 
 
 #define SETTINGS_STORAGE_VERSION 3
@@ -1167,23 +1110,15 @@ int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
 
-    // Копируем Roboto в приватный каталог приложения, откуда Raylib
-    // может надёжно загрузить TTF вместе с кириллическими символами.
+    // Стандартный шрифт Raylib не содержит кириллицу. Загружаем Roboto
+    // Android с явным набором русских символов для сообщений интерфейса.
     int cyrillicCodepoints[191];
     int cpIndex = 0;
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
-    const char *fontPath = GetAndroidCyrillicFontPath();
-    int fontDataSize = 0;
-    unsigned char *fontData = fontPath ? (unsigned char *)ReadFromAppStorage("Roboto-Regular.ttf", &fontDataSize) : NULL;
-    Font cyrillicFont = (fontData && fontDataSize > 0)
-        ? LoadFontFromMemory(".ttf", fontData, fontDataSize, 32, cyrillicCodepoints, cpIndex)
-        : GetFontDefault();
-    if (fontData) free(fontData);
-    if (cyrillicFont.texture.id == 0) {
-        TraceLog(LOG_ERROR, "CYRILLIC FONT LOAD FAILED");
-        cyrillicFont = GetFontDefault();
-    }
+    Font cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
+                                   cyrillicCodepoints, cpIndex);
+    if (cyrillicFont.texture.id == 0) cyrillicFont = GetFontDefault();
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -1436,7 +1371,7 @@ int main(void)
             loadingProgress += frameTime/2.4f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
-        if(commandChatOpen || commandConsoleOpen) PollAndroidTextInput(commandInput,sizeof(commandInput));
+        if(commandChatOpen || commandConsoleOpen) ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
@@ -1708,7 +1643,7 @@ int main(void)
                 Rectangle sendButton={cp.x+cp.width-128,cp.y+116,114,42};
                 Rectangle closeCmd={cp.x+14,cp.y+116,100,42};
                 if(CheckCollisionPointRec(pos,closeCmd)){commandChatOpen=false;commandConsoleOpen=false;HideSoftKeyboard();}
-                else if(CheckCollisionPointRec(pos,inputBox)) ShowAndroidTextInput(commandInput);
+                else if(CheckCollisionPointRec(pos,inputBox)) ShowSoftKeyboard();
                 else if(CheckCollisionPointRec(pos,sendButton))
                 {
                     HideSoftKeyboard();
