@@ -4331,7 +4331,7 @@ int main(void)
             DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,22,RAYWHITE);
             // Окно карты (круг) всегда остаётся неподвижным внутри квадратной области.
             float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
-            float mapCx=cx+mapPanOffset.x,mapCy=cy+mapPanOffset.y;
+            float mapCx=cx,mapCy=cy;
             float sc=(rr/260.0f)*mapZoom;
             // Перетаскивание одним пальцем и масштабирование двумя.
             Rectangle mapTouchArea={mx,my,ms,ms};
@@ -4341,7 +4341,7 @@ int main(void)
                 Vector2 center={(a.x+b.x)*0.5f,(a.y+b.y)*0.5f};
                 float dx=a.x-b.x,dy=a.y-b.y;
                 float distance=sqrtf(dx*dx+dy*dy);
-                if(mapPinchPreviousDistance>1.0f)
+                if(mapPinchPreviousDistance>1.0f && distance>1.0f)
                 {
                     // Раздвигаем пальцы — приближаем карту, сводим — отдаляем.
                     mapZoom*=distance/mapPinchPreviousDistance;
@@ -4372,6 +4372,12 @@ int main(void)
                 mapPinchPreviousDistance=0.0f;
             }
             else { mapPanTouchId=-1; mapPinchPreviousDistance=0.0f; }
+            // Перемещение содержимого ограничено квадратным окном карты.
+            float maxMapPan=ms*0.25f;
+            mapPanOffset.x=fmaxf(-maxMapPan,fminf(maxMapPan,mapPanOffset.x));
+            mapPanOffset.y=fmaxf(-maxMapPan,fminf(maxMapPan,mapPanOffset.y));
+            mapCx=cx+mapPanOffset.x;
+            mapCy=cy+mapPanOffset.y;
             DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255));
             // Содержимое карты двигается внутри неподвижного окна карты.
             // Ограничиваем отрисовку квадратом, чтобы объекты не вылезали за его границы.
@@ -4390,7 +4396,6 @@ int main(void)
             }
             for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=mapCx+cosf(a)*rr*0.57f,ay=mapCy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
             for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(mapCx+cosf(a)*r),(int)(mapCy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
-            EndScissorMode();
             // Контур круга остаётся неподвижным и не может уехать за квадрат.
             float px=mapCx+player.x*sc,py=mapCy+player.z*sc;
             // Заправка отмечена на карте в точке (0, -22), как и в игровом мире.
@@ -4398,8 +4403,9 @@ int main(void)
             DrawRectangle((int)gasX-7,(int)gasY-6,14,12,C(185,65,48,255));
             DrawRectangleLines((int)gasX-7,(int)gasY-6,14,12,RAYWHITE);
             DrawText("ЗАПРАВКА",(int)gasX+10,(int)gasY-8,13,RAYWHITE);
-            DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("ВЫ",(int)px+12,(int)py-8,12,RAYWHITE);
+            EndScissorMode();
+            DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             DrawText("ПЕРЕМЕЩЕНИЕ: 1 ПАЛЕЦ  |  МАСШТАБ: 2 ПАЛЬЦА",(int)mx,(int)(my+ms+12),12,C(205,220,225,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,255));
