@@ -2740,23 +2740,20 @@ int main(void)
                                     ((pz > 82.0f) ? C(194, 169, 112, 255) :
                                                     C(73, 139, 76, 255));
                 if (coast) biomeGround = (pz < -82.0f) ? C(176, 190, 190, 255) : C(151, 137, 102, 255);
-                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f}, biomeGround);
+                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.0f, 40.0f}, biomeGround);
             }
         }
 
-        // Широкая грунтовая дорога через поселение.
-        DrawPlane((Vector3){0, -0.055f, 0},
-                  (Vector2){12.5f, 380},
-                  C(126, 111, 83, 255));
-        DrawPlane((Vector3){0, -0.049f, 0},
-                  (Vector2){9.2f, 380},
-                  C(157, 137, 101, 255));
-        DrawPlane((Vector3){0, -0.055f, 0},
-                  (Vector2){380, 12.5f},
-                  C(126, 111, 83, 255));
-        DrawPlane((Vector3){0, -0.049f, 0},
-                  (Vector2){380, 9.2f},
-                  C(157, 137, 101, 255));
+        // Дороги сделаны тонкими объёмными полосами вместо наложенных
+        // почти coplanar-плоскостей: это устраняет Z-fighting при вращении камеры.
+        DrawCube((Vector3){0, -0.055f, 0}, 12.5f, 0.05f, 380.0f,
+                 C(126, 111, 83, 255));
+        DrawCube((Vector3){0, -0.044f, 0}, 9.2f, 0.05f, 380.0f,
+                 C(157, 137, 101, 255));
+        DrawCube((Vector3){0, -0.055f, 0}, 380.0f, 0.05f, 12.5f,
+                 C(126, 111, 83, 255));
+        DrawCube((Vector3){0, -0.033f, 0}, 380.0f, 0.05f, 9.2f,
+                 C(157, 137, 101, 255));
 
         // Небольшие естественные пятна травы вокруг игрока.
         if (graphicsQuality >= 1)
@@ -2777,37 +2774,7 @@ int main(void)
             }
         }
 
-        DrawPlane((Vector3){0, -0.052f, 0},
-                  (Vector2){9.5f, 380},
-                  C(116, 105, 84, 255));
 
-        DrawPlane((Vector3){0, -0.048f, 0},
-                  (Vector2){7.0f, 380},
-                  C(164, 145, 111, 255));
-
-        DrawPlane((Vector3){0, -0.052f, 0},
-                  (Vector2){380, 9.5f},
-                  C(116, 105, 84, 255));
-
-        DrawPlane((Vector3){0, -0.048f, 0},
-                  (Vector2){380, 7.0f},
-                  C(164, 145, 111, 255));
-
-        DrawPlane((Vector3){0, -0.052f, -120},
-                  (Vector2){380, 7.5f},
-                  C(116, 105, 84, 255));
-
-        DrawPlane((Vector3){0, -0.048f, -120},
-                  (Vector2){380, 5.2f},
-                  C(164, 145, 111, 255));
-
-        DrawPlane((Vector3){0, -0.052f, 120},
-                  (Vector2){520, 7.5f},
-                  C(116, 105, 84, 255));
-
-        DrawPlane((Vector3){0, -0.048f, 120},
-                  (Vector2){520, 5.2f},
-                  C(164, 145, 111, 255));
 
         float chunkView = chunkDistance*50.0f;
         float chunkView2 = chunkView*chunkView;
