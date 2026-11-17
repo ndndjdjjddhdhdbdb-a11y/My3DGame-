@@ -618,33 +618,60 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
  // Горный проход: каменные боковые стены и верхняя арка, центр остаётся свободным.
 static void DrawMountainPassage(float x, float z, float scale, bool snowy)
 {
-    Color stone = snowy ? C(157, 169, 170, 255) : C(105, 116, 105, 255);
-    Color light = snowy ? C(194, 204, 202, 255) : C(132, 139, 124, 255);
-    DrawSphere((Vector3){x-4.0f*scale, 2.0f*scale, z}, 3.4f*scale, stone);
-    DrawSphere((Vector3){x+4.0f*scale, 2.0f*scale, z}, 3.4f*scale, stone);
-    DrawSphere((Vector3){x-2.0f*scale, 4.5f*scale, z}, 3.0f*scale, light);
-    DrawSphere((Vector3){x+2.0f*scale, 4.5f*scale, z}, 3.0f*scale, light);
-    DrawSphere((Vector3){x, 5.1f*scale, z+0.2f*scale}, 2.6f*scale, stone);
-    // Каменные склоны по обе стороны прохода.
-    DrawSphere((Vector3){x-6.5f*scale, 1.8f*scale, z+4.0f*scale}, 4.0f*scale, stone);
-    DrawSphere((Vector3){x+6.5f*scale, 1.8f*scale, z-4.0f*scale}, 4.0f*scale, stone);
+    Color stone = snowy ? C(151, 164, 164, 255) : C(91, 106, 91, 255);
+    Color edge = snowy ? C(190, 201, 199, 255) : C(126, 137, 120, 255);
+    Color inside = C(25, 29, 30, 255);
+
+    // Большая скала вокруг единственного входа. Туннель открыт только спереди (-Z).
+    DrawSphere((Vector3){x-7.0f*scale, 2.1f*scale, z+4.0f*scale}, 5.0f*scale, stone);
+    DrawSphere((Vector3){x+7.0f*scale, 2.1f*scale, z+4.0f*scale}, 5.0f*scale, stone);
+    DrawSphere((Vector3){x, 7.0f*scale, z+4.0f*scale}, 7.0f*scale, stone);
+
+    // Каменная арка входа, оставляющая один широкий проём.
+    DrawSphere((Vector3){x-3.0f*scale, 2.3f*scale, z}, 2.0f*scale, edge);
+    DrawSphere((Vector3){x+3.0f*scale, 2.3f*scale, z}, 2.0f*scale, edge);
+    DrawSphere((Vector3){x, 5.1f*scale, z}, 3.1f*scale, edge);
+
+    // Внутренние стены и потолок уходят вглубь и постепенно опускаются.
+    for (int seg=0; seg<5; seg++)
+    {
+        float zz=z+(1.5f+seg*2.2f)*scale;
+        float drop=seg*0.48f*scale;
+        DrawCube((Vector3){x-2.75f*scale, 1.8f*scale-drop, zz},
+                 0.65f*scale, 4.0f*scale, 2.35f*scale, stone);
+        DrawCube((Vector3){x+2.75f*scale, 1.8f*scale-drop, zz},
+                 0.65f*scale, 4.0f*scale, 2.35f*scale, stone);
+        DrawCube((Vector3){x, 4.0f*scale-drop, zz},
+                 5.2f*scale, 0.65f*scale, 2.35f*scale, stone);
+        // Пол туннеля ступенчато спускается вниз.
+        DrawCube((Vector3){x, -0.12f*scale-drop, zz},
+                 4.9f*scale, 0.28f*scale, 2.35f*scale, edge);
+    }
+    // Тёмный тупиковый конец подчёркивает, что это один вход, а не сквозной проход.
+    DrawCube((Vector3){x, 1.2f*scale-2.0f*scale, z+12.8f*scale},
+             5.1f*scale, 5.0f*scale, 0.35f*scale, inside);
 }
 
 // Гора с большим тёмным отверстием на склоне.
 static void DrawMountainHole(float x, float z, float scale, bool snowy)
 {
     Color stone = snowy ? C(148, 160, 160, 255) : C(91, 105, 91, 255);
-    Color light = snowy ? C(190, 201, 199, 255) : C(125, 135, 119, 255);
-    Color dark = C(22, 27, 29, 255);
-    // Основная масса и боковые края отверстия.
-    DrawSphere((Vector3){x, 3.0f*scale, z+2.0f*scale}, 7.0f*scale, stone);
-    DrawSphere((Vector3){x-4.2f*scale, 2.0f*scale, z-1.0f*scale}, 3.8f*scale, light);
-    DrawSphere((Vector3){x+4.2f*scale, 2.0f*scale, z-1.0f*scale}, 3.8f*scale, light);
-    DrawSphere((Vector3){x, 5.4f*scale, z-1.0f*scale}, 3.8f*scale, light);
-    // Тёмная глубина отверстия находится за его входом.
-    DrawSphere((Vector3){x, 2.5f*scale, z-0.2f*scale}, 2.35f*scale, dark);
-    DrawSphere((Vector3){x-6.0f*scale, 1.7f*scale, z+3.0f*scale}, 3.6f*scale, stone);
-    DrawSphere((Vector3){x+6.0f*scale, 1.7f*scale, z+3.0f*scale}, 3.6f*scale, stone);
+    Color edge = snowy ? C(190, 201, 199, 255) : C(125, 135, 119, 255);
+    Color dark = C(18, 22, 24, 255);
+
+    // Массив горы расположен вокруг отверстия, не закрывая его центр.
+    DrawSphere((Vector3){x-7.0f*scale, 2.0f*scale, z+2.0f*scale}, 5.0f*scale, stone);
+    DrawSphere((Vector3){x+7.0f*scale, 2.0f*scale, z+2.0f*scale}, 5.0f*scale, stone);
+    DrawSphere((Vector3){x, 8.0f*scale, z+3.0f*scale}, 7.0f*scale, stone);
+    DrawSphere((Vector3){x, -2.0f*scale, z+3.0f*scale}, 5.0f*scale, stone);
+
+    // Очень большое круглое отверстие: каменный обод по краям и сверху.
+    DrawSphere((Vector3){x-4.5f*scale, 2.8f*scale, z}, 2.8f*scale, edge);
+    DrawSphere((Vector3){x+4.5f*scale, 2.8f*scale, z}, 2.8f*scale, edge);
+    DrawSphere((Vector3){x, 6.3f*scale, z}, 3.1f*scale, edge);
+    // Тёмная плоскость далеко внутри показывает глубину большого отверстия.
+    DrawCube((Vector3){x, 2.9f*scale, z+4.0f*scale},
+             7.0f*scale, 5.8f*scale, 0.25f*scale, dark);
 }
 
 // Более крупные залежи с хорошо заметными цветными вкраплениями.
