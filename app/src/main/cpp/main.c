@@ -3295,7 +3295,8 @@ int main(void)
                         // затем отходит от игрока и 30 секунд не нападает.
                         wildAnimalState[animal]=ANIMAL_SNORT;
                         wildAnimalTimer[animal]=0.9f;
-                        wildAnimalTargetHeading[animal]=atan2f(a->x-player.x,player.z-a->z);
+                        // Во время фырканья кабан стоит и смотрит прямо на игрока.
+                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                         if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
                         wildAnimalLastChase[animal]=animalNow;
                         wildAnimalGrazeTimer[animal]=60.0f+((float)rand()/(float)RAND_MAX)*60.0f;
@@ -3309,6 +3310,9 @@ int main(void)
                     {
                         wildAnimalState[animal]=ANIMAL_COOLDOWN;
                         wildAnimalTimer[animal]=30.0f;
+                        // После фырканья кабан разворачивается от игрока
+                        // и первые 3 секунды отходит, затем стоит до конца паузы.
+                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
                     }
                 }
                 else if(wildAnimalState[animal]==ANIMAL_COOLDOWN)
