@@ -18,6 +18,8 @@ private:
 
     Vector3 position_{0.0f, 1.8f, 0.0f};
     float verticalVelocity_ = 0.0f;
+    float yaw_ = -1.5707963f;
+    float pitch_ = 0.0f;
 
     const float walkSpeed_ = 5.0f;
     const float runMultiplier_ = 1.6f;
