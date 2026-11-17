@@ -4280,7 +4280,7 @@ int main(void)
             // Почти квадратный ящик: 4 столбца на 2 ряда.
             int cols=4, rows=2;
             float gap=4.0f;
-            float contentY=cratePanel.y+31.0f, contentH=cratePanel.height-39.0f;
+            float contentY=cratePanel.y+50.0f, contentH=cratePanel.height-58.0f;
             float cellW=(cratePanel.width-16.0f-gap*(cols-1))/(float)cols;
             float cellH=(contentH-gap*(rows-1))/(float)rows;
             for(int slot=0;slot<8;slot++){
