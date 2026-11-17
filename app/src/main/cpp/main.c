@@ -627,6 +627,9 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
     {
         if(fabsf(x)<12.0f+radius && fabsf(z+13.0f)<0.24f+radius) return true;
         if(fabsf(x)<12.0f+radius && fabsf(z+31.0f)<0.24f+radius && fabsf(x)>4.0f) return true;
+        // Стеклянная боковая секция и почти закрытая левая створка входа.
+        if(fabsf(z+31.0f)<0.18f+radius &&
+           (fabsf(x+3.18f)<0.68f+radius || fabsf(x+1.55f)<0.55f+radius)) return true;
         if(fabsf(z+22.0f)<9.0f+radius && fabsf(fabsf(x)-12.0f)<0.24f+radius &&
            !(fabsf(x-12.25f)<0.9f && z>-28.0f && z<-25.0f)) return true;
         // Перегородки трёх задних комнат с дверными проёмами.
