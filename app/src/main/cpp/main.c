@@ -1512,10 +1512,10 @@ int main(void)
                         strcpy(commandOutput,"Панель ресурсов открыта");
                     }
                     else if(strcmp(commandInput,"/update")==0)
-                        strcpy(commandOutput,"git pull --ff-only origin master &&\\n./gradlew assembleDebug");
+                        strcpy(commandOutput,"git pull --ff-only origin master &&\n./gradlew assembleDebug");
                     else strcpy(commandOutput,"Команды: /give или /update");
                 }
-                commandInput[0]='\\0';
+                commandInput[0]='\0';
             }
         }
         else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
@@ -2365,10 +2365,10 @@ int main(void)
                             strcpy(commandOutput,"Панель ресурсов открыта");
                         }
                         else if(strcmp(commandInput,"/update")==0)
-                            strcpy(commandOutput,"git pull --ff-only origin master &&\\n./gradlew assembleDebug");
+                            strcpy(commandOutput,"git pull --ff-only origin master &&\n./gradlew assembleDebug");
                         else strcpy(commandOutput,"Команды: /give или /update");
                     }
-                    commandInput[0]='\\0';
+                    commandInput[0]='\0';
                 }
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
@@ -2376,7 +2376,7 @@ int main(void)
             {
                 commandChatOpen=true;
                 commandConsoleOpen=false;
-                commandInput[0]='\\0';
+                commandInput[0]='\0';
                 strcpy(commandOutput,"Введите /console");
                 ShowSoftKeyboard();
             }
