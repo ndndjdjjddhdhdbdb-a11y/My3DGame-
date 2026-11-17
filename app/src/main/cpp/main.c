@@ -1264,6 +1264,10 @@ int main(void)
     char commandOutput[180] = "Введите /console";
     bool buildMode = false;
     bool buildPlanHeld = false;
+    // Own edge detection for Bluetooth mouse: Android Raylib can leave the
+    // previous mouse-button state unchanged, which repeats held clicks.
+    bool mouseLeftWasDown = false;
+    bool mouseRightWasDown = false;
     float buildMessageTimer = 0.0f;
     int buildMessageType = 0; // 1 — запрет зоны, 2 — мешают объекты
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
@@ -1524,7 +1528,8 @@ int main(void)
             if (IsKeyPressed(KEY_FOUR)) selectedHotbarSlot = 3;
             if (IsKeyPressed(KEY_TAB)) { inventoryOpen = !inventoryOpen; joystickActive = false; lookTouchId = -1; }
             if (IsKeyPressed(KEY_V)) firstPerson = !firstPerson;
-            if (IsKeyPressed(KEY_X)) buildMode = true;
+            // X is a hold-to-open Building Plan key only; it must not
+            // permanently switch the build mode on.
             buildPlanHeld = IsKeyDown(KEY_X);
             if (IsKeyPressed(KEY_E)) attackRequested = true;
         }
@@ -1745,6 +1750,13 @@ int main(void)
         buildPlaceButton = (Rectangle){14, 266, 142, 42};
         takeButton = (Rectangle){screenWidth/2.0f-76.0f, screenHeight-150.0f, 152.0f, 46.0f};
         chatButton = (Rectangle){screenWidth-190.0f, 240.0f, 170.0f, 64.0f};
+
+        bool mouseLeftDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool mouseRightDown = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+        bool mouseLeftPressed = mouseLeftDown && !mouseLeftWasDown;
+        bool mouseRightPressed = mouseRightDown && !mouseRightWasDown;
+        mouseLeftWasDown = mouseLeftDown;
+        mouseRightWasDown = mouseRightDown;
 
         int touchCount = GetTouchPointCount();
 
@@ -2293,7 +2305,7 @@ int main(void)
         }
 
         if (touchCount == 0 &&
-            IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            mouseLeftPressed)
         {
             Vector2 pos = GetMousePosition();
 
@@ -2971,10 +2983,10 @@ int main(void)
             !commandChatOpen && !commandConsoleOpen && !resourcePanelOpen &&
             !buildPlanHeld)
         {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !mouseOnHud)
+            if (mouseLeftPressed && !mouseOnHud)
                 attackRequested = true;
 
-            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && buildMode)
+            if (mouseRightPressed && buildMode)
             {
                 if (selectedBuildType != 2 || itemCounts[6] > 0)
                 {
