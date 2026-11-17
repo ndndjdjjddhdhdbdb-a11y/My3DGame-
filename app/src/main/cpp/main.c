@@ -1901,7 +1901,7 @@ int main(void)
                 commandInput[0]='\0';
             }
         }
-        else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+        else if (!mainMenuOpen && !loadingScreen && !settingsOpen && !editControls && !inventoryOpen &&
                  !mapOpen && !gasCrateOpen && !resourcePanelOpen)
         {
             if (IsKeyPressed(KEY_ONE)) selectedHotbarSlot = 0;
