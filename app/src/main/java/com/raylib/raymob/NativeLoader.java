@@ -32,6 +32,7 @@ import android.widget.EditText;
 import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
 import android.text.InputType;
+import android.text.InputFilter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -65,6 +66,7 @@ public class NativeLoader extends NativeActivity {
         runOnUiThread(() -> {
             final EditText edit = new EditText(this);
             edit.setSingleLine(true);
+            edit.setFilters(new InputFilter[] { new InputFilter.LengthFilter(79) });
             edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
             edit.setText(initialText == null ? "" : initialText);
             edit.setSelection(edit.length());
