@@ -3323,7 +3323,7 @@ int main(void)
                     float px=nextX-player.x, pz=nextZ-player.z;
                     bool tooClose=(px*px+pz*pz<1.55f*1.55f);
                     bool blocked=(nextX*nextX+nextZ*nextZ>258.0f*258.0f) ||
-                                 IsAnimalBlockedAt(nextX,nextZ,wildAnimals,wildAnimalTypes,animal) ||
+                                 IsAnimalBlockedAt(nextX,nextZ,0.0f,wildAnimals,wildAnimalTypes,animal) ||
                                  IsGasStationBlocked(nextX,nextZ,0.65f,0.0f) ||
                                  IsMountainBlockedAt(nextX,nextZ,0.65f);
                     for(int t=0;t<treeCount && !blocked;t++)
