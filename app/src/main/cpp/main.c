@@ -102,6 +102,70 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
+/* Получаем символы Android-клавиатуры как UTF-8.
+   Стандартный GetLastSoftKeyChar() заменяет кириллицу на '?'. */
+static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
+{
+    int keyCode = GetLastSoftKeyCode();
+    if (keyCode == 0 || size < 2) return;
+
+    unsigned int len = (unsigned int)strlen(text);
+
+    if (keyCode == 67) // Android KEYCODE_DEL
+    {
+        if (len > 0)
+        {
+            len--;
+            while (len > 0 && (((unsigned char)text[len] & 0xC0) == 0x80)) len--;
+            text[len] = '\\0';
+        }
+        ClearLastSoftKey();
+        return;
+    }
+
+    if (keyCode == 66) // Enter: отправка выполняется кнопкой SEND
+    {
+        ClearLastSoftKey();
+        return;
+    }
+
+    int cp = GetLastSoftKeyUnicode();
+    if (cp <= 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+    {
+        ClearLastSoftKey();
+        return;
+    }
+
+    unsigned char bytes[4];
+    unsigned int count = 0;
+    if (cp <= 0x7F) bytes[count++] = (unsigned char)cp;
+    else if (cp <= 0x7FF)
+    {
+        bytes[count++] = (unsigned char)(0xC0 | (cp >> 6));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    }
+    else if (cp <= 0xFFFF)
+    {
+        bytes[count++] = (unsigned char)(0xE0 | (cp >> 12));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    }
+    else
+    {
+        bytes[count++] = (unsigned char)(0xF0 | (cp >> 18));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    }
+
+    if (len + count < size)
+    {
+        memcpy(text + len, bytes, count);
+        text[len + count] = '\\0';
+    }
+    ClearLastSoftKey();
+}
+
 
 #define SETTINGS_STORAGE_VERSION 3
 #define SETTINGS_STORAGE_SLOTS 131
@@ -1116,6 +1180,7 @@ int main(void)
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
     Font cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
                                    cyrillicCodepoints, cpIndex);
+    if (cyrillicFont.texture.id == 0) cyrillicFont = GetFontDefault();
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -1368,7 +1433,7 @@ int main(void)
             loadingProgress += frameTime/2.4f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
-        if(commandChatOpen || commandConsoleOpen) SoftKeyboardEditText(commandInput,sizeof(commandInput));
+        if(commandChatOpen || commandConsoleOpen) ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
