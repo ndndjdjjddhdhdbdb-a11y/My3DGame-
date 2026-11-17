@@ -27,71 +27,12 @@ package com.raylib.raymob;  // Don't change the package name (see gradle.propert
 import android.app.NativeActivity;
 import android.view.KeyEvent;
 import android.os.Bundle;
-import android.app.AlertDialog;
-import android.widget.EditText;
-import android.view.inputmethod.InputMethodManager;
-import android.content.Context;
-import android.text.InputType;
-import android.text.InputFilter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 
 public class NativeLoader extends NativeActivity {
-
+ 
     public DisplayManager displayManager;
     public SoftKeyboard softKeyboard;
     public boolean initCallback = false;
-
-    private volatile String submittedText = null;
-
-    // Возвращает копию системного шрифта в доступном для native-кода каталоге.
-    public String getCyrillicFontPath() {
-        File target = new File(getFilesDir(), "Roboto-Regular.ttf");
-        if (!target.exists() || target.length() == 0) {
-            try (FileInputStream in = new FileInputStream("/system/fonts/Roboto-Regular.ttf");
-                 FileOutputStream out = new FileOutputStream(target)) {
-                byte[] buffer = new byte[8192];
-                int count;
-                while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-            } catch (Exception e) {
-                return "";
-            }
-        }
-        return target.getAbsolutePath();
-    }
-
-    // Показывает настоящее Android-поле ввода, поддерживающее IME и Unicode.
-    public void showGameTextInput(final String initialText) {
-        runOnUiThread(() -> {
-            final EditText edit = new EditText(this);
-            edit.setSingleLine(true);
-            edit.setFilters(new InputFilter[] { new InputFilter.LengthFilter(79) });
-            edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            edit.setText(initialText == null ? "" : initialText);
-            edit.setSelection(edit.length());
-            AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Ввод текста")
-                .setView(edit)
-                .setNegativeButton("Отмена", (d, w) -> submittedText = null)
-                .setPositiveButton("Готово", (d, w) -> submittedText = edit.getText().toString())
-                .create();
-            dialog.setOnShowListener(d -> {
-                edit.requestFocus();
-                edit.postDelayed(() -> {
-                    InputMethodManager manager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                    manager.showSoftInput(edit, InputMethodManager.SHOW_IMPLICIT);
-                }, 200);
-            });
-            dialog.show();
-        });
-    }
-
-    public String takeGameTextInput() {
-        String result = submittedText;
-        submittedText = null;
-        return result;
-    }
 
     // Loading method of your native application
     @Override
