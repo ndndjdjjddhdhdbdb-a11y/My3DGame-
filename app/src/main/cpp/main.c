@@ -1162,7 +1162,7 @@ int main(void)
     int actionButtonAlpha[3] = {245, 245, 245};
     int selectedActionControl = 0;
     Rectangle editSelectButtons[3];
-    Rectangle editSizeMinus, editSizePlus, editAlphaMinus, editAlphaPlus;
+    Rectangle editSizeSlider, editAlphaSlider;
     bool attackRequested = false;
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
@@ -1431,10 +1431,8 @@ int main(void)
         float editSelectW = (screenWidth-40.0f)/3.0f;
         for (int control = 0; control < 3; control++)
             editSelectButtons[control] = (Rectangle){20.0f+control*editSelectW, 52.0f, editSelectW-5.0f, 38.0f};
-        editSizeMinus = (Rectangle){screenWidth/2.0f-112.0f, 102.0f, 92.0f, 38.0f};
-        editSizePlus = (Rectangle){screenWidth/2.0f+20.0f, 102.0f, 92.0f, 38.0f};
-        editAlphaMinus = (Rectangle){screenWidth/2.0f-112.0f, 148.0f, 92.0f, 38.0f};
-        editAlphaPlus = (Rectangle){screenWidth/2.0f+20.0f, 148.0f, 92.0f, 38.0f};
+        editSizeSlider = (Rectangle){screenWidth*0.18f, 119.0f, screenWidth*0.64f, 16.0f};
+        editAlphaSlider = (Rectangle){screenWidth*0.18f, 174.0f, screenWidth*0.64f, 16.0f};
         float slotSize = fminf(54.0f, (screenWidth-165.0f)/4.0f);
         float slotGap = 6.0f;
         float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
@@ -1500,14 +1498,18 @@ int main(void)
                     selectedActionControl = 1;
                 else if (CheckCollisionPointRec(pos, editSelectButtons[2]))
                     selectedActionControl = 2;
-                else if (CheckCollisionPointRec(pos, editSizeMinus))
-                    actionButtonScale[selectedActionControl] = fmaxf(0.55f, actionButtonScale[selectedActionControl]-0.10f);
-                else if (CheckCollisionPointRec(pos, editSizePlus))
-                    actionButtonScale[selectedActionControl] = fminf(1.70f, actionButtonScale[selectedActionControl]+0.10f);
-                else if (CheckCollisionPointRec(pos, editAlphaMinus))
-                    actionButtonAlpha[selectedActionControl] = (int)fmaxf(60.0f, actionButtonAlpha[selectedActionControl]-20.0f);
-                else if (CheckCollisionPointRec(pos, editAlphaPlus))
-                    actionButtonAlpha[selectedActionControl] = (int)fminf(255.0f, actionButtonAlpha[selectedActionControl]+20.0f);
+                else if (CheckCollisionPointRec(pos, editSizeSlider))
+                {
+                    dragTarget = 8; dragTouchId = id;
+                    float t = (pos.x-editSizeSlider.x)/editSizeSlider.width;
+                    actionButtonScale[selectedActionControl] = 0.55f+fmaxf(0.0f,fminf(1.0f,t))*1.15f;
+                }
+                else if (CheckCollisionPointRec(pos, editAlphaSlider))
+                {
+                    dragTarget = 9; dragTouchId = id;
+                    float t = (pos.x-editAlphaSlider.x)/editAlphaSlider.width;
+                    actionButtonAlpha[selectedActionControl] = (int)(60.0f+fmaxf(0.0f,fminf(1.0f,t))*195.0f);
+                }
                 else if (CheckCollisionPointRec(pos, interactButton))
                 {
                     dragTarget = 4;
@@ -2198,6 +2200,16 @@ int main(void)
                     }
                     else if (dragTarget == 7)
                     { mapButton.x=fmaxf(8,fminf(nx,screenWidth-mapButton.width-8)); mapButton.y=fmaxf(8,fminf(ny,screenHeight-mapButton.height-8)); }
+                    else if (dragTarget == 8)
+                    {
+                        float t = fmaxf(0.0f, fminf(1.0f, (pos.x-editSizeSlider.x)/editSizeSlider.width));
+                        actionButtonScale[selectedActionControl] = 0.55f+t*1.15f;
+                    }
+                    else if (dragTarget == 9)
+                    {
+                        float t = fmaxf(0.0f, fminf(1.0f, (pos.x-editAlphaSlider.x)/editAlphaSlider.width));
+                        actionButtonAlpha[selectedActionControl] = (int)(60.0f+t*195.0f);
+                    }
                     else if (dragTarget >= 4 && dragTarget <= 6)
                     {
                         int control = dragTarget-4;
@@ -3843,20 +3855,22 @@ int main(void)
                     (int)(editSelectButtons[control].y+11), 15, RAYWHITE);
             }
 
-            Rectangle adjustButtons[4] = {editSizeMinus, editSizePlus, editAlphaMinus, editAlphaPlus};
-            const char *adjustLabels[4] = {"SIZE -", "SIZE +", "ALPHA -", "ALPHA +"};
-            for (int control = 0; control < 4; control++)
-            {
-                DrawRectangleRounded(adjustButtons[control], 0.18f, 8, C(24, 55, 78, 245));
-                DrawRectangleRoundedLinesEx(adjustButtons[control], 0.18f, 8, 1.2f, C(115, 180, 215, 230));
-                DrawText(adjustLabels[control], (int)adjustButtons[control].x+12,
-                    (int)adjustButtons[control].y+11, 13, RAYWHITE);
-            }
+            DrawText("SIZE", (int)editSizeSlider.x, 99, 14, RAYWHITE);
+            DrawText("OPACITY", (int)editAlphaSlider.x, 151, 14, RAYWHITE);
 
-            DrawText(TextFormat("SIZE: %d%%   OPACITY: %d%%",
-                (int)(actionButtonScale[selectedActionControl]*100.0f),
-                actionButtonAlpha[selectedActionControl]*100/255),
-                12, 194, 14, C(190, 220, 240, 255));
+            DrawRectangleRounded(editSizeSlider, 0.5f, 8, C(35, 55, 72, 255));
+            DrawRectangleRounded(editAlphaSlider, 0.5f, 8, C(35, 55, 72, 255));
+            float sizeT = (actionButtonScale[selectedActionControl]-0.55f)/1.15f;
+            float alphaT = (actionButtonAlpha[selectedActionControl]-60.0f)/195.0f;
+            DrawRectangleRounded((Rectangle){editSizeSlider.x,editSizeSlider.y,editSizeSlider.width*sizeT,editSizeSlider.height},0.5f,8,C(65,175,235,255));
+            DrawRectangleRounded((Rectangle){editAlphaSlider.x,editAlphaSlider.y,editAlphaSlider.width*alphaT,editAlphaSlider.height},0.5f,8,C(65,175,235,255));
+            DrawCircleV((Vector2){editSizeSlider.x+editSizeSlider.width*sizeT,editSizeSlider.y+8},10,RAYWHITE);
+            DrawCircleV((Vector2){editAlphaSlider.x+editAlphaSlider.width*alphaT,editAlphaSlider.y+8},10,RAYWHITE);
+
+            DrawText(TextFormat("%d%%", (int)(actionButtonScale[selectedActionControl]*100.0f)),
+                (int)(editSizeSlider.x+editSizeSlider.width+8), 116, 13, RAYWHITE);
+            DrawText(TextFormat("%d%%", actionButtonAlpha[selectedActionControl]*100/255),
+                (int)(editAlphaSlider.x+editAlphaSlider.width+8), 171, 13, RAYWHITE);
 
             // Показываем сами кнопки в режиме редактирования, чтобы было
             // понятно, какую именно область пользователь перетаскивает.
