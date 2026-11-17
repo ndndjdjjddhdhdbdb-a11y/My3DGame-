@@ -1135,7 +1135,8 @@ static void DrawHeldMeat(Vector3 center, float scale)
 
 static void DrawFirstPersonArms(Vector3 eye, float yaw,
                                 float walkPhase, bool moving, float time,
-                                float attackProgress, int heldItemId)
+                                float attackProgress, int heldItemId,
+                                float useProgress, int useItem)
 {
     Vector3 forward = {sinf(yaw), 0.0f, -cosf(yaw)};
     Vector3 right = {cosf(yaw), 0.0f, sinf(yaw)};
@@ -1154,6 +1155,8 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
         float armLift = moving ?
             cosf(walkPhase*2.0f)*0.025f :
             sinf(time*1.6f)*0.012f;
+        float useLift = (side == 1 && (useItem == 2 || useItem == 3)) ?
+            sinf(useProgress*3.1415926f)*0.34f : 0.0f;
 
         Vector3 shoulder = {
             eye.x + right.x*s*0.42f + forward.x*(0.18f+armSwing*0.25f),
@@ -1163,20 +1166,20 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
 
         Vector3 elbow = {
             eye.x + right.x*s*0.48f + forward.x*(0.48f+armSwing*0.65f),
-            eye.y - 0.52f + armLift*0.8f,
+            eye.y - 0.52f + armLift*0.8f + useLift*0.75f,
             eye.z + right.z*s*0.48f + forward.z*(0.48f+armSwing*0.65f)
         };
 
         float punch = (side == 1) ? attackProgress*0.95f : 0.0f;
         Vector3 wrist = {
             eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing+punch),
-            eye.y - 0.48f + armLift + punch*0.10f,
+            eye.y - 0.48f + armLift + punch*0.10f + useLift,
             eye.z + right.z*s*0.34f + forward.z*(0.78f+armSwing+punch)
         };
 
         Vector3 hand = {
             eye.x + right.x*s*0.30f + forward.x*(0.88f+armSwing+punch),
-            eye.y - 0.45f + armLift + punch*0.10f,
+            eye.y - 0.45f + armLift + punch*0.10f + useLift,
             eye.z + right.z*s*0.30f + forward.z*(0.88f+armSwing+punch)
         };
 
@@ -1187,10 +1190,18 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     }
 
     // Предмет в правой руке следует за направлением камеры.
-    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*0.78f,
-                        eye.y-0.43f, eye.z+right.z*0.30f+forward.z*0.78f};
-    Vector3 toolTip = {eye.x+right.x*0.36f+forward.x*0.99f,
-                       eye.y-0.18f, eye.z+right.z*0.36f+forward.z*0.99f};
+    // Основание предмета совпадает с центром правой кисти и повторяет её движение.
+    float armSwing = moving ? sinf(walkPhase)*0.13f : sinf(time*1.6f)*0.012f;
+    float armLift = moving ? cosf(walkPhase*2.0f)*0.025f : sinf(time*1.6f)*0.012f;
+    float useLift = (useItem == 2 || useItem == 3) ?
+        sinf(useProgress*3.1415926f)*0.34f : 0.0f;
+    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*(0.88f+armSwing),
+                        eye.y-0.45f+armLift+useLift,
+                        eye.z+right.z*0.30f+forward.z*(0.88f+armSwing)};
+    Vector3 toolTip = {toolBase.x+forward.x*0.20f,
+                       toolBase.y+0.27f,
+                       toolBase.z+forward.z*0.20f};
+    if(useItem==2 || useItem==3) heldItemId=useItem;
     if(heldItemId==0) DrawHeldAxe(toolBase,toolTip,yaw,1.0f);
     else if(heldItemId==7)
     {
@@ -1215,7 +1226,8 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
 }
 
 static void DrawPlayer(Vector3 player, float angle,
-                       float walkPhase, bool moving, float attackProgress, int heldItemId)
+                       float walkPhase, bool moving, float attackProgress, int heldItemId,
+                       float useProgress, int useItem)
 {
     float swing = moving ? sinf(walkPhase)*0.30f : sinf(walkPhase)*0.025f;
     float bob = moving ? fabsf(cosf(walkPhase))*0.035f : 0.0f;
@@ -1298,7 +1310,9 @@ static void DrawPlayer(Vector3 player, float angle,
     Vector3 shoulderR = PlayerPoint(player, angle, 0.36f, 1.42f+bob, 0);
     Vector3 elbowR = PlayerPoint(player, angle, 0.45f, 1.05f+bob,
                                  swing*0.65f-attackProgress*0.24f);
-    Vector3 wristR = PlayerPoint(player, angle, 0.43f, 0.82f+bob,
+    float useLift = (useItem == 2 || useItem == 3) ?
+        sinf(useProgress*3.1415926f)*0.34f : 0.0f;
+    Vector3 wristR = PlayerPoint(player, angle, 0.43f, 0.82f+bob+useLift,
                                  swing*0.9f-attackProgress*0.72f);
 
     DrawSphere(shoulderL, 0.145f, jacket);
@@ -1313,8 +1327,9 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(wristR, 0.075f, skinLight);
 
     // Предмет закреплён в кисти, а геометрия ориентирована по руке.
-    Vector3 heldBase=PlayerPoint(player,angle,0.43f,0.82f,-0.08f);
-    Vector3 heldTip=PlayerPoint(player,angle,0.56f,1.13f,-0.38f);
+    Vector3 heldBase=wristR;
+    Vector3 heldTip=PlayerPoint(player,angle,0.56f,1.13f+useLift,-0.38f);
+    if(useItem==2 || useItem==3) heldItemId=useItem;
     if(heldItemId==0) DrawHeldAxe(heldBase,heldTip,angle,0.88f);
     else if(heldItemId==7)
     {
@@ -1869,6 +1884,9 @@ int main(void)
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
     float attackAnimation = 0.0f;
+    float consumeAnimationTime = 0.0f;
+    int consumeAnimationType = -1;
+    const float consumeAnimationDuration = 0.72f;
 
     LoadGameSettings(&joystickPosition, &joystickRadius,
                      &settingsButton, &cameraButton, &mapButton,
@@ -2053,6 +2071,13 @@ int main(void)
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
         if (attackAnimation > 0.0f) attackAnimation -= frameTime;
         if (attackAnimation < 0.0f) attackAnimation = 0.0f;
+        if (consumeAnimationTime > 0.0f) {
+            consumeAnimationTime -= frameTime;
+            if (consumeAnimationTime <= 0.0f) {
+                consumeAnimationTime = 0.0f;
+                consumeAnimationType = -1;
+            }
+        }
 
         if (!mainMenuOpen && !settingsOpen && !editControls)
         {
@@ -4132,11 +4157,15 @@ int main(void)
                             {
                                 foodLevel=fminf(100.0f,foodLevel+25.0f);
                                 itemCounts[2]--;
+                                consumeAnimationType=2;
+                                consumeAnimationTime=consumeAnimationDuration;
                             }
                             else if(inventoryDragItem==3 && itemCounts[3]>0)
                             {
                                 waterLevel=fminf(100.0f,waterLevel+25.0f);
                                 itemCounts[3]--;
+                                consumeAnimationType=3;
+                                consumeAnimationTime=consumeAnimationDuration;
                             }
                         }
                         else
@@ -4480,7 +4509,10 @@ int main(void)
             DrawPlayer(
                 player, playerAngle, walkPhase, playerMoving,
                 attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f,
-                hotbarItemIds[selectedHotbarSlot]
+                hotbarItemIds[selectedHotbarSlot],
+                consumeAnimationTime > 0.0f ?
+                    1.0f-consumeAnimationTime/consumeAnimationDuration : 0.0f,
+                consumeAnimationType
             );
         }
         else
@@ -4492,7 +4524,10 @@ int main(void)
                 playerMoving,
                 (float)GetTime(),
                 attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f,
-                hotbarItemIds[selectedHotbarSlot]
+                hotbarItemIds[selectedHotbarSlot],
+                consumeAnimationTime > 0.0f ?
+                    1.0f-consumeAnimationTime/consumeAnimationDuration : 0.0f,
+                consumeAnimationType
             );
         }
 
