@@ -36,15 +36,25 @@ void Player::Update(float deltaTime)
     if (deltaTime > 0.05f)
         deltaTime = 0.05f;
 
-    // Raylib самостоятельно обрабатывает мышь и поворот FPS-камеры.
-    UpdateCamera(&camera_, CAMERA_FIRST_PERSON);
+    // Управляем обзором мышью самостоятельно, чтобы UpdateCamera
+    // не дублировал WASD-перемещение, которое реализовано ниже.
+    const Vector2 mouseDelta = GetMouseDelta();
+    const float mouseSensitivity = 0.0025f;
 
-    // Направление взгляда на плоскости земли.
-    Vector3 forward = NormalizeHorizontal({
-        camera_.target.x - camera_.position.x,
-        0.0f,
-        camera_.target.z - camera_.position.z
-    });
+    yaw_ += mouseDelta.x * mouseSensitivity;
+    pitch_ -= mouseDelta.y * mouseSensitivity;
+
+    if (pitch_ > 1.50f) pitch_ = 1.50f;
+    if (pitch_ < -1.50f) pitch_ = -1.50f;
+
+    const Vector3 lookDirection = {
+        std::cos(pitch_) * std::cos(yaw_),
+        std::sin(pitch_),
+        std::cos(pitch_) * std::sin(yaw_)
+    };
+
+    // Направление движения по земле не зависит от наклона камеры вверх/вниз.
+    Vector3 forward = NormalizeHorizontal(lookDirection);
 
     const Vector3 right = {-forward.z, 0.0f, forward.x};
     Vector3 movement = {0.0f, 0.0f, 0.0f};
@@ -89,18 +99,12 @@ void Player::Update(float deltaTime)
         onGround_ = true;
     }
 
-    // Сохраняем направление камеры и перемещаем её вместе с игроком.
-    const Vector3 viewOffset = {
-        camera_.target.x - camera_.position.x,
-        camera_.target.y - camera_.position.y,
-        camera_.target.z - camera_.position.z
-    };
-
+    // Камера следует за игроком и смотрит в рассчитанном направлении.
     camera_.position = position_;
     camera_.target = {
-        position_.x + viewOffset.x,
-        position_.y + viewOffset.y,
-        position_.z + viewOffset.z
+        position_.x + lookDirection.x,
+        position_.y + lookDirection.y,
+        position_.z + lookDirection.z
     };
 }
 
