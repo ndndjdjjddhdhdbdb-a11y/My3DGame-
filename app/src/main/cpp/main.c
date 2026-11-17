@@ -4,6 +4,20 @@
 #include <string.h>
 #include <stdio.h>
 
+// Единый шрифт интерфейса с поддержкой русского языка.
+static Font cyrillicFont;
+static void DrawUiText(const char *text, int x, int y, int fontSize, Color color)
+{
+    DrawTextEx(cyrillicFont, text, (Vector2){(float)x, (float)y},
+               (float)fontSize, 1.0f, color);
+}
+static int MeasureUiText(const char *text, int fontSize)
+{
+    return (int)MeasureTextEx(cyrillicFont, text, (float)fontSize, 1.0f).x;
+}
+#define DrawText(text, x, y, size, color) DrawUiText(text, x, y, size, color)
+#define MeasureText(text, size) MeasureUiText(text, size)
+
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
 #define MAX_BUILD_PIECES 64
@@ -92,10 +106,10 @@ static Color GetOreColor(int type)
 
 static const char *GetOreName(int type)
 {
-    if (type == 0) return "IRON";
-    if (type == 1) return "LAPIS";
-    if (type == 2) return "SULFUR";
-    return "SILICON";
+    if (type == 0) return "ЖЕЛЕЗО";
+    if (type == 1) return "ЛАЗУРИТ";
+    if (type == 2) return "СЕРА";
+    return "КРЕМНИЙ";
 }
 
 static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
@@ -1161,7 +1175,7 @@ int main(void)
     int cpIndex = 0;
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
-    Font cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
+    cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
                                    cyrillicCodepoints, cpIndex);
     if (cyrillicFont.texture.id == 0) cyrillicFont = GetFontDefault();
     SetTargetFPS(60);
@@ -1205,8 +1219,8 @@ int main(void)
     int selectedHotbarSlot = 0;
     // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE,
     // 8 IRON, 9 LAPIS, 10 SULFUR, 11 SILICON.
-    const char *itemNames[12] = {"AXE", "MED", "FOOD", "WATER", "WOOD", "STONE", "DOOR", "ORF PIXCADE",
-                                 "IRON", "LAPIS", "SULFUR", "SILICON"};
+    const char *itemNames[12] = {"ТОПОР", "АПТЕЧКА", "ЕДА", "ВОДА", "ДЕРЕВО", "КАМЕНЬ", "ДВЕРЬ", "ОРУЖИЕ",
+                                 "ЖЕЛЕЗО", "ЛАЗУРИТ", "СЕРА", "КРЕМНИЙ"};
     int itemCounts[12] = {1, 1, 3, 3, 0, 0, 0, 1, 0, 0, 0, 0};
     const int hotbarItemIds[4] = {0, 7, 2, 3}; // AXE, ORF PIXCADE, FOOD, WATER.
 
@@ -3308,7 +3322,7 @@ int main(void)
             for (int k=0; k<4; k++)
                 DrawLineEx(screenCorners[k], screenCorners[(k+1)%4], 5.0f, markerColor);
             DrawCircleLines(screenWidth/2, screenHeight/2, 13.0f, markerColor);
-            DrawText("BUILD TARGET", screenWidth/2-58, screenHeight/2+22, 18, markerColor);
+            DrawText("МЕСТО СТРОИТЕЛЬСТВА", screenWidth/2-58, screenHeight/2+22, 18, markerColor);
         }
 
         if(buildMessageTimer>0.0f) buildMessageTimer-=GetFrameTime();
@@ -3346,9 +3360,9 @@ int main(void)
                 (Rectangle){14, 72, 244, 88},
                 0.16f, 14, 1.5f, C(119, 159, 166, 190)
             );
-            DrawText("SURVIVAL STATUS", 27, 78, 11,
+            DrawText("СОСТОЯНИЕ", 27, 78, 11,
                      C(135, 190, 194, 255));
-            DrawText("FOOD", 28, 98, 12, RAYWHITE);
+            DrawText("ЕДА", 28, 98, 12, RAYWHITE);
             DrawRectangleRounded(
                 (Rectangle){82, 88, 112, 9},
                 0.5f, 6, C(65, 70, 72, 230)
@@ -3360,7 +3374,7 @@ int main(void)
             DrawText(TextFormat("%d%%", (int)foodLevel),
                      203, 85, 12, C(245, 220, 170, 255));
 
-            DrawText("WATER", 28, 124, 12, RAYWHITE);
+            DrawText("ВОДА", 28, 124, 12, RAYWHITE);
             DrawRectangleRounded(
                 (Rectangle){82, 126, 112, 9},
                 0.5f, 6, C(65, 70, 72, 230)
@@ -3373,7 +3387,7 @@ int main(void)
                      203, 123, 12, C(170, 220, 250, 255));
 
             if (foodLevel < 20.0f || waterLevel < 20.0f)
-                DrawText("LOW SUPPLIES - FIND BARRELS", 28, 145, 10,
+                DrawText("МАЛО РЕСУРСОВ — ИЩИТЕ БОЧКИ", 28, 145, 10,
                          C(255, 190, 105, 255));
 
             DrawRectangleRounded(
@@ -3385,8 +3399,8 @@ int main(void)
                 0.22f, 12, 1.5f, C(116, 169, 180, 190)
             );
             DrawCircle(34, 37, 7, C(103, 230, 135, 255));
-            DrawText("GREEN VALLEY", 49, 24, 18, RAYWHITE);
-            DrawText("SURVIVAL ZONE  /  DAY 01", 49, 43, 9,
+            DrawText("ЗЕЛЁНАЯ ДОЛИНА", 49, 24, 18, RAYWHITE);
+            DrawText("ЗОНА ВЫЖИВАНИЯ / ДЕНЬ 01", 49, 43, 9,
                      C(139, 179, 190, 255));
 
             DrawRectangleRounded(
@@ -3423,21 +3437,21 @@ int main(void)
             );
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,220));
-            DrawText("MAP",mapButton.x+mapButton.width/2-MeasureText("MAP",19)/2,mapButton.y+22,19,RAYWHITE);
-            if(!settingsOpen && !inventoryOpen && !gasCrateOpen) DrawSurvivalButton(chatButton,"CHAT",18,false);
+            DrawText("КАРТА",mapButton.x+mapButton.width/2-MeasureText("КАРТА",19)/2,mapButton.y+22,19,RAYWHITE);
+            if(!settingsOpen && !inventoryOpen && !gasCrateOpen) DrawSurvivalButton(chatButton,"ЧАТ",18,false);
 
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
-                DrawSurvivalButton(buildButton, buildMode ? "BUILD: ON" : "BUILD", 16, buildMode);
+                DrawSurvivalButton(buildButton, buildMode ? "СТРОИТЬ: ВКЛ." : "СТРОИТЬ", 16, buildMode);
                 if (buildMode)
                 {
-                    DrawSurvivalButton(buildFloorButton, "FOUND", 10, selectedBuildType == 0);
-                    DrawSurvivalButton(buildWallButton, "WALL", 10, selectedBuildType == 1);
-                    DrawSurvivalButton(buildRoofButton, "ROOF", 10, selectedBuildType == 3);
-                    DrawSurvivalButton(buildDoorButton, "DOOR", 10, selectedBuildType == 2);
-                    DrawSurvivalButton(buildPlaceButton, "PLACE", 15, true);
+                    DrawSurvivalButton(buildFloorButton, "ОСНОВА", 10, selectedBuildType == 0);
+                    DrawSurvivalButton(buildWallButton, "СТЕНА", 10, selectedBuildType == 1);
+                    DrawSurvivalButton(buildRoofButton, "КРЫША", 10, selectedBuildType == 3);
+                    DrawSurvivalButton(buildDoorButton, "ДВЕРЬ", 10, selectedBuildType == 2);
+                    DrawSurvivalButton(buildPlaceButton, "ПОСТАВИТЬ", 15, true);
                     int buildCost = selectedBuildType == 0 ? 30 : ((selectedBuildType == 1 || selectedBuildType == 3) ? 15 : 0);
-                    DrawText(TextFormat("WOOD: %d  |  %s", itemCounts[4], selectedBuildType == 2 ? TextFormat("DOORS: %d", itemCounts[6]) : TextFormat("COST: %d", buildCost)),
+                    DrawText(TextFormat("ДЕРЕВО: %d  |  %s", itemCounts[4], selectedBuildType == 2 ? TextFormat("ДВЕРИ: %d", itemCounts[6]) : TextFormat("ЦЕНА: %d", buildCost)),
                         164, 278, 12, C(225, 235, 245, 255));
                 }
             }
@@ -3494,8 +3508,8 @@ int main(void)
                     DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
                 }
-                DrawSurvivalButtonAlpha(inventoryButton, "BAG", 13, false, (unsigned char)actionButtonAlpha[2]);
-                DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
+                DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
+                DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
             }
 
             // Кнопка действия меняет подпись, когда прицел наведён на ящик.
@@ -3505,7 +3519,7 @@ int main(void)
                 bool canOpenCrate = targetedGasCrate >= 0;
                 Color hitColor = canOpenCrate ? C(35, 125, 82, hitAlpha) :
                     (attackCooldown <= 0.0f ? C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha));
-                const char *actionLabel = canOpenCrate ? "OPEN" : "HIT";
+                const char *actionLabel = canOpenCrate ? "ОТКРЫТЬ" : "УДАР";
                 int actionFont = canOpenCrate ? 16 : 20;
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
                 DrawRectangleRoundedLinesEx(interactButton, 0.25f, 14, 2, C(230, 190, 160, hitAlpha));
@@ -3517,7 +3531,7 @@ int main(void)
                     float cooldownRatio=attackCooldown/attackCooldownDuration;
                     DrawRectangleRounded((Rectangle){interactButton.x+12,interactButton.y+34,
                         (interactButton.width-24)*(1.0f-cooldownRatio),7},0.5f,6,C(105,225,150,hitAlpha));
-                    const char *cooldownLabel=attackCooldown<=0.0f?"READY":TextFormat("%.1f s",attackCooldown);
+                    const char *cooldownLabel=attackCooldown<=0.0f?"ГОТОВО":TextFormat("%.1f s",attackCooldown);
                     DrawText(cooldownLabel,(int)(interactButton.x+interactButton.width/2-
                         MeasureText(cooldownLabel,13)/2),(int)(interactButton.y+44),13,C(255,255,255,hitAlpha));
                 }
@@ -3527,8 +3541,8 @@ int main(void)
             {
                 DrawRectangleRounded((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, C(18, 31, 44, 225));
                 DrawRectangleRoundedLinesEx((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, 2, C(90, 165, 105, 240));
-                DrawText(TextFormat("TREE  -  %d/3", treeHealth[targetedTree]), (int)(screenWidth/2.0f-105.0f), 119, 19, RAYWHITE);
-                DrawText("HIT TO CHOP", (int)(screenWidth/2.0f+15.0f), 122, 13, C(175, 220, 175, 255));
+                DrawText(TextFormat("ДЕРЕВО — %d/3", treeHealth[targetedTree]), (int)(screenWidth/2.0f-105.0f), 119, 19, RAYWHITE);
+                DrawText("УДАРЬТЕ, ЧТОБЫ СРУБИТЬ", (int)(screenWidth/2.0f+15.0f), 122, 13, C(175, 220, 175, 255));
             }
 
             if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
@@ -3562,16 +3576,16 @@ int main(void)
             {
                 int oreType = targetedOre/4;
                 int maxOreHp = (oreType == 2) ? 10 : ((oreType == 3) ? 30 : 15);
-                const char *oreLabel = TextFormat("%s ORE", GetOreName(oreType));
+                const char *oreLabel = TextFormat("%s: РУДА", GetOreName(oreType));
                 float hudX = screenWidth/2.0f-145.0f;
                 Rectangle oreHud = {hudX, 105, 290, 105};
                 DrawRectangleRounded(oreHud, 0.18f, 12, C(15, 27, 40, 238));
                 DrawRectangleRoundedLinesEx(oreHud, 0.18f, 12, 2.2f, GetOreColor(oreType));
                 DrawText(oreLabel, (int)hudX+16, 114, 19, RAYWHITE);
-                DrawText(TextFormat("HP: %d / %d", oreHealth[targetedOre], maxOreHp),
+                DrawText(TextFormat("ЗДОРОВЬЕ: %d / %d", oreHealth[targetedOre], maxOreHp),
                          (int)hudX+16, 142, 17, C(235, 241, 248, 255));
                 if (oreType == 3 && hotbarItemIds[selectedHotbarSlot] != 7)
-                    DrawText("EQUIP ORF PIXCADE IN SLOT 2", (int)hudX+16, 184, 13, C(255, 205, 115, 255));
+                    DrawText("ОРУЖИЕ НАХОДИТСЯ В ЯЧЕЙКЕ 2", (int)hudX+16, 184, 13, C(255, 205, 115, 255));
                 DrawRectangleRounded((Rectangle){hudX+16, 166, 258, 9}, 0.5f, 6, C(54, 63, 72, 255));
                 float hpRatio = (float)oreHealth[targetedOre]/(float)maxOreHp;
                 if (hpRatio < 0.0f) hpRatio = 0.0f;
@@ -3601,7 +3615,7 @@ int main(void)
             );
 
             // Кнопка возврата в главное меню.
-            DrawSurvivalButton(menuReturnButton, "MENU", 19, false);
+            DrawSurvivalButton(menuReturnButton, "МЕНЮ", 19, false);
 
             if(commandChatOpen || commandConsoleOpen)
             {
@@ -3614,8 +3628,8 @@ int main(void)
                 DrawRectangleRounded(inputBox,0.12f,8,C(7,14,23,255));
                 DrawRectangleRoundedLinesEx(inputBox,0.12f,8,1,C(90,145,180,255));
                 DrawTextEx(cyrillicFont,commandInput[0]?commandInput:"Введите команду...",(Vector2){inputBox.x+10,inputBox.y+12},16,1,RAYWHITE);
-                DrawSurvivalButton((Rectangle){cp.x+14,cp.y+116,100,42},"CLOSE",13,false);
-                DrawSurvivalButton((Rectangle){cp.x+cp.width-128,cp.y+116,114,42},"SEND",13,true);
+                DrawSurvivalButton((Rectangle){cp.x+14,cp.y+116,100,42},"ЗАКРЫТЬ",13,false);
+                DrawSurvivalButton((Rectangle){cp.x+cp.width-128,cp.y+116,114,42},"ОТПРАВИТЬ",13,true);
                 DrawTextEx(cyrillicFont,commandOutput,(Vector2){cp.x+14,cp.y+160},11,1,C(170,210,235,255));
             }
             if(resourcePanelOpen)
@@ -3642,8 +3656,8 @@ int main(void)
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f, screenWidth*0.80f, screenHeight*0.76f};
                 DrawRectangleRounded(invPanel, 0.025f, 8, C(30, 32, 30, 248));
                 DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
-                DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
-                DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
+                DrawText("ИНВЕНТАРЬ", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
+                DrawText("ПРЕДМЕТЫ / БЫСТРЫЙ ДОСТУП", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
                 for (int item = 0; item < 12; item++)
                 {
                     float gap = 8.0f;
@@ -3663,8 +3677,8 @@ int main(void)
                         (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),10)-5),
                         (int)(r.y+r.height-14),10,C(190,211,164,255));
                 }
-                DrawSurvivalButton(inventoryButton, "BAG", 13, true);
-                DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+242,
+                DrawSurvivalButton(inventoryButton, "СУМКА", 13, true);
+                DrawText("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+242,
                     12, C(145, 205, 240, 255));
                 Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
                 Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
@@ -3674,18 +3688,18 @@ int main(void)
                 DrawRectangleRounded(craftAxeButton, 0.16f, 8,
                     canCraftAxe ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftAxeButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
-                DrawText("CRAFT AXE  -  3 WOOD / 2 STONE",
+                DrawText("СОЗДАТЬ ТОПОР — 3 ДЕРЕВА / 2 КАМНЯ",
                     (int)craftAxeButton.x+10, (int)craftAxeButton.y+10, 10, RAYWHITE);
                 DrawRectangleRounded(craftMedButton, 0.16f, 8,
                     canCraftMed ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftMedButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
-                DrawText("CRAFT MED  -  2 WOOD / 1 STONE",
+                DrawText("СОЗДАТЬ АПТЕЧКУ — 2 ДЕРЕВА / 1 КАМЕНЬ",
                     (int)craftMedButton.x+10, (int)craftMedButton.y+10, 10, RAYWHITE);
                 bool canCraftDoor = itemCounts[4] >= 10 && itemCounts[6] < 99;
                 DrawRectangleRounded(craftDoorButton, 0.16f, 8, canCraftDoor ? C(31,91,119,255) : C(42,51,62,230));
                 DrawRectangleRoundedLinesEx(craftDoorButton, 0.16f, 8, 1.0f, C(100,180,220,210));
-                DrawText("CRAFT DOOR - 10 WOOD", (int)craftDoorButton.x+10, (int)craftDoorButton.y+10, 10, RAYWHITE);
-                DrawText("TAP FOOD / WATER TO CONSUME",
+                DrawText("СОЗДАТЬ ДВЕРЬ — 10 ДЕРЕВА", (int)craftDoorButton.x+10, (int)craftDoorButton.y+10, 10, RAYWHITE);
+                DrawText("НАЖМИТЕ НА ЕДУ ИЛИ ВОДУ, ЧТОБЫ ИСПОЛЬЗОВАТЬ",
                     (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
                     10, C(145, 190, 220, 255));
             }
@@ -3699,7 +3713,7 @@ int main(void)
             Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
             DrawRectangleRounded(cratePanel,0.035f,8,C(25,28,27,250));
             DrawRectangleRoundedLinesEx(cratePanel,0.035f,8,1.8f,C(135,145,119,255));
-            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",
+            DrawText(openedGasCrate==3?"ОРУЖЕЙНЫЙ ЯЩИК":"ЯЩИК С РЕСУРСАМИ",
                 (int)cratePanel.x+7,(int)cratePanel.y+9,10,C(215,225,207,255));
             Rectangle close={cratePanel.x+cratePanel.width-30.0f,cratePanel.y+5.0f,25.0f,23.0f};
             DrawRectangleRounded(close,0.18f,6,C(78,48,43,255));
@@ -3707,7 +3721,7 @@ int main(void)
 
             DrawRectangleRounded(invPanel,0.035f,8,C(25,29,31,250));
             DrawRectangleRoundedLinesEx(invPanel,0.035f,8,1.8f,C(91,139,157,255));
-            DrawText("INVENTORY",(int)invPanel.x+7,(int)invPanel.y+8,10,C(190,220,232,255));
+            DrawText("ИНВЕНТАРЬ",(int)invPanel.x+7,(int)invPanel.y+8,10,C(190,220,232,255));
 
             // Почти квадратный ящик: 4 столбца на 2 ряда.
             int cols=4, rows=2;
@@ -3727,7 +3741,7 @@ int main(void)
                     int fs=cell.width<55?7:9;
                     DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.30f),fs,C(225,229,218,255));
                     DrawText(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),9)-3),(int)(cell.y+cell.height-12),9,C(190,211,164,255));
-                } else DrawText("EMPTY",(int)cell.x+3,(int)(cell.y+cell.height*0.38f),7,C(116,128,115,255));
+                } else DrawText("ПУСТО",(int)cell.x+3,(int)(cell.y+cell.height*0.38f),7,C(116,128,115,255));
                 if(crateGlowSlot==slot && crateTakeCooldown>0.0f){
                     float pulse=0.5f+0.5f*sinf((0.75f-crateTakeCooldown)*18.0f);
                     unsigned char alpha=(unsigned char)(115.0f+125.0f*pulse);
@@ -3756,11 +3770,11 @@ int main(void)
                     (int)(cell.y+cell.height-11),8,C(190,211,164,255));
             }
             if(crateTakeCooldown>0.0f){
-                DrawText("TAKING",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(155,235,155,255));
+                DrawText("ЗАБИРАЕТЕ",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(155,235,155,255));
                 DrawRectangleRounded((Rectangle){cratePanel.x+48,cratePanel.y+cratePanel.height-11,cratePanel.width-56,4},0.5f,6,C(55,67,55,255));
                 DrawRectangleRounded((Rectangle){cratePanel.x+48,cratePanel.y+cratePanel.height-11,(cratePanel.width-56)*(crateTakeCooldown/0.75f),4},0.5f,6,C(125,225,125,255));
             } else {
-                DrawText("TAP TO TAKE",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(160,180,160,255));
+                DrawText("НАЖМИТЕ, ЧТОБЫ ВЗЯТЬ",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(160,180,160,255));
             }
         }
 
@@ -3770,7 +3784,7 @@ int main(void)
             float ms=fminf(fminf(screenWidth*0.78f,screenHeight*0.70f),430.0f), mx=(screenWidth-ms)*0.5f, my=(screenHeight-ms)*0.5f;
             DrawRectangleRounded((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,C(15,29,34,250));
             DrawRectangleRoundedLinesEx((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,2,C(115,165,150,230));
-            DrawText("ISLAND MAP",(int)mx,(int)my-27,18,RAYWHITE);
+            DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,18,RAYWHITE);
             float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
             DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255)); DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             DrawCircle((int)cx,(int)cy,rr*0.78f,C(75,111,75,255));
@@ -3779,11 +3793,11 @@ int main(void)
             for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
             for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
             float sc=rr/260.0f,px=cx+player.x*sc,py=cy+player.z*sc;
-            DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("YOU",(int)px+12,(int)py-8,12,RAYWHITE);
-            DrawText("Tap MAP to close",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
+            DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("ВЫ",(int)px+12,(int)py-8,12,RAYWHITE);
+            DrawText("Нажмите «КАРТА», чтобы закрыть",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,255));
-            DrawText("CLOSE MAP",mapButton.x+mapButton.width/2-MeasureText("CLOSE MAP",16)/2,mapButton.y+23,16,RAYWHITE);
+            DrawText("ЗАКРЫТЬ КАРТУ",mapButton.x+mapButton.width/2-MeasureText("ЗАКРЫТЬ КАРТУ",16)/2,mapButton.y+23,16,RAYWHITE);
         }
 
         // Главное меню boltSurvival.
@@ -3816,7 +3830,7 @@ int main(void)
                 RAYWHITE
             );
 
-            const char *subtitle = "SURVIVE  -  EXPLORE  -  BUILD";
+            const char *subtitle = "ВЫЖИВАЙТЕ — ИССЛЕДУЙТЕ — СТРОЙТЕ";
             int subtitleWidth = MeasureText(subtitle, 15);
 
             DrawText(
@@ -3837,14 +3851,14 @@ int main(void)
 
                 Rectangle buttons[4] = {menuPlayButton, menuServersButton,
                                         menuShopButton, menuSettingsButton};
-                const char *labels[4] = {"PLAY", "SERVERS", "SHOP", "SETTINGS"};
+                const char *labels[4] = {"ИГРАТЬ", "СЕРВЕРЫ", "МАГАЗИН", "НАСТРОЙКИ"};
                 for (int i = 0; i < 4; i++)
                     DrawSurvivalButton(buttons[i], labels[i], 18, i == 0);
             }
             else
             {
                 const char *pageTitle =
-                    (menuPage == 1) ? "SERVERS" : "SHOP";
+                    (menuPage == 1) ? "СЕРВЕРЫ" : "МАГАЗИН";
 
                 int pageTitleWidth = MeasureText(pageTitle, 27);
 
@@ -3872,7 +3886,7 @@ int main(void)
                         C(100, 175, 215, 230)
                     );
                     DrawText(
-                        "SERVER #1",
+                        "СЕРВЕР №1",
                         (int)serverCard.x+18,
                         (int)serverCard.y+14, 20, RAYWHITE
                     );
@@ -3882,13 +3896,13 @@ int main(void)
                         C(80, 220, 135, 255)
                     );
                     DrawText(
-                        "ONLINE",
+                        "В СЕТИ",
                         (int)serverCard.x+18,
                         (int)serverCard.y+49, 16,
                         C(100, 225, 145, 255)
                     );
                     DrawText(
-                        "0/20 PLAYERS",
+                        "0/20 ИГРОКОВ",
                         (int)serverCard.x+18,
                         (int)serverCard.y+75, 18,
                         C(190, 215, 235, 255)
@@ -3896,7 +3910,7 @@ int main(void)
                 }
                 else
                 {
-                    const char *message = "COMING SOON";
+                    const char *message = "СКОРО";
                     int messageWidth = MeasureText(message, 18);
                     DrawText(
                         message,
@@ -3907,11 +3921,11 @@ int main(void)
                     );
                 }
             
-                DrawSurvivalButton(menuBackButton, "BACK", 19, false);
+                DrawSurvivalButton(menuBackButton, "НАЗАД", 19, false);
             }
 
             DrawText(
-                "ALPHA VERSION",
+                "АЛЬФА-ВЕРСИЯ",
                 18,
                 screenHeight-35,
                 14,
@@ -3938,13 +3952,13 @@ int main(void)
             );
 
             DrawText(
-                "GAME SETTINGS",
+                "НАСТРОЙКИ ИГРЫ",
                 panelX+24, panelY+18,
                 25, RAYWHITE
             );
 
             DrawText(
-                "Controls and graphics",
+                "Управление и графика",
                 panelX+26, panelY+47,
                 15, C(155, 177, 198, 255)
             );
@@ -3955,7 +3969,7 @@ int main(void)
             );
 
             DrawText(
-                "MOVE BUTTONS",
+                "ПЕРЕМЕСТИТЬ КНОПКИ",
                 moveButtonsButton.x+18,
                 moveButtonsButton.y+17,
                 19, RAYWHITE
@@ -3967,14 +3981,14 @@ int main(void)
             );
 
             DrawText(
-                "JOYSTICK SIZE",
+                "РАЗМЕР ДЖОЙСТИКА",
                 sizeButton.x+18,
                 sizeButton.y+17,
                 19, RAYWHITE
             );
 
             DrawText(
-                "GRAPHICS QUALITY",
+                "КАЧЕСТВО ГРАФИКИ",
                 panelX+25, panelY+166,
                 16, C(205, 220, 238, 255)
             );
@@ -3998,7 +4012,7 @@ int main(void)
             DrawRectangleRounded(mediumButton, 0.22f, 12, medColor);
             DrawRectangleRounded(highButton, 0.22f, 12, highColor);
 
-            const char *qualityLabels[3] = {"POTATO", "DETAILED", "REALISM"};
+            const char *qualityLabels[3] = {"НИЗКОЕ", "СРЕДНЕЕ", "ВЫСОКОЕ"};
             Rectangle qualityButtons[3] = {lowButton, mediumButton, highButton};
             for (int qi = 0; qi < 3; qi++)
             {
@@ -4010,7 +4024,7 @@ int main(void)
             }
 
             DrawText(
-                "FPS LIMIT",
+                "ЛИМИТ КАДРОВ/С",
                 panelX+25, panelY+240,
                 16, RAYWHITE
             );
@@ -4043,7 +4057,7 @@ int main(void)
             }
 
             DrawText(
-                "WORLD DETAILS",
+                "ДЕТАЛИ МИРА",
                 panelX+25, panelY+320,
                 16, RAYWHITE
             );
@@ -4076,28 +4090,28 @@ int main(void)
             );
 
             DrawText(
-                "MORE",
+                "БОЛЬШЕ",
                 detailMoreButton.x+detailMoreButton.width/2-25,
                 detailMoreButton.y+13,
                 15, RAYWHITE
             );
 
             DrawText(
-                "SOME",
+                "СРЕДНЕ",
                 detailSomeButton.x+detailSomeButton.width/2-24,
                 detailSomeButton.y+13,
                 15, RAYWHITE
             );
 
             DrawText(
-                "LESS",
+                "МЕНЬШЕ",
                 detailFewButton.x+detailFewButton.width/2-20,
                 detailFewButton.y+13,
                 15, RAYWHITE
             );
 
             DrawText(
-                "RENDER RESOLUTION",
+                "РАЗРЕШЕНИЕ РЕНДЕРА",
                 panelX+25, panelY+400,
                 16, RAYWHITE
             );
@@ -4156,14 +4170,14 @@ int main(void)
             );
 
             DrawText(
-                TextFormat("CHUNK DISTANCE: %d / 20", chunkDistance),
+                TextFormat("ДАЛЬНОСТЬ ЗАГРУЗКИ: %d / 20", chunkDistance),
                 chunkButton.x+15,
                 chunkButton.y+11,
                 17, RAYWHITE
             );
 
             DrawText(
-                "CAMERA SENSITIVITY",
+                "ЧУВСТВИТЕЛЬНОСТЬ КАМЕРЫ",
                 panelX+25, panelY+510,
                 16, RAYWHITE
             );
@@ -4221,7 +4235,7 @@ int main(void)
             );
 
             DrawText(
-                "RESET",
+                "СБРОСИТЬ",
                 resetButton.x+resetButton.width/2-34,
                 resetButton.y+15,
                 18, RAYWHITE
@@ -4233,7 +4247,7 @@ int main(void)
             );
 
             DrawText(
-                "CLOSE",
+                "ЗАКРЫТЬ",
                 closeButton.x+closeButton.width/2-34,
                 closeButton.y+15,
                 18, RAYWHITE
@@ -4248,12 +4262,12 @@ int main(void)
             );
 
             DrawText(
-                "MOVE YOUR CONTROLS",
+                "НАСТРОЙКА КНОПОК",
                 screenWidth/2-145, 12,
                 20, RAYWHITE
             );
 
-            const char *controlNames[3] = {"HIT", "RUN", "BAG"};
+            const char *controlNames[3] = {"УДАР", "БЕГ", "СУМКА"};
             for (int control = 0; control < 3; control++)
             {
                 DrawRectangleRounded(editSelectButtons[control], 0.18f, 8,
@@ -4266,8 +4280,8 @@ int main(void)
                     (int)(editSelectButtons[control].y+11), 15, RAYWHITE);
             }
 
-            DrawText("SIZE", (int)editSizeSlider.x, 99, 14, RAYWHITE);
-            DrawText("OPACITY", (int)editAlphaSlider.x, 151, 14, RAYWHITE);
+            DrawText("РАЗМЕР", (int)editSizeSlider.x, 99, 14, RAYWHITE);
+            DrawText("ПРОЗРАЧНОСТЬ", (int)editAlphaSlider.x, 151, 14, RAYWHITE);
 
             DrawRectangleRounded(editSizeSlider, 0.5f, 8, C(35, 55, 72, 255));
             DrawRectangleRounded(editAlphaSlider, 0.5f, 8, C(35, 55, 72, 255));
@@ -4287,13 +4301,13 @@ int main(void)
             // понятно, какую именно область пользователь перетаскивает.
             DrawRectangleRounded(interactButton, 0.25f, 14,
                 C(185, 75, 55, (unsigned char)actionButtonAlpha[0]));
-            DrawText("HIT",
-                (int)(interactButton.x+interactButton.width/2-MeasureText("HIT", 20)/2),
+            DrawText("УДАР",
+                (int)(interactButton.x+interactButton.width/2-MeasureText("УДАР", 20)/2),
                 (int)(interactButton.y+interactButton.height/2-10), 20,
                 C(255, 255, 255, (unsigned char)actionButtonAlpha[0]));
-            DrawSurvivalButtonAlpha(sprintButton, "RUN", 18, false,
+            DrawSurvivalButtonAlpha(sprintButton, "БЕГ", 18, false,
                 (unsigned char)actionButtonAlpha[1]);
-            DrawSurvivalButtonAlpha(inventoryButton, "BAG", 13, false,
+            DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false,
                 (unsigned char)actionButtonAlpha[2]);
 
             DrawRectangleLinesEx(interactButton, 2, C(255, 210, 120, 230));
@@ -4341,7 +4355,7 @@ int main(void)
             int loadTitleSize = (int)fminf(48.0f, screenWidth*0.10f);
             DrawText(loadTitle, screenWidth/2-MeasureText(loadTitle, loadTitleSize)/2,
                      screenHeight/2-90, loadTitleSize, RAYWHITE);
-            const char *loadLabel = "LOADING RESOURCES";
+            const char *loadLabel = "ЗАГРУЗКА РЕСУРСОВ";
             DrawText(loadLabel, screenWidth/2-MeasureText(loadLabel, 20)/2,
                      screenHeight/2-20, 20, C(190, 220, 245, 255));
             Rectangle loadBar = {screenWidth*0.20f, screenHeight/2+25,
