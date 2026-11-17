@@ -3414,7 +3414,7 @@ int main(void)
             );
 
             DrawText(
-                "SETTINGS",
+                "НАСТРОЙКИ",
                 settingsButton.x+18,
                 settingsButton.y+22,
                 19,
@@ -3432,7 +3432,7 @@ int main(void)
             );
 
             DrawText(
-                firstPerson ? "FIRST PERSON" : "THIRD PERSON",
+                firstPerson ? "ОТ ПЕРВОГО ЛИЦА" : "ОТ ТРЕТЬЕГО ЛИЦА",
                 cameraButton.x+10, cameraButton.y+19, 17, RAYWHITE
             );
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
@@ -3531,7 +3531,7 @@ int main(void)
                     float cooldownRatio=attackCooldown/attackCooldownDuration;
                     DrawRectangleRounded((Rectangle){interactButton.x+12,interactButton.y+34,
                         (interactButton.width-24)*(1.0f-cooldownRatio),7},0.5f,6,C(105,225,150,hitAlpha));
-                    const char *cooldownLabel=attackCooldown<=0.0f?"ГОТОВО":TextFormat("%.1f s",attackCooldown);
+                    const char *cooldownLabel=attackCooldown<=0.0f?"ГОТОВО":TextFormat("%.1f с",attackCooldown);
                     DrawText(cooldownLabel,(int)(interactButton.x+interactButton.width/2-
                         MeasureText(cooldownLabel,13)/2),(int)(interactButton.y+44),13,C(255,255,255,hitAlpha));
                 }
@@ -3558,16 +3558,16 @@ int main(void)
                     C(190, 145, 90, 240)
                 );
                 DrawText(
-                    "LOOT BARREL", (int)hudX+18, 116, 19, RAYWHITE
+                    "БОЧКА С ДОБЫЧЕЙ", (int)hudX+18, 116, 19, RAYWHITE
                 );
                 DrawText(
-                    TextFormat("HP: %d/50", barrelHealth[targetedBarrel]),
+                    TextFormat("ЗДОРОВЬЕ: %d/50", barrelHealth[targetedBarrel]),
                     (int)hudX+18, 145, 18,
                     C(255, 218, 145, 255)
                 );
 
                 DrawText(
-                    "AIM AT BARREL",
+                    "НАВЕДИТЕСЬ НА БОЧКУ",
                     (int)hudX+18, 166, 14, C(190, 215, 230, 255)
                 );
             }
@@ -4338,7 +4338,7 @@ int main(void)
             );
 
             DrawText(
-                "DONE",
+                "ГОТОВО",
                 doneButton.x+74,
                 doneButton.y+20,
                 22, RAYWHITE
