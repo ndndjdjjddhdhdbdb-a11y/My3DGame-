@@ -67,6 +67,14 @@ static void DrawUiText(const char *text, int x, int y, int fontSize, Color color
     DrawTextEx(cyrillicFont, text, (Vector2){(float)x, (float)y},
                (float)fontSize, 1.0f, color);
 }
+static void DrawUiTextBold(const char *text, int x, int y, int fontSize, Color color)
+{
+    // Небольшое смещение нескольких слоёв делает системный шрифт визуально жирнее.
+    DrawTextEx(cyrillicFont,text,(Vector2){(float)x+0.55f,(float)y},(float)fontSize,1.0f,color);
+    DrawTextEx(cyrillicFont,text,(Vector2){(float)x,(float)y+0.55f},(float)fontSize,1.0f,color);
+    DrawTextEx(cyrillicFont,text,(Vector2){(float)x+0.55f,(float)y+0.55f},(float)fontSize,1.0f,color);
+    DrawTextEx(cyrillicFont,text,(Vector2){(float)x,(float)y},(float)fontSize,1.0f,color);
+}
 static int MeasureUiText(const char *text, int fontSize)
 {
     return (int)MeasureTextEx(cyrillicFont, text, (float)fontSize, 1.0f).x;
@@ -1234,33 +1242,76 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
 
 static void DrawWildAnimal(Vector3 p, int type, float phase)
 {
-    float bob=sinf(phase)*0.035f;
-    Color fur=type==0?C(128,91,57,255):C(91,77,62,255);
-    Color dark=type==0?C(76,55,39,255):C(54,48,41,255);
-    DrawCylinder((Vector3){p.x,0.025f,p.z},0.52f,0.52f,0.035f,10,(Color){20,25,20,65});
-    DrawSphere((Vector3){p.x,0.88f+bob,p.z},0.48f,fur);
-    DrawSphere((Vector3){p.x,0.94f+bob,p.z-0.39f},0.32f,fur);
-    DrawSphere((Vector3){p.x,0.86f+bob,p.z-0.65f},0.21f,dark);
+    // Модели ориентированы мордой в сторону -Z.
+    float bob=sinf(phase)*0.025f;
+    bool deer=(type==0);
+    Color fur=deer?C(145,103,65,255):C(83,67,53,255);
+    Color dark=deer?C(91,62,40,255):C(48,40,34,255);
+    Color belly=deer?C(190,163,125,255):C(119,91,69,255);
+    DrawCylinder((Vector3){p.x,0.025f,p.z},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
+
+    if(deer)
+    {
+        // Стройное вытянутое туловище, грудь и поднятая шея.
+        DrawSphere((Vector3){p.x,0.91f+bob,p.z+0.08f},0.43f,fur);
+        DrawSphere((Vector3){p.x,0.83f+bob,p.z+0.12f},0.34f,belly);
+        DrawSphere((Vector3){p.x,1.12f+bob,p.z-0.30f},0.25f,fur);
+        DrawCylinderEx((Vector3){p.x,0.92f+bob,p.z-0.28f},
+                       (Vector3){p.x,1.43f+bob,p.z-0.57f},0.19f,0.13f,9,fur);
+        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.61f},0.19f,fur);
+        DrawSphere((Vector3){p.x,1.40f+bob,p.z-0.79f},0.105f,dark);
+        DrawSphere((Vector3){p.x-0.17f,1.57f+bob,p.z-0.58f},0.075f,fur);
+        DrawSphere((Vector3){p.x+0.17f,1.57f+bob,p.z-0.58f},0.075f,fur);
+        DrawSphere((Vector3){p.x,0.99f+bob,p.z+0.49f},0.13f,belly);
+        for(int side=-1;side<=1;side+=2)
+        {
+            DrawCylinderEx((Vector3){p.x+side*0.12f,1.57f+bob,p.z-0.60f},
+                           (Vector3){p.x+side*0.25f,1.94f+bob,p.z-0.63f},
+                           0.045f,0.032f,6,C(190,166,126,255));
+            DrawCylinderEx((Vector3){p.x+side*0.25f,1.78f+bob,p.z-0.62f},
+                           (Vector3){p.x+side*0.43f,1.88f+bob,p.z-0.65f},
+                           0.032f,0.018f,5,C(190,166,126,255));
+            DrawCylinderEx((Vector3){p.x+side*0.25f,1.86f+bob,p.z-0.63f},
+                           (Vector3){p.x+side*0.20f,2.04f+bob,p.z-0.63f},
+                           0.028f,0.015f,5,C(190,166,126,255));
+        }
+    }
+    else
+    {
+        // Низкий тяжёлый кабан с широкой спиной, плечами и пятачком.
+        DrawSphere((Vector3){p.x,0.76f+bob,p.z+0.08f},0.59f,fur);
+        DrawSphere((Vector3){p.x,0.70f+bob,p.z+0.25f},0.47f,belly);
+        DrawSphere((Vector3){p.x,0.86f+bob,p.z-0.34f},0.48f,fur);
+        DrawSphere((Vector3){p.x,0.80f+bob,p.z-0.68f},0.30f,fur);
+        DrawSphere((Vector3){p.x,0.75f+bob,p.z-0.91f},0.19f,dark);
+        DrawCube((Vector3){p.x,0.76f+bob,p.z-1.075f},0.29f,0.20f,0.10f,C(115,77,66,255));
+        for(int side=-1;side<=1;side+=2)
+        {
+            DrawSphere((Vector3){p.x+side*0.27f,1.04f+bob,p.z-0.55f},0.12f,dark);
+            DrawCylinderEx((Vector3){p.x+side*0.25f,0.68f+bob,p.z-0.82f},
+                           (Vector3){p.x+side*0.34f,0.91f+bob,p.z-0.91f},
+                           0.075f,0.015f,6,C(226,211,174,255));
+        }
+        DrawSphere((Vector3){p.x,1.10f+bob,p.z+0.48f},0.13f,dark);
+    }
+
+    // Четыре отдельные ноги с небольшими суставами и копытами.
     for(int side=-1;side<=1;side+=2)
         for(int leg=0;leg<2;leg++)
         {
-            float lx=p.x+side*0.24f;
-            float lz=p.z+(leg==0?-0.25f:0.25f);
-            DrawCylinderEx((Vector3){lx,0.62f+bob,lz},
-                           (Vector3){lx+side*0.025f,0.12f,lz},
-                           0.075f,0.055f,6,dark);
+            float lx=p.x+side*(deer?0.25f:0.34f);
+            float lz=p.z+(leg==0?-0.34f:0.39f);
+            float hipY=deer?0.78f:0.67f;
+            float kneeY=deer?0.42f:0.39f;
+            float footY=0.12f;
+            DrawCylinderEx((Vector3){lx,hipY+bob,lz},
+                           (Vector3){lx+side*0.015f,kneeY+bob,lz+0.015f},
+                           deer?0.075f:0.105f,deer?0.055f:0.075f,7,fur);
+            DrawCylinderEx((Vector3){lx+side*0.015f,kneeY+bob,lz+0.015f},
+                           (Vector3){lx,footY,lz+0.025f},
+                           deer?0.052f:0.075f,deer?0.038f:0.055f,7,dark);
+            DrawCube((Vector3){lx,0.085f,lz+0.025f},deer?0.12f:0.17f,0.12f,0.16f,C(39,34,29,255));
         }
-    if(type==0)
-    {
-        for(int side=-1;side<=1;side+=2)
-        {
-            Vector3 antler={p.x+side*0.18f,1.38f+bob,p.z-0.48f};
-            DrawCylinderEx((Vector3){p.x+side*0.12f,1.05f+bob,p.z-0.43f},
-                           antler,0.045f,0.025f,5,C(190,174,139,255));
-            DrawCylinderEx(antler,(Vector3){antler.x+side*0.15f,1.52f+bob,p.z-0.47f},
-                           0.025f,0.012f,4,C(190,174,139,255));
-        }
-    }
 }
 
 static void DrawBiomeAtmosphere(Vector3 player, int biome, float time, int quality)
@@ -2194,9 +2245,9 @@ int main(void)
                 float invSize=fminf(screenHeight*0.48f,screenWidth*0.25f);
                 Rectangle cratePanel={screenWidth- crateSize-18.0f,screenHeight-crateSize-62.0f,crateSize,crateSize};
                 Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
-                Rectangle close={cratePanel.x+cratePanel.width-30.0f,cratePanel.y+5.0f,25.0f,23.0f};
-                float crateContentY=cratePanel.y+31.0f;
-                float crateContentH=cratePanel.height-39.0f;
+                Rectangle close={cratePanel.x+cratePanel.width-48.0f,cratePanel.y+4.0f,42.0f,40.0f};
+                float crateContentY=cratePanel.y+50.0f;
+                float crateContentH=cratePanel.height-58.0f;
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
                 else if(openedGasCrate>=0 && crateTakeCooldown<=0.0f){
                     int cols=4, rows=2;
@@ -4157,8 +4208,8 @@ int main(void)
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f, screenWidth*0.80f, screenHeight*0.76f};
                 DrawRectangleRounded(invPanel, 0.025f, 8, C(30, 32, 30, 248));
                 DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
-                DrawText("ИНВЕНТАРЬ", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
-                DrawText("ПРЕДМЕТЫ / БЫСТРЫЙ ДОСТУП", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
+                DrawUiTextBold("ИНВЕНТАРЬ", (int)invPanel.x+18, (int)invPanel.y+13, 26, RAYWHITE);
+                DrawUiTextBold("ПРЕДМЕТЫ / БЫСТРЫЙ ДОСТУП", (int)invPanel.x+20, (int)invPanel.y+47, 14, C(165, 205, 232, 255));
                 for (int item = 0; item < 12; item++)
                 {
                     float gap = 8.0f;
@@ -4172,15 +4223,15 @@ int main(void)
                     DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(51,55,49,255));
                     DrawRectangleLinesEx(r,1.2f,C(105,116,99,235));
                     DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(142,169,91,255):C(103,119,91,255));
-                    int labelSize = (item == 7) ? 7 : 8;
-                    DrawText(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(210,218,204,255));
-                    DrawText(TextFormat("x%d",itemCounts[item]),
-                        (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),10)-5),
-                        (int)(r.y+r.height-14),10,C(190,211,164,255));
+                    int labelSize = (item == 7) ? 9 : 10;
+                    DrawUiTextBold(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(225,231,218,255));
+                    DrawUiTextBold(TextFormat("x%d",itemCounts[item]),
+                        (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),12)-5),
+                        (int)(r.y+r.height-16),12,C(202,222,171,255));
                 }
                 DrawSurvivalButton(inventoryButton, "СУМКА", 13, true);
-                DrawText("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+242,
-                    12, C(145, 205, 240, 255));
+                DrawUiTextBold("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+240,
+                    16, C(165, 215, 245, 255));
                 Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
                 Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
                 Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
@@ -4190,19 +4241,19 @@ int main(void)
                     canCraftAxe ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftAxeButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
                 DrawText("СОЗДАТЬ ТОПОР — 3 ДЕРЕВА / 2 КАМНЯ",
-                    (int)craftAxeButton.x+10, (int)craftAxeButton.y+10, 10, RAYWHITE);
+                    (int)craftAxeButton.x+10, (int)craftAxeButton.y+8, 12, RAYWHITE);
                 DrawRectangleRounded(craftMedButton, 0.16f, 8,
                     canCraftMed ? C(31, 91, 119, 255) : C(42, 51, 62, 230));
                 DrawRectangleRoundedLinesEx(craftMedButton, 0.16f, 8, 1.0f, C(100, 180, 220, 210));
                 DrawText("СОЗДАТЬ АПТЕЧКУ — 2 ДЕРЕВА / 1 КАМЕНЬ",
-                    (int)craftMedButton.x+10, (int)craftMedButton.y+10, 10, RAYWHITE);
+                    (int)craftMedButton.x+10, (int)craftMedButton.y+8, 12, RAYWHITE);
                 bool canCraftDoor = itemCounts[4] >= 10 && itemCounts[6] < 99;
                 DrawRectangleRounded(craftDoorButton, 0.16f, 8, canCraftDoor ? C(31,91,119,255) : C(42,51,62,230));
                 DrawRectangleRoundedLinesEx(craftDoorButton, 0.16f, 8, 1.0f, C(100,180,220,210));
-                DrawText("СОЗДАТЬ ДВЕРЬ — 10 ДЕРЕВА", (int)craftDoorButton.x+10, (int)craftDoorButton.y+10, 10, RAYWHITE);
+                DrawText("СОЗДАТЬ ДВЕРЬ — 10 ДЕРЕВА", (int)craftDoorButton.x+10, (int)craftDoorButton.y+8, 12, RAYWHITE);
                 DrawText("НАЖМИТЕ НА ЕДУ ИЛИ ВОДУ, ЧТОБЫ ИСПОЛЬЗОВАТЬ",
-                    (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-26),
-                    10, C(145, 190, 220, 255));
+                    (int)invPanel.x+18, (int)(invPanel.y+invPanel.height-28),
+                    13, C(165, 205, 232, 255));
             }
         }
 
@@ -4214,15 +4265,17 @@ int main(void)
             Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
             DrawRectangleRounded(cratePanel,0.035f,8,C(25,28,27,250));
             DrawRectangleRoundedLinesEx(cratePanel,0.035f,8,1.8f,C(135,145,119,255));
-            DrawText(openedGasCrate==3?"ОРУЖЕЙНЫЙ ЯЩИК":"ЯЩИК С РЕСУРСАМИ",
-                (int)cratePanel.x+7,(int)cratePanel.y+9,10,C(215,225,207,255));
-            Rectangle close={cratePanel.x+cratePanel.width-30.0f,cratePanel.y+5.0f,25.0f,23.0f};
-            DrawRectangleRounded(close,0.18f,6,C(78,48,43,255));
-            DrawText("X",(int)close.x+9,(int)close.y+5,11,RAYWHITE);
+            int crateTitleSize=(int)fmaxf(11.0f,fminf(15.0f,cratePanel.width*0.045f));
+            DrawUiTextBold(openedGasCrate==3?"ОРУЖЕЙНЫЙ ЯЩИК":"ЯЩИК С РЕСУРСАМИ",
+                (int)cratePanel.x+9,(int)cratePanel.y+13,crateTitleSize,C(230,236,220,255));
+            Rectangle close={cratePanel.x+cratePanel.width-48.0f,cratePanel.y+4.0f,42.0f,40.0f};
+            DrawRectangleRounded(close,0.18f,8,C(100,49,43,255));
+            DrawRectangleRoundedLinesEx(close,0.18f,8,1.5f,C(190,125,110,255));
+            DrawUiTextBold("X",(int)close.x+14,(int)close.y+7,22,RAYWHITE);
 
             DrawRectangleRounded(invPanel,0.035f,8,C(25,29,31,250));
             DrawRectangleRoundedLinesEx(invPanel,0.035f,8,1.8f,C(91,139,157,255));
-            DrawText("ИНВЕНТАРЬ",(int)invPanel.x+7,(int)invPanel.y+8,10,C(190,220,232,255));
+            DrawUiTextBold("ИНВЕНТАРЬ",(int)invPanel.x+7,(int)invPanel.y+8,13,C(210,230,238,255));
 
             // Почти квадратный ящик: 4 столбца на 2 ряда.
             int cols=4, rows=2;
@@ -4239,10 +4292,10 @@ int main(void)
                 DrawRectangleRec(cell,C(43,47,43,255));
                 DrawRectangleLinesEx(cell,1.0f,C(105,116,99,235));
                 if(amount>0){
-                    int fs=cell.width<55?7:9;
-                    DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.30f),fs,C(225,229,218,255));
-                    DrawText(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),9)-3),(int)(cell.y+cell.height-12),9,C(190,211,164,255));
-                } else DrawText("ПУСТО",(int)cell.x+3,(int)(cell.y+cell.height*0.38f),7,C(116,128,115,255));
+                    int fs=cell.width<55?9:11;
+                    DrawUiTextBold(itemNames[item],(int)cell.x+4,(int)(cell.y+cell.height*0.27f),fs,C(235,238,226,255));
+                    DrawUiTextBold(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),11)-4),(int)(cell.y+cell.height-15),11,C(205,225,174,255));
+                } else DrawUiTextBold("ПУСТО",(int)cell.x+4,(int)(cell.y+cell.height*0.36f),9,C(145,155,143,255));
                 if(crateGlowSlot==slot && crateTakeCooldown>0.0f){
                     float pulse=0.5f+0.5f*sinf((0.75f-crateTakeCooldown)*18.0f);
                     unsigned char alpha=(unsigned char)(115.0f+125.0f*pulse);
@@ -4254,7 +4307,7 @@ int main(void)
             // Квадратное окно рюкзака: 3 столбца на 4 ряда.
             int invCols=3, invRows=4;
             float invGap=4.0f;
-            float invContentY=invPanel.y+27.0f, invContentH=invPanel.height-34.0f;
+            float invContentY=invPanel.y+34.0f, invContentH=invPanel.height-41.0f;
             float invCellW=(invPanel.width-14.0f-invGap*(invCols-1))/(float)invCols;
             float invCellH=(invContentH-invGap*(invRows-1))/(float)invRows;
             for(int item=0;item<12;item++){
