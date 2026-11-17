@@ -56,7 +56,9 @@ public class NativeLoader extends NativeActivity {
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         softKeyboard.onKeyUpEvent(event);
-        return super.onKeyDown(keyCode, event);
+        // Передаём событие отпускания как отпускание, а не как новое нажатие.
+        // Иначе Android/Raylib получает лишнее событие клавиатуры.
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override
