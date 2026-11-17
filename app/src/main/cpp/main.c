@@ -3252,7 +3252,8 @@ int main(void)
                 wildAnimalGrazeTimer[animal]-=frameTime;
 
                 // Олень постепенно привыкает к игроку после нескольких близких подходов.
-                if(wildAnimalTypes[animal]==0 && !deerProvoked[animal])
+                if(wildAnimalTypes[animal]==0 && !deerProvoked[animal] &&
+                   wildAnimalState[animal]!=ANIMAL_FLEE && wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
                     if(distance<4.0f && !deerWasNearPlayer[animal])
                     {
@@ -3849,7 +3850,7 @@ int main(void)
                     // Удар по оленю заставляет его сразу спасаться бегством.
                     deerProvoked[targetedAnimal]=false;
                     deerApproachCount[targetedAnimal]=0;
-                    deerWasNearPlayer[targetedAnimal]=false;
+                    deerWasNearPlayer[targetedAnimal]=true;
                     wildAnimalState[targetedAnimal]=ANIMAL_FLEE;
                     wildAnimalChaseStarted[targetedAnimal]=GetTime();
                     wildAnimalTargetHeading[targetedAnimal]=atan2f(
