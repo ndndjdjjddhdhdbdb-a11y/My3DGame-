@@ -3341,7 +3341,7 @@ int main(void)
                         wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*3.0f;
                     }
                 }
-                else
+                else if(wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
                     if(seesPlayer)
                     {
