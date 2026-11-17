@@ -2953,12 +2953,25 @@ int main(void)
             lookTouchId = -1;
 
         // ПК: левая кнопка — удар/взаимодействие, правая — установка постройки.
+        Vector2 desktopMousePos = GetMousePosition();
+        bool mouseOnHud = CheckCollisionPointRec(desktopMousePos, settingsButton) ||
+            CheckCollisionPointRec(desktopMousePos, cameraButton) ||
+            CheckCollisionPointRec(desktopMousePos, mapButton) ||
+            CheckCollisionPointRec(desktopMousePos, buildButton) ||
+            CheckCollisionPointRec(desktopMousePos, sprintButton) ||
+            CheckCollisionPointRec(desktopMousePos, inventoryButton) ||
+            CheckCollisionPointRec(desktopMousePos, interactButton) ||
+            CheckCollisionPointRec(desktopMousePos, chatButton) ||
+            CheckCollisionPointRec(desktopMousePos, takeButton);
+        for (int hs = 0; hs < 4; hs++)
+            if (CheckCollisionPointRec(desktopMousePos, hotbarSlots[hs])) mouseOnHud = true;
+
         if (touchCount == 0 && !mainMenuOpen && !settingsOpen && !editControls &&
             !inventoryOpen && !mapOpen && !gasCrateOpen &&
             !commandChatOpen && !commandConsoleOpen && !resourcePanelOpen &&
             !buildPlanHeld)
         {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !mouseOnHud)
                 attackRequested = true;
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && buildMode)
