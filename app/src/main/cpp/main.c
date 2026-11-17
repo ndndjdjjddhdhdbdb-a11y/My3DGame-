@@ -1629,8 +1629,8 @@ int main(void)
                     float ry=rp.y+58+item*rowH;
                     Rectangle minus={rp.x+rp.width-126,ry,48,rowH-4};
                     Rectangle plus={rp.x+rp.width-70,ry,48,rowH-4};
-                    if(CheckCollisionPointRec(pos,minus)){itemCounts[item]-=10;if(itemCounts[item]<0)itemCounts[item]=0;break;}
-                    if(CheckCollisionPointRec(pos,plus)){itemCounts[item]+=10;if(itemCounts[item]>9999)itemCounts[item]=9999;break;}
+                    if(CheckCollisionPointRec(pos,minus)){itemCounts[item]-=10;if(itemCounts[item]<0)itemCounts[item]=0;SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]);break;}
+                    if(CheckCollisionPointRec(pos,plus)){itemCounts[item]+=10;if(itemCounts[item]>9999)itemCounts[item]=9999;SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]);break;}
                 }
             }
             else if(commandChatOpen || commandConsoleOpen)
@@ -1652,7 +1652,7 @@ int main(void)
                     else if(commandConsoleOpen)
                     {
                         if(strcmp(commandInput,"/give")==0){commandConsoleOpen=false;resourcePanelOpen=true;strcpy(commandOutput,"Панель ресурсов открыта");}
-                        else if(strcmp(commandInput,"/update")==0)strcpy(commandOutput,"git pull --ff-only origin master && ./gradlew assembleDebug");
+                        else if(strcmp(commandInput,"/update")==0)strcpy(commandOutput,"git pull --ff-only origin master &&\n./gradlew assembleDebug");
                         else strcpy(commandOutput,"Команды: /give или /update");
                     }
                     commandInput[0]='\0';
@@ -3568,7 +3568,7 @@ int main(void)
                 DrawTextEx(cyrillicFont,commandInput[0]?commandInput:"Введите команду...",(Vector2){inputBox.x+10,inputBox.y+12},16,1,RAYWHITE);
                 DrawSurvivalButton((Rectangle){cp.x+14,cp.y+116,100,42},"CLOSE",13,false);
                 DrawSurvivalButton((Rectangle){cp.x+cp.width-128,cp.y+116,114,42},"SEND",13,true);
-                DrawTextEx(cyrillicFont,commandOutput,(Vector2){cp.x+14,cp.y+164},13,1,C(170,210,235,255));
+                DrawTextEx(cyrillicFont,commandOutput,(Vector2){cp.x+14,cp.y+160},11,1,C(170,210,235,255));
             }
             if(resourcePanelOpen)
             {
