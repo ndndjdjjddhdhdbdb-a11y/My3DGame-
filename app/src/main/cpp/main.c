@@ -1556,7 +1556,6 @@ int main(void)
     float actionButtonScale[3] = {1.0f, 1.0f, 1.0f};
     int actionButtonAlpha[3] = {245, 245, 245};
     int selectedActionControl = 0;
-    Rectangle editSelectButtons[3];
     Rectangle editSizeSlider, editAlphaSlider;
     bool attackRequested = false;
     float attackCooldown = 0.0f;
@@ -1694,7 +1693,7 @@ int main(void)
                     {
                         commandConsoleOpen=false;
                         resourcePanelOpen=true;
-                        strcpy(commandOutput,"Панель ресурсов открыта");
+                        strcpy(commandOutput,"Окно выдачи предметов открыто");
                     }
                     else if(strcmp(commandInput,"/update")==0)
                         strcpy(commandOutput,"git pull --ff-only origin master &&\n./gradlew assembleDebug");
@@ -1975,10 +1974,10 @@ int main(void)
                 Rectangle closeRp={rp.x+rp.width-82,rp.y+10,68,34};
                 float rowH=(rp.height-158.0f)/12.0f;
                 float controlsY=rp.y+rp.height-94.0f;
-                Rectangle minusTen={rp.x+14,controlsY,48,32};
-                Rectangle minusOne={rp.x+68,controlsY,42,32};
-                Rectangle plusOne={rp.x+rp.width-156,controlsY,42,32};
-                Rectangle plusTen={rp.x+rp.width-108,controlsY,48,32};
+                Rectangle minusTen={rp.x+10,controlsY,42,32};
+                Rectangle minusOne={rp.x+56,controlsY,36,32};
+                Rectangle plusOne={rp.x+rp.width-132,controlsY,36,32};
+                Rectangle plusTen={rp.x+rp.width-90,controlsY,42,32};
                 Rectangle giveButton={rp.x+14,controlsY+38,rp.width-28,38};
                 if(CheckCollisionPointRec(pos,closeRp)) resourcePanelOpen=false;
                 else if(CheckCollisionPointRec(pos,minusTen)) giveSelectedAmount=fmaxf(1,giveSelectedAmount-10);
@@ -4184,12 +4183,12 @@ int main(void)
                         (int)(rp.x+rp.width-150),(int)ry+6,11,C(190,220,175,255));
                 }
                 float controlsY=rp.y+rp.height-94.0f;
-                DrawSurvivalButton((Rectangle){rp.x+14,controlsY,48,32},"-10",12,false);
-                DrawSurvivalButton((Rectangle){rp.x+68,controlsY,42,32},"-1",12,false);
+                DrawSurvivalButton((Rectangle){rp.x+10,controlsY,42,32},"-10",11,false);
+                DrawSurvivalButton((Rectangle){rp.x+56,controlsY,36,32},"-1",11,false);
                 DrawTextEx(cyrillicFont,TextFormat("%d шт.",giveSelectedAmount),
-                    (Vector2){rp.x+116,controlsY+7},16,1,RAYWHITE);
-                DrawSurvivalButton((Rectangle){rp.x+rp.width-156,controlsY,42,32},"+1",12,true);
-                DrawSurvivalButton((Rectangle){rp.x+rp.width-108,controlsY,48,32},"+10",12,true);
+                    (Vector2){rp.x+100,controlsY+7},14,1,RAYWHITE);
+                DrawSurvivalButton((Rectangle){rp.x+rp.width-132,controlsY,36,32},"+1",11,true);
+                DrawSurvivalButton((Rectangle){rp.x+rp.width-90,controlsY,42,32},"+10",11,true);
                 DrawSurvivalButton((Rectangle){rp.x+14,controlsY+38,rp.width-28,38},
                     TextFormat("ВЫДАТЬ: %s",itemNames[giveSelectedItem]),14,true);
             }
