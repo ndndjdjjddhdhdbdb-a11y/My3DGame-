@@ -1074,6 +1074,23 @@ static Vector3 PlayerPoint(Vector3 player, float angle,
     };
 }
 
+static void DrawRotatedCubeY(Vector3 center, float width, float height, float depth, float yaw, Color color)
+{
+    rlPushMatrix(); rlTranslatef(center.x,center.y,center.z);
+    rlRotatef(-yaw*RAD2DEG,0.0f,1.0f,0.0f);
+    DrawCube((Vector3){0,0,0},width,height,depth,color); rlPopMatrix();
+}
+static void DrawHeldAxe(Vector3 grip, Vector3 head, float yaw, float scale)
+{
+    DrawCylinderEx(grip,head,0.040f*scale,0.030f*scale,8,C(104,68,39,255));
+    DrawRotatedCubeY((Vector3){head.x,head.y-0.035f*scale,head.z},
+        0.13f*scale,0.12f*scale,0.12f*scale,yaw,C(72,76,75,255));
+    DrawRotatedCubeY((Vector3){head.x,head.y+0.015f*scale,head.z},
+        0.43f*scale,0.23f*scale,0.105f*scale,yaw,C(116,128,135,255));
+    DrawRotatedCubeY((Vector3){head.x,head.y+0.015f*scale,head.z-0.012f*scale},
+        0.46f*scale,0.055f*scale,0.115f*scale,yaw,C(190,198,199,255));
+}
+
 static void DrawFirstPersonArms(Vector3 eye, float yaw,
                                 float walkPhase, bool moving, float time,
                                 float attackProgress, int heldItemId)
@@ -1132,35 +1149,27 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
                         eye.y-0.43f, eye.z+right.z*0.30f+forward.z*0.78f};
     Vector3 toolTip = {eye.x+right.x*0.36f+forward.x*0.99f,
                        eye.y-0.18f, eye.z+right.z*0.36f+forward.z*0.99f};
-    if(heldItemId==0 || heldItemId==5 || heldItemId==8 || heldItemId==9 ||
-       heldItemId==10 || heldItemId==11 || heldItemId==4 || heldItemId==6 || heldItemId==7)
-        DrawCylinderEx(toolBase,toolTip,0.045f,0.035f,7,C(111,75,45,255));
-    if(heldItemId==0 || heldItemId==5 || heldItemId==8 || heldItemId==9 ||
-       heldItemId==10 || heldItemId==11)
-    {
-        Vector3 head={toolTip.x+right.x*0.035f,toolTip.y+0.04f,toolTip.z+right.z*0.035f};
-        Color metal=heldItemId==9?C(48,91,205,255):
-                    heldItemId==10?C(224,194,49,255):
-                    heldItemId==11?C(205,211,218,255):C(132,139,145,255);
-        DrawCube(head,0.30f,0.15f,0.14f,metal);
-        if(heldItemId==5) DrawCube((Vector3){head.x,head.y+0.10f,head.z},0.20f,0.18f,0.18f,C(105,105,105,255));
-    }
+    if(heldItemId==0) DrawHeldAxe(toolBase,toolTip,yaw,1.0f);
     else if(heldItemId==7)
     {
+        DrawCylinderEx(toolBase,toolTip,0.045f,0.035f,8,C(111,75,45,255));
         DrawCylinderEx(toolTip,(Vector3){toolTip.x+forward.x*0.22f,toolTip.y+0.02f,toolTip.z+forward.z*0.22f},0.075f,0.055f,8,C(65,72,78,255));
     }
     else if(heldItemId==1)
     {
-        DrawCube(toolTip,0.27f,0.19f,0.14f,C(190,55,55,255));
-        DrawCube((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.07f,0.17f,0.025f,RAYWHITE);
-        DrawCube((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.17f,0.07f,0.025f,RAYWHITE);
+        DrawRotatedCubeY(toolTip,0.27f,0.19f,0.14f,yaw,C(190,55,55,255));
+        DrawRotatedCubeY((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.07f,0.17f,0.025f,yaw,RAYWHITE);
+        DrawRotatedCubeY((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.17f,0.07f,0.025f,yaw,RAYWHITE);
     }
-    else if(heldItemId==2)
-        DrawSphere(toolTip,0.13f,C(178,116,55,255));
-    else if(heldItemId==3)
-        DrawCylinder(toolTip,0.10f,0.10f,0.28f,8,C(70,150,215,255));
+    else if(heldItemId==2) DrawSphere(toolTip,0.13f,C(178,116,55,255));
+    else if(heldItemId==3) DrawCylinderEx(toolBase,toolTip,0.10f,0.10f,8,C(70,150,215,255));
     else
-        DrawCube(toolTip,0.18f,0.16f,0.17f,heldItemId==4?C(126,82,47,255):C(139,112,77,255));
+    {
+        Color itemColor=heldItemId==4?C(126,82,47,255):heldItemId==5?C(105,105,105,255):
+            heldItemId==6?C(115,82,52,255):heldItemId==9?C(48,91,205,255):
+            heldItemId==10?C(224,194,49,255):heldItemId==11?C(205,211,218,255):C(139,112,77,255);
+        DrawRotatedCubeY(toolTip,0.18f,0.16f,0.17f,yaw,itemColor);
+    }
 }
 
 static void DrawPlayer(Vector3 player, float angle,
@@ -1261,30 +1270,29 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(wristL, 0.075f, skinLight);
     DrawSphere(wristR, 0.075f, skinLight);
 
-    // Предмет в правой руке персонажа от третьего лица.
-    Vector3 heldBase=PlayerPoint(player,angle,0.45f,0.82f,-0.08f);
+    // Предмет закреплён в кисти, а геометрия ориентирована по руке.
+    Vector3 heldBase=PlayerPoint(player,angle,0.43f,0.82f,-0.08f);
     Vector3 heldTip=PlayerPoint(player,angle,0.56f,1.13f,-0.38f);
-    if(heldItemId==0 || heldItemId==4 || heldItemId==5 || heldItemId==6 ||
-       heldItemId==7 || heldItemId>=8)
-        DrawCylinderEx(heldBase,heldTip,0.045f,0.035f,7,C(111,75,45,255));
-    if(heldItemId==0 || heldItemId==5 || heldItemId>=8)
+    if(heldItemId==0) DrawHeldAxe(heldBase,heldTip,angle,0.88f);
+    else if(heldItemId==7)
     {
-        Color metal=heldItemId==9?C(48,91,205,255):
-                    heldItemId==10?C(224,194,49,255):
-                    heldItemId==11?C(205,211,218,255):C(125,132,137,255);
-        DrawCube(PlayerPoint(player,angle,0.66f,1.21f,-0.43f),0.30f,0.15f,0.14f,metal);
+        DrawCylinderEx(heldBase,heldTip,0.045f,0.035f,8,C(111,75,45,255));
+        DrawCylinderEx(heldTip,PlayerPoint(player,angle,0.56f,1.13f,-0.72f),0.07f,0.045f,8,C(65,72,78,255));
     }
     else if(heldItemId==1)
     {
-        DrawCube(heldTip,0.25f,0.18f,0.14f,C(190,55,55,255));
-        DrawCube(PlayerPoint(player,angle,0.56f,1.14f,-0.47f),0.06f,0.16f,0.025f,RAYWHITE);
+        DrawRotatedCubeY(heldTip,0.25f,0.18f,0.14f,angle,C(190,55,55,255));
+        DrawRotatedCubeY(PlayerPoint(player,angle,0.56f,1.14f,-0.47f),0.06f,0.16f,0.025f,angle,RAYWHITE);
     }
     else if(heldItemId==2) DrawSphere(heldTip,0.12f,C(178,116,55,255));
-    else if(heldItemId==3) DrawCylinder(heldTip,0.09f,0.09f,0.25f,8,C(70,150,215,255));
-    else if(heldItemId==4) DrawCube(heldTip,0.28f,0.10f,0.10f,C(126,82,47,255));
-    else if(heldItemId==6) DrawCube(heldTip,0.22f,0.28f,0.07f,C(115,82,52,255));
-    else if(heldItemId==7) DrawCylinderEx(heldTip,PlayerPoint(player,angle,0.56f,1.13f,-0.72f),0.07f,0.045f,8,C(65,72,78,255));
-    else DrawCube(heldTip,0.16f,0.16f,0.16f,C(139,112,77,255));
+    else if(heldItemId==3) DrawCylinderEx(heldBase,heldTip,0.09f,0.09f,8,C(70,150,215,255));
+    else
+    {
+        Color itemColor=heldItemId==4?C(126,82,47,255):heldItemId==5?C(105,105,105,255):
+            heldItemId==6?C(115,82,52,255):heldItemId==9?C(48,91,205,255):
+            heldItemId==10?C(224,194,49,255):heldItemId==11?C(205,211,218,255):C(139,112,77,255);
+        DrawRotatedCubeY(heldTip,0.18f,0.16f,0.17f,angle,itemColor);
+    }
 
     // Голова без кепки, с простыми волосами и лицом.
     DrawSphere(PlayerPoint(player, angle, 0, 1.86f+bob, 0),
@@ -5123,8 +5131,6 @@ int main(void)
                 }
                 for(int edge=0;edge<64;edge++)
                     DrawTriangle(boundary[0],boundary[edge+1],boundary[edge+2],biomeMapColors[bi]);
-                for(int edge=0;edge<64;edge++)
-                    DrawLineEx(boundary[edge+1],boundary[edge+2],1.2f,C(225,225,210,190));
                 DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],biomeFont)/2,
                          (int)by-biomeFont/2,biomeFont,C(25,35,30,255));
             }
@@ -5158,6 +5164,16 @@ int main(void)
             DrawCircleLines((int)px,(int)py,(int)(11*markerScale),RAYWHITE);
             DrawText("ВЫ",(int)(px+12*markerScale),(int)(py-8*markerScale),
                      (int)fmaxf(8.0f,12.0f*mapZoom),RAYWHITE);
+            // Маскируем всё, что выходит за круг карты.
+            for(int row=(int)(cy-rr);row<=(int)(cy+rr);row+=2)
+            {
+                float dy=(float)row-cy;
+                float halfWidth=sqrtf(fmaxf(0.0f,rr*rr-dy*dy));
+                float left=cx-halfWidth, right=cx+halfWidth;
+                if(left>mapPanel.x) DrawRectangle((int)mapPanel.x,row,(int)(left-mapPanel.x+1),2,C(10,20,32,255));
+                float panelRight=mapPanel.x+mapPanel.width;
+                if(right<panelRight) DrawRectangle((int)right,row,(int)(panelRight-right+1),2,C(10,20,32,255));
+            }
             DrawCircleLines((int)cx,(int)cy,(int)rr,C(185,190,157,255));
             EndScissorMode();
 
