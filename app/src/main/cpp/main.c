@@ -69,12 +69,6 @@ static void DrawUiText(const char *text, int x, int y, int fontSize, Color color
 }
 static void DrawUiTextBold(const char *text, int x, int y, int fontSize, Color color)
 {
-    DrawUiText(text,x,y,fontSize,color);
-    DrawUiText(text,x+1,y,fontSize,color);
-    DrawUiText(text,x,y+1,fontSize,color);
-}
-static void DrawUiTextBold(const char *text, int x, int y, int fontSize, Color color)
-{
     // Небольшое смещение нескольких слоёв делает системный шрифт визуально жирнее.
     DrawTextEx(cyrillicFont,text,(Vector2){(float)x+0.55f,(float)y},(float)fontSize,1.0f,color);
     DrawTextEx(cyrillicFont,text,(Vector2){(float)x,(float)y+0.55f},(float)fontSize,1.0f,color);
@@ -1252,13 +1246,13 @@ static void DrawWildAnimal(Vector3 p, int type, float phase)
     Color fur=deer?C(145,101,59,255):C(82,65,50,255), dark=deer?C(76,51,34,255):C(43,36,30,255), light=deer?C(195,165,125,255):C(125,93,69,255);
     DrawCylinder((Vector3){p.x,0.025f,p.z},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
     if(deer){
-        DrawSphere((Vector3){p.x,0.91f+bob,p.z+0.10f},(Vector3){0.39f,0.43f,0.72f},fur);
-        DrawSphere((Vector3){p.x,0.66f+bob,p.z+0.10f},(Vector3){0.28f,0.16f,0.49f},light);
+        DrawCubeV((Vector3){p.x,0.91f+bob,p.z+0.10f},(Vector3){0.78f,0.86f,1.44f},fur);
+        DrawCubeV((Vector3){p.x,0.66f+bob,p.z+0.10f},(Vector3){0.56f,0.32f,0.98f},light);
         DrawCylinderEx((Vector3){p.x,0.95f+bob,p.z-0.38f},(Vector3){p.x,1.43f+bob,p.z-0.65f},0.19f,0.12f,9,fur);
-        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.69f},(Vector3){0.18f,0.20f,0.24f},fur);
-        DrawSphere((Vector3){p.x,1.39f+bob,p.z-0.89f},(Vector3){0.11f,0.09f,0.18f},dark);
-        DrawSphere((Vector3){p.x-0.16f,1.57f+bob,p.z-0.68f},(Vector3){0.07f,0.045f,0.19f},fur);
-        DrawSphere((Vector3){p.x+0.16f,1.57f+bob,p.z-0.68f},(Vector3){0.07f,0.045f,0.19f},fur);
+        DrawSphere((Vector3){p.x,1.49f+bob,p.z-0.69f},0.22f,fur);
+        DrawSphere((Vector3){p.x,1.39f+bob,p.z-0.89f},0.15f,dark);
+        DrawCylinderEx((Vector3){p.x-0.16f,1.57f+bob,p.z-0.84f},(Vector3){p.x-0.16f,1.57f+bob,p.z-0.52f},0.055f,0.035f,6,fur);
+        DrawCylinderEx((Vector3){p.x+0.16f,1.57f+bob,p.z-0.84f},(Vector3){p.x+0.16f,1.57f+bob,p.z-0.52f},0.055f,0.035f,6,fur);
         DrawSphere((Vector3){p.x,1.38f+bob,p.z-1.00f},0.035f,dark);
         for(int side=-1;side<=1;side+=2){
             Vector3 base={p.x+side*0.11f,1.62f+bob,p.z-0.69f}, fork={p.x+side*0.25f,1.82f+bob,p.z-0.70f};
@@ -1267,11 +1261,11 @@ static void DrawWildAnimal(Vector3 p, int type, float phase)
             DrawCylinderEx((Vector3){p.x+side*0.21f,1.77f+bob,p.z-0.70f},(Vector3){p.x+side*0.19f,2.02f+bob,p.z-0.70f},0.026f,0.012f,5,C(198,177,140,255));
         }
     }else{
-        DrawSphere((Vector3){p.x,0.73f+bob,p.z+0.12f},(Vector3){0.56f,0.45f,0.78f},fur);
-        DrawSphere((Vector3){p.x,0.53f+bob,p.z+0.10f},(Vector3){0.43f,0.16f,0.60f},light);
-        DrawSphere((Vector3){p.x,0.81f+bob,p.z-0.48f},(Vector3){0.40f,0.34f,0.43f},fur);
-        DrawSphere((Vector3){p.x,0.69f+bob,p.z-0.77f},(Vector3){0.27f,0.20f,0.27f},fur);
-        DrawSphere((Vector3){p.x,0.64f+bob,p.z-0.99f},(Vector3){0.19f,0.13f,0.10f},C(120,82,68,255));
+        DrawCubeV((Vector3){p.x,0.73f+bob,p.z+0.12f},(Vector3){1.12f,0.90f,1.56f},fur);
+        DrawCubeV((Vector3){p.x,0.53f+bob,p.z+0.10f},(Vector3){0.86f,0.32f,1.20f},light);
+        DrawSphere((Vector3){p.x,0.81f+bob,p.z-0.48f},0.42f,fur);
+        DrawSphere((Vector3){p.x,0.69f+bob,p.z-0.77f},0.28f,fur);
+        DrawSphere((Vector3){p.x,0.64f+bob,p.z-0.99f},0.19f,C(120,82,68,255));
         for(int side=-1;side<=1;side+=2){
             DrawCylinderEx((Vector3){p.x+side*0.23f,0.94f+bob,p.z-0.57f},(Vector3){p.x+side*0.36f,1.17f+bob,p.z-0.61f},0.13f,0.025f,6,dark);
             DrawSphere((Vector3){p.x+side*0.20f,0.72f+bob,p.z-0.85f},0.035f,C(22,19,17,255));
@@ -1325,7 +1319,7 @@ static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
         if (len > 0) {
             len--;
             while (len > 0 && (((unsigned char)text[len] & 0xC0) == 0x80)) len--;
-            text[len] = '\\0';
+            text[len] = '\0';
         }
         ClearLastSoftKey();
         return;
@@ -1354,7 +1348,7 @@ static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
     }
     if (len + count < size) {
         memcpy(text + len, bytes, count);
-        text[len + count] = '\\0';
+        text[len + count] = '\0';
     }
     ClearLastSoftKey();
 }
@@ -2220,6 +2214,7 @@ int main(void)
                 Rectangle cratePanel={screenWidth- crateSize-18.0f,screenHeight-crateSize-62.0f,crateSize,crateSize};
                 Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
                 Rectangle close={cratePanel.x+cratePanel.width-48.0f,cratePanel.y+4.0f,42.0f,40.0f};
+                Rectangle closeHit={close.x-10.0f,close.y-8.0f,close.width+20.0f,close.height+16.0f};
                 float crateContentY=cratePanel.y+50.0f;
                 float crateContentH=cratePanel.height-58.0f;
                 if(CheckCollisionPointRec(pos,closeHit)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
