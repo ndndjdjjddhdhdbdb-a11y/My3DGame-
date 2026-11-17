@@ -20,6 +20,8 @@ static pthread_mutex_t gNetMutex = PTHREAD_MUTEX_INITIALIZER;
 static NetPlayer gNetPlayers[NET_MAX_PLAYERS];
 static int gNetPlayerCount = 0;
 static int gNetLocalPlayerId = -1;
+static bool gNetSpawnPending = false;
+static Vector3 gNetSpawnPosition = {0};
 static char gNetStatus[48] = "ПОДКЛЮЧЕНИЕ...";
 static double gNetLastSend = 0.0;
 
@@ -73,7 +75,12 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
             char *z = strtok_r(NULL, " ", &save);
             char *yaw = strtok_r(NULL, " ", &save);
             if (!id || !name || !x || !y || !z || !yaw) break;
-            parsed[parsedCount].id = atoi(id);
+            int parsedId = atoi(id);
+            bool duplicateId = false;
+            for (int existing = 0; existing < parsedCount; ++existing)
+                if (parsed[existing].id == parsedId) { duplicateId = true; break; }
+            if (duplicateId) continue;
+            parsed[parsedCount].id = parsedId;
             snprintf(parsed[parsedCount].name, sizeof(parsed[parsedCount].name), "%s", name);
             parsed[parsedCount].targetPosition = (Vector3){(float)atof(x), (float)atof(y), (float)atof(z)};
             parsed[parsedCount].position = parsed[parsedCount].targetPosition;
@@ -100,8 +107,12 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
     else if (strncmp(value, "WELCOME ", 8) == 0)
     {
         int localId = atoi(value + 8);
+        float spawnX = 0.0f, spawnY = 0.0f, spawnZ = 0.0f;
+        (void)sscanf(value + 8, "%d %*d %f %f %f", &localId, &spawnX, &spawnY, &spawnZ);
         pthread_mutex_lock(&gNetMutex);
         gNetLocalPlayerId = localId;
+        gNetSpawnPosition = (Vector3){spawnX, spawnY, spawnZ};
+        gNetSpawnPending = true;
         snprintf(gNetStatus, sizeof(gNetStatus), "ONLINE");
         pthread_mutex_unlock(&gNetMutex);
     }
@@ -112,6 +123,23 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
         pthread_mutex_unlock(&gNetMutex);
     }
     (*env)->ReleaseStringUTFChars(env, message, value);
+}
+
+static bool IsNetPlayerBlockedAt(float x, float z)
+{
+    const float minDistance = 1.05f;
+    const float minDistance2 = minDistance * minDistance;
+    bool blocked = false;
+    pthread_mutex_lock(&gNetMutex);
+    for (int i = 0; i < gNetPlayerCount; ++i)
+    {
+        if (gNetPlayers[i].id == gNetLocalPlayerId) continue;
+        float dx = x - gNetPlayers[i].position.x;
+        float dz = z - gNetPlayers[i].position.z;
+        if (dx*dx + dz*dz < minDistance2) { blocked = true; break; }
+    }
+    pthread_mutex_unlock(&gNetMutex);
+    return blocked;
 }
 
 static void NetSendPosition(Vector3 position, float yaw)
@@ -2226,7 +2254,20 @@ int main(void)
     while (!WindowShouldClose())
     {
         float frameTime = GetFrameTime();
-        if (GetTime() - gNetLastSend >= 0.10) { NetSendPosition(player, playerAngle); gNetLastSend = GetTime(); }
+        pthread_mutex_lock(&gNetMutex);
+        if (gNetSpawnPending)
+        {
+            player = gNetSpawnPosition;
+            gNetSpawnPending = false;
+            thirdPersonCameraReady = false;
+        }
+        bool netReady = (strcmp(gNetStatus, "ONLINE") == 0);
+        pthread_mutex_unlock(&gNetMutex);
+        if (netReady && GetTime() - gNetLastSend >= 0.10)
+        {
+            NetSendPosition(player, playerAngle);
+            gNetLastSend = GetTime();
+        }
         attackRequested = false;
         jumpRequested = false;
         eatRequested = false;
@@ -3575,10 +3616,12 @@ int main(void)
                     }
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
                     if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
+                        !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1) &&
+                        !IsNetPlayerBlockedAt(nextX, player.z))
                         player.x = nextX;
                     if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
+                        !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1) &&
+                        !IsNetPlayerBlockedAt(player.x, nextZ))
                         player.z = nextZ;
 
                     if (playerMoving)
@@ -3650,10 +3693,12 @@ int main(void)
                     nextZ=-26.5f;
                 }
                 if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
+                    !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1) &&
+                    !IsNetPlayerBlockedAt(nextX, player.z))
                     player.x = nextX;
                 if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
+                    !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1) &&
+                    !IsNetPlayerBlockedAt(player.x, nextZ))
                     player.z = nextZ;
 
                 playerMoving = true;
