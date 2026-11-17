@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
@@ -102,68 +103,62 @@ static Color C(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return (Color){r, g, b, a};
 }
 
-/* Получаем символы Android-клавиатуры как UTF-8.
-   Стандартный GetLastSoftKeyChar() заменяет кириллицу на '?'. */
-static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
+/* Android IME bridge: получает готовую Unicode-строку из EditText. */
+static const char *GetAndroidCyrillicFontPath(void)
 {
-    int keyCode = GetLastSoftKeyCode();
-    if (keyCode == 0 || size < 2) return;
+    JNIEnv *env = AttachCurrentThread();
+    jobject activity = GetNativeLoaderInstance();
+    if (!env || !activity) return NULL;
+    jclass cls = (*env)->GetObjectClass(env, activity);
+    jmethodID method = (*env)->GetMethodID(env, cls, "getCyrillicFontPath", "()Ljava/lang/String;");
+    jstring value = method ? (jstring)(*env)->CallObjectMethod(env, activity, method) : NULL;
+    const char *path = value ? (*env)->GetStringUTFChars(env, value, NULL) : NULL;
+    static char fontPath[512];
+    if (path) {
+        snprintf(fontPath, sizeof(fontPath), "%s", path);
+        (*env)->ReleaseStringUTFChars(env, value, path);
+    } else fontPath[0] = '\\0';
+    if (value) (*env)->DeleteLocalRef(env, value);
+    (*env)->DeleteLocalRef(env, cls);
+    (*env)->DeleteLocalRef(env, activity);
+    DetachCurrentThread();
+    return fontPath[0] ? fontPath : NULL;
+}
 
-    unsigned int len = (unsigned int)strlen(text);
+static void ShowAndroidTextInput(const char *initialText)
+{
+    JNIEnv *env = AttachCurrentThread();
+    jobject activity = GetNativeLoaderInstance();
+    if (!env || !activity) return;
+    jclass cls = (*env)->GetObjectClass(env, activity);
+    jmethodID method = (*env)->GetMethodID(env, cls, "showGameTextInput", "(Ljava/lang/String;)V");
+    jstring value = (*env)->NewStringUTF(env, initialText ? initialText : "");
+    if (method && value) (*env)->CallVoidMethod(env, activity, method, value);
+    if (value) (*env)->DeleteLocalRef(env, value);
+    (*env)->DeleteLocalRef(env, cls);
+    (*env)->DeleteLocalRef(env, activity);
+    DetachCurrentThread();
+}
 
-    if (keyCode == 67) // Android KEYCODE_DEL
-    {
-        if (len > 0)
-        {
-            len--;
-            while (len > 0 && (((unsigned char)text[len] & 0xC0) == 0x80)) len--;
-            text[len] = '\\0';
+static void PollAndroidTextInput(char *destination, unsigned int size)
+{
+    JNIEnv *env = AttachCurrentThread();
+    jobject activity = GetNativeLoaderInstance();
+    if (!env || !activity || size == 0) return;
+    jclass cls = (*env)->GetObjectClass(env, activity);
+    jmethodID method = (*env)->GetMethodID(env, cls, "takeGameTextInput", "()Ljava/lang/String;");
+    jstring value = method ? (jstring)(*env)->CallObjectMethod(env, activity, method) : NULL;
+    if (value) {
+        const char *utf8 = (*env)->GetStringUTFChars(env, value, NULL);
+        if (utf8) {
+            snprintf(destination, size, "%s", utf8);
+            (*env)->ReleaseStringUTFChars(env, value, utf8);
         }
-        ClearLastSoftKey();
-        return;
+        (*env)->DeleteLocalRef(env, value);
     }
-
-    if (keyCode == 66) // Enter: отправка выполняется кнопкой SEND
-    {
-        ClearLastSoftKey();
-        return;
-    }
-
-    int cp = GetLastSoftKeyUnicode();
-    if (cp <= 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
-    {
-        ClearLastSoftKey();
-        return;
-    }
-
-    unsigned char bytes[4];
-    unsigned int count = 0;
-    if (cp <= 0x7F) bytes[count++] = (unsigned char)cp;
-    else if (cp <= 0x7FF)
-    {
-        bytes[count++] = (unsigned char)(0xC0 | (cp >> 6));
-        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
-    }
-    else if (cp <= 0xFFFF)
-    {
-        bytes[count++] = (unsigned char)(0xE0 | (cp >> 12));
-        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
-        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
-    }
-    else
-    {
-        bytes[count++] = (unsigned char)(0xF0 | (cp >> 18));
-        bytes[count++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F));
-        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
-        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
-    }
-
-    if (len + count < size)
-    {
-        memcpy(text + len, bytes, count);
-        text[len + count] = '\\0';
-    }
-    ClearLastSoftKey();
+    (*env)->DeleteLocalRef(env, cls);
+    (*env)->DeleteLocalRef(env, activity);
+    DetachCurrentThread();
 }
 
 
@@ -1172,15 +1167,18 @@ int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
 
-    // Стандартный шрифт Raylib не содержит кириллицу. Загружаем Roboto
-    // Android с явным набором русских символов для сообщений интерфейса.
+    // Копируем Roboto в приватный каталог приложения, откуда Raylib
+    // может надёжно загрузить TTF вместе с кириллическими символами.
     int cyrillicCodepoints[191];
     int cpIndex = 0;
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
-    Font cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
-                                   cyrillicCodepoints, cpIndex);
-    if (cyrillicFont.texture.id == 0) cyrillicFont = GetFontDefault();
+    const char *fontPath = GetAndroidCyrillicFontPath();
+    Font cyrillicFont = fontPath ? LoadFontEx(fontPath, 32, cyrillicCodepoints, cpIndex) : GetFontDefault();
+    if (cyrillicFont.texture.id == 0) {
+        TraceLog(LOG_ERROR, "CYRILLIC FONT LOAD FAILED");
+        cyrillicFont = GetFontDefault();
+    }
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -1433,7 +1431,7 @@ int main(void)
             loadingProgress += frameTime/2.4f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
-        if(commandChatOpen || commandConsoleOpen) ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
+        if(commandChatOpen || commandConsoleOpen) PollAndroidTextInput(commandInput,sizeof(commandInput));
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
@@ -1705,7 +1703,7 @@ int main(void)
                 Rectangle sendButton={cp.x+cp.width-128,cp.y+116,114,42};
                 Rectangle closeCmd={cp.x+14,cp.y+116,100,42};
                 if(CheckCollisionPointRec(pos,closeCmd)){commandChatOpen=false;commandConsoleOpen=false;HideSoftKeyboard();}
-                else if(CheckCollisionPointRec(pos,inputBox)) ShowSoftKeyboard();
+                else if(CheckCollisionPointRec(pos,inputBox)) ShowAndroidTextInput(commandInput);
                 else if(CheckCollisionPointRec(pos,sendButton))
                 {
                     HideSoftKeyboard();
