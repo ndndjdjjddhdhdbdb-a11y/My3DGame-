@@ -1165,9 +1165,9 @@ static void DrawPlayer(Vector3 player, float angle,
     Vector3 ankleL = PlayerPoint(player, angle, -0.18f, 0.13f, swing);
     Vector3 ankleR = PlayerPoint(player, angle,  0.18f, 0.13f, -swing);
 
-    DrawCylinderEx(hipL, kneeL, 0.145f, 0.115f, 10, skin);
+    DrawCylinderEx(hipL, kneeL, 0.145f, 0.115f, 10, underwear);
     DrawCylinderEx(kneeL, ankleL, 0.115f, 0.09f, 10, underwear);
-    DrawCylinderEx(hipR, kneeR, 0.145f, 0.115f, 10, skin);
+    DrawCylinderEx(hipR, kneeR, 0.145f, 0.115f, 10, underwear);
     DrawCylinderEx(kneeR, ankleR, 0.115f, 0.09f, 10, underwear);
     DrawSphere(kneeL, 0.105f, underwear);
     DrawSphere(kneeR, 0.105f, underwear);
@@ -1180,6 +1180,17 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawCube(PlayerPoint(player, angle, -0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
     DrawCube(PlayerPoint(player, angle, 0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
 
+    // Компактный походный рюкзак расположен за корпусом, чтобы не создавать
+    // впечатление второго персонажа и не перекрывать силуэт головы.
+    DrawCube(PlayerPoint(player, angle, 0, 1.16f, 0.46f),
+             0.44f, 0.58f, 0.30f, C(57, 69, 54, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 1.16f, 0.63f),
+             0.27f, 0.30f, 0.035f, C(78, 91, 67, 255));
+    DrawCube(PlayerPoint(player, angle, -0.25f, 1.14f, 0.45f),
+             0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
+    DrawCube(PlayerPoint(player, angle, 0.25f, 1.14f, 0.45f),
+             0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
+
     // Торс от третьего лица: отдельная цельная геометрия от талии
     // до плеч, чтобы корпус не терялся из-за тонкого цилиндра.
     DrawCylinderEx(
@@ -1191,6 +1202,19 @@ static void DrawPlayer(Vector3 player, float angle,
                0.285f, jacket);
     DrawSphere(PlayerPoint(player, angle, 0, 1.49f+bob, 0),
                0.22f, jacket);
+
+    // Две узкие лямки и нагрудный карман подчёркивают походную экипировку.
+    Vector3 strapLTop = PlayerPoint(player, angle, -0.20f, 1.43f+bob, -0.245f);
+    Vector3 strapLBottom = PlayerPoint(player, angle, -0.10f, 0.91f+bob, -0.275f);
+    Vector3 strapRTop = PlayerPoint(player, angle, 0.20f, 1.43f+bob, -0.245f);
+    Vector3 strapRBottom = PlayerPoint(player, angle, 0.10f, 0.91f+bob, -0.275f);
+    DrawCylinderEx(strapLTop, strapLBottom, 0.032f, 0.026f, 6, C(171, 145, 99, 255));
+    DrawCylinderEx(strapRTop, strapRBottom, 0.032f, 0.026f, 6, C(171, 145, 99, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 1.15f+bob, -0.302f),
+             0.22f, 0.17f, 0.045f, C(67, 75, 56, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 1.25f+bob, -0.326f),
+             0.08f, 0.025f, 0.012f, C(190, 160, 101, 255));
+
     DrawCylinderEx(
         PlayerPoint(player, angle, 0, 1.45f+bob, 0),
         PlayerPoint(player, angle, 0, 1.66f+bob, 0),
@@ -1264,6 +1288,23 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
              horizontal?len+w-1.2f: w-1.2f,0.035f,
              horizontal?w-1.2f:len+w-1.2f,
              C(151,132,99,255));
+    // Две неглубокие колеи делают грунтовую дорогу менее плоской.
+    Color tireTrack = C(91, 78, 60, 105);
+    if (horizontal)
+    {
+        DrawCube((Vector3){cx, -0.006f, cz-1.65f},
+                 len+w-1.5f, 0.006f, 0.20f, tireTrack);
+        DrawCube((Vector3){cx, -0.006f, cz+1.65f},
+                 len+w-1.5f, 0.006f, 0.20f, tireTrack);
+    }
+    else
+    {
+        DrawCube((Vector3){cx-1.65f, -0.006f, cz},
+                 0.20f, 0.006f, len+w-1.5f, tireTrack);
+        DrawCube((Vector3){cx+1.65f, -0.006f, cz},
+                 0.20f, 0.006f, len+w-1.5f, tireTrack);
+    }
+
     // Обочины из более тёмного грунта.
     if (horizontal)
     {
@@ -2002,7 +2043,7 @@ int main(void)
         menuBackButton = menuShopButton;
 
         menuReturnButton = (Rectangle){
-            screenWidth/2.0f-67.5f, 18, 135, 55
+            14.0f, 14.0f, 135.0f, 48.0f
         };
 
         moveButtonsButton = (Rectangle){
@@ -4400,18 +4441,18 @@ int main(void)
             // Компактная панель выживания в стиле военного HUD.
             DrawRectangleRounded(
                 (Rectangle){14, 72, 244, 88},
-                0.16f, 14, C(12, 24, 34, 218)
+                0.16f, 14, C(8, 18, 34, 228)
             );
             DrawRectangleRoundedLinesEx(
                 (Rectangle){14, 72, 244, 88},
-                0.16f, 14, 1.5f, C(119, 159, 166, 190)
+                0.16f, 14, 1.5f, C(105, 176, 220, 220)
             );
             DrawText("СОСТОЯНИЕ", 27, 78, 11,
-                     C(135, 190, 194, 255));
+                     C(155, 205, 238, 255));
             DrawText("ЕДА", 28, 98, 12, RAYWHITE);
             DrawRectangleRounded(
                 (Rectangle){82, 88, 112, 9},
-                0.5f, 6, C(65, 70, 72, 230)
+                0.5f, 6, C(38, 55, 74, 235)
             );
             DrawRectangleRounded(
                 (Rectangle){82, 88, 112*(foodLevel/100.0f), 9},
@@ -4423,7 +4464,7 @@ int main(void)
             DrawText("ВОДА", 28, 124, 12, RAYWHITE);
             DrawRectangleRounded(
                 (Rectangle){82, 126, 112, 9},
-                0.5f, 6, C(65, 70, 72, 230)
+                0.5f, 6, C(38, 55, 74, 235)
             );
             DrawRectangleRounded(
                 (Rectangle){82, 126, 112*(waterLevel/100.0f), 9},
@@ -4431,19 +4472,6 @@ int main(void)
             );
             DrawText(TextFormat("%d%%", (int)waterLevel),
                      203, 123, 12, C(170, 220, 250, 255));
-
-            DrawRectangleRounded(
-                (Rectangle){14, 14, 210, 46},
-                0.22f, 12, C(12, 25, 37, 205)
-            );
-            DrawRectangleRoundedLinesEx(
-                (Rectangle){14, 14, 210, 46},
-                0.22f, 12, 1.5f, C(116, 169, 180, 190)
-            );
-            DrawCircle(34, 37, 7, C(103, 230, 135, 255));
-            DrawText("ЗЕЛЁНАЯ ДОЛИНА", 49, 24, 18, RAYWHITE);
-            DrawText("ЗОНА ВЫЖИВАНИЯ / ДЕНЬ 01", 49, 43, 9,
-                     C(139, 179, 190, 255));
 
             DrawRectangleRounded(
                 settingsButton, 0.30f, 16,
@@ -4554,41 +4582,31 @@ int main(void)
             // Компактный HUD выживания в верхнем левом углу.
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
-                Rectangle statusPanel = {screenWidth*0.5f-77.0f, 14, 154, 62};
-                DrawRectangleRounded(statusPanel, 0.16f, 8, C(8, 15, 20, 205));
-                DrawRectangleRoundedLinesEx(statusPanel, 0.16f, 8, 1.2f, C(115, 145, 151, 190));
-                DrawText("ЕДА", 23, 70, 10, C(230, 220, 190, 255));
-                DrawText("ВОДА", 23, 96, 10, C(170, 215, 245, 255));
-                DrawRectangleRounded((Rectangle){60, 72, 96, 7}, 0.5f, 5, C(55, 62, 61, 255));
-                DrawRectangleRounded((Rectangle){60, 72, 96*fmaxf(0.0f,fminf(1.0f,foodLevel/100.0f)), 7}, 0.5f, 5, C(190, 157, 83, 255));
-                DrawRectangleRounded((Rectangle){60, 98, 96, 7}, 0.5f, 5, C(55, 62, 61, 255));
-                DrawRectangleRounded((Rectangle){60, 98, 96*fmaxf(0.0f,fminf(1.0f,waterLevel/100.0f)), 7}, 0.5f, 5, C(74, 157, 207, 255));
-
                 // Нижняя панель быстрого доступа.
                 Rectangle hotbarPanel = {hotbarSlots[0].x-9, hotbarSlots[0].y-7,
                     hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 72};
-                DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(7, 13, 18, 190));
-                DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.2f, C(100, 126, 137, 180));
+                DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(6, 14, 28, 218));
+                DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.2f, C(100, 165, 211, 215));
                 for (int slot = 0; slot < 4; slot++)
                 {
                     Rectangle r = hotbarSlots[slot];
                     bool activeSlot = slot == selectedHotbarSlot;
                     DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.13f, 8, C(0,0,0,125));
-                    DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(74, 78, 57, 250) : C(25, 32, 34, 240));
+                    DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 252) : C(16, 31, 49, 245));
                     DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.0f,
-                        activeSlot ? C(222, 190, 105, 255) : C(112, 133, 137, 220));
+                        activeSlot ? C(145, 216, 250, 255) : C(83, 132, 170, 225));
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10,
-                        activeSlot ? C(255, 224, 151, 255) : C(165, 184, 185, 255));
+                        activeSlot ? C(210, 240, 255, 255) : C(150, 184, 210, 255));
                     const char *slotName = itemNames[hotbarItemIds[slot]];
                     int nw = MeasureText(slotName, 9);
                     DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+23, 9, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
-                        (int)(r.x+r.width-23), (int)(r.y+r.height-14), 10, C(220, 220, 202, 255));
+                        (int)(r.x+r.width-23), (int)(r.y+r.height-14), 10, C(195, 220, 238, 255));
                 }
                 const char *selectedName = itemNames[hotbarItemIds[selectedHotbarSlot]];
                 int selectedNameWidth = MeasureText(selectedName, 12);
                 DrawText(selectedName, (int)(screenWidth/2.0f-selectedNameWidth/2.0f),
-                    (int)hotbarPanel.y-16, 12, C(235, 220, 175, 245));
+                    (int)hotbarPanel.y-16, 12, C(160, 220, 255, 250));
                 DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
                 DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
             }
@@ -4653,7 +4671,7 @@ int main(void)
                     C(190, 145, 90, 240)
                 );
                 DrawText(
-                    "БОЧКА С ДОБЫЧЕЙ", (int)hudX+18, 116, 19, RAYWHITE
+                    "БОЧКА С ЛУТОМ", (int)hudX+18, 116, 19, RAYWHITE
                 );
                 DrawText(
                     TextFormat("ЗДОРОВЬЕ: %d/50", barrelHealth[targetedBarrel]),
@@ -4731,8 +4749,8 @@ int main(void)
             {
                 DrawRectangle(0,0,screenWidth,screenHeight,C(0,4,12,205));
                 Rectangle rp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,screenHeight*0.78f};
-                DrawRectangleRounded(rp,0.06f,10,C(24,31,35,252));
-                DrawRectangleRoundedLinesEx(rp,0.06f,10,2,C(130,165,125,255));
+                DrawRectangleRounded(rp,0.06f,10,C(12, 27, 45, 252));
+                DrawRectangleRoundedLinesEx(rp,0.06f,10,2,C(105, 174, 218, 255));
                 DrawTextEx(cyrillicFont,"ВЫДАЧА ПРЕДМЕТОВ",(Vector2){rp.x+14,rp.y+12},20,1,RAYWHITE);
                 DrawSurvivalButton((Rectangle){rp.x+rp.width-82,rp.y+10,68,34},"X",16,false);
                 float rowH=(rp.height-158.0f)/12.0f;
@@ -4741,11 +4759,11 @@ int main(void)
                     float ry=rp.y+54+item*rowH;
                     Rectangle row={rp.x+10,ry,rp.width-20,rowH-2};
                     bool selected=(giveSelectedItem==item);
-                    DrawRectangleRounded(row,0.12f,6,selected?C(48,91,73,255):C(35,43,43,230));
-                    if(selected) DrawRectangleRoundedLinesEx(row,0.12f,6,2,C(165,215,135,255));
+                    DrawRectangleRounded(row,0.12f,6,selected?C(30, 83, 123, 255):C(19, 39, 60, 230));
+                    if(selected) DrawRectangleRoundedLinesEx(row,0.12f,6,2,C(135, 205, 245, 255));
                     DrawTextEx(cyrillicFont,itemNames[item],(Vector2){rp.x+18,ry+5},14,1,RAYWHITE);
                     DrawText(TextFormat("В ИНВЕНТАРЕ: %d",itemCounts[item]),
-                        (int)(rp.x+rp.width-150),(int)ry+6,11,C(190,220,175,255));
+                        (int)(rp.x+rp.width-150),(int)ry+6,11,C(180, 220, 245, 255));
                 }
                 float controlsY=rp.y+rp.height-94.0f;
                 DrawSurvivalButton((Rectangle){rp.x+10,controlsY,42,32},"-10",11,false);
@@ -4761,8 +4779,8 @@ int main(void)
             {
                 DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f, screenWidth*0.80f, screenHeight*0.76f};
-                DrawRectangleRounded(invPanel, 0.025f, 8, C(30, 32, 30, 248));
-                DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
+                DrawRectangleRounded(invPanel, 0.025f, 8, C(10, 23, 41, 250));
+                DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(105, 177, 220, 245));
                 DrawUiTextBold("ИНВЕНТАРЬ", (int)invPanel.x+18, (int)invPanel.y+13, 26, RAYWHITE);
                 DrawUiTextBold("ПРЕДМЕТЫ / БЫСТРЫЙ ДОСТУП", (int)invPanel.x+20, (int)invPanel.y+47, 14, C(165, 205, 232, 255));
                 for (int slot = 0; slot < 12; slot++)
@@ -4775,23 +4793,23 @@ int main(void)
                     Rectangle r = {gridX+(slot%4)*(cellSize+gap),
                                    invPanel.y+72+(slot/4)*58, cellSize, cellSize};
                     DrawRectangle((int)r.x+2,(int)r.y+3,(int)r.width,(int)r.height,C(0,0,0,105));
-                    DrawRectangle(r.x,r.y,r.width,r.height,C(42,46,42,255));
-                    DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(51,55,49,255));
-                    DrawRectangleLinesEx(r,1.2f,inventoryDragItem==item?C(245,205,100,255):C(105,116,99,235));
-                    DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(142,169,91,255):C(103,119,91,255));
+                    DrawRectangle(r.x,r.y,r.width,r.height,C(18, 37, 57, 255));
+                    DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(27, 50, 74, 255));
+                    DrawRectangleLinesEx(r,1.2f,inventoryDragItem==item?C(145, 216, 250, 255):C(88, 145, 190, 240));
+                    DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(82, 178, 225, 255):C(76, 126, 166, 255));
                     int labelSize = (item == 7) ? 9 : 10;
-                    DrawUiTextBold(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(225,231,218,255));
+                    DrawUiTextBold(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(226, 240, 250, 255));
                     DrawUiTextBold(TextFormat("x%d",itemCounts[item]),
                         (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),12)-5),
-                        (int)(r.y+r.height-16),12,C(202,222,171,255));
+                        (int)(r.y+r.height-16),12,C(175, 220, 245, 255));
                 }
                 if(inventoryDragItem>=0)
                 {
                     Rectangle dragCard={inventoryDragPosition.x-42,inventoryDragPosition.y-25,84,50};
-                    DrawRectangleRounded(dragCard,0.12f,6,C(30,43,38,235));
-                    DrawRectangleRoundedLinesEx(dragCard,0.12f,6,2,C(245,205,100,255));
+                    DrawRectangleRounded(dragCard,0.12f,6,C(13, 34, 55, 245));
+                    DrawRectangleRoundedLinesEx(dragCard,0.12f,6,2,C(145, 216, 250, 255));
                     DrawUiTextBold(itemNames[inventoryDragItem],(int)dragCard.x+5,(int)dragCard.y+7,9,RAYWHITE);
-                    DrawUiTextBold(TextFormat("x%d",itemCounts[inventoryDragItem]),(int)dragCard.x+5,(int)dragCard.y+27,10,C(220,235,180,255));
+                    DrawUiTextBold(TextFormat("x%d",itemCounts[inventoryDragItem]),(int)dragCard.x+5,(int)dragCard.y+27,10,C(190, 225, 245, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "СУМКА", 13, true);
                 DrawUiTextBold("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+240,
@@ -4827,8 +4845,8 @@ int main(void)
             float invSize=fminf(screenHeight*0.48f,screenWidth*0.25f);
             Rectangle cratePanel={screenWidth-crateSize-18.0f,screenHeight-crateSize-62.0f,crateSize,crateSize};
             Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
-            DrawRectangleRounded(cratePanel,0.035f,8,C(25,28,27,250));
-            DrawRectangleRoundedLinesEx(cratePanel,0.035f,8,1.8f,C(135,145,119,255));
+            DrawRectangleRounded(cratePanel,0.035f,8,C(10, 23, 41, 250));
+            DrawRectangleRoundedLinesEx(cratePanel,0.035f,8,1.8f,C(105, 177, 220, 245));
             int crateTitleSize=(int)fmaxf(11.0f,fminf(15.0f,cratePanel.width*0.045f));
             DrawUiTextBold(openedGasCrate==3?"ОРУЖЕЙНЫЙ ЯЩИК":"ЯЩИК С РЕСУРСАМИ",
                 (int)cratePanel.x+9,(int)cratePanel.y+13,crateTitleSize,C(230,236,220,255));
@@ -4837,8 +4855,8 @@ int main(void)
             DrawRectangleRoundedLinesEx(close,0.18f,8,1.5f,C(190,125,110,255));
             DrawUiTextBold("X",(int)close.x+14,(int)close.y+7,22,RAYWHITE);
 
-            DrawRectangleRounded(invPanel,0.035f,8,C(25,29,31,250));
-            DrawRectangleRoundedLinesEx(invPanel,0.035f,8,1.8f,C(91,139,157,255));
+            DrawRectangleRounded(invPanel,0.035f,8,C(13, 29, 48, 250));
+            DrawRectangleRoundedLinesEx(invPanel,0.035f,8,1.8f,C(91, 158, 204, 255));
             DrawUiTextBold("ИНВЕНТАРЬ",(int)invPanel.x+7,(int)invPanel.y+8,13,C(210,230,238,255));
 
             // Почти квадратный ящик: 4 столбца на 2 ряда.
@@ -4853,8 +4871,8 @@ int main(void)
                 int amount=gasCrateAmounts[openedGasCrate][slot];
                 int item=gasCrateItems[openedGasCrate][slot];
                 DrawRectangle((int)cell.x+2,(int)cell.y+3,(int)cell.width,(int)cell.height,C(0,0,0,100));
-                DrawRectangleRec(cell,C(43,47,43,255));
-                DrawRectangleLinesEx(cell,1.0f,C(105,116,99,235));
+                DrawRectangleRec(cell,C(20, 39, 59, 255));
+                DrawRectangleLinesEx(cell,1.0f,C(86, 139, 182, 235));
                 if(amount>0){
                     int fs=cell.width<55?9:11;
                     DrawUiTextBold(itemNames[item],(int)cell.x+4,(int)(cell.y+cell.height*0.27f),fs,C(235,238,226,255));
@@ -4878,14 +4896,14 @@ int main(void)
                 int col=item%invCols,row=item/invCols;
                 Rectangle cell={invPanel.x+7.0f+col*(invCellW+invGap),invContentY+row*(invCellH+invGap),invCellW,invCellH};
                 DrawRectangle((int)cell.x+2,(int)cell.y+2,(int)cell.width,(int)cell.height,C(0,0,0,90));
-                DrawRectangleRec(cell,C(43,49,51,255));
-                DrawRectangleLinesEx(cell,1.0f,C(91,119,123,235));
-                DrawRectangle(cell.x,cell.y,2,cell.height,(item==2||item==3)?C(142,169,91,255):C(85,126,132,255));
+                DrawRectangleRec(cell,C(23, 44, 65, 255));
+                DrawRectangleLinesEx(cell,1.0f,C(80, 132, 174, 235));
+                DrawRectangle(cell.x,cell.y,2,cell.height,(item==2||item==3)?C(142,169,91,255):C(73, 133, 180, 255));
                 int fs=cell.width<48?6:8;
-                DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.28f),fs,C(218,228,225,255));
+                DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.28f),fs,C(224, 238, 248, 255));
                 DrawText(TextFormat("x%d",itemCounts[item]),
                     (int)(cell.x+cell.width-MeasureText(TextFormat("x%d",itemCounts[item]),8)-3),
-                    (int)(cell.y+cell.height-11),8,C(190,211,164,255));
+                    (int)(cell.y+cell.height-11),8,C(174, 218, 242, 255));
             }
             if(crateTakeCooldown>0.0f){
                 DrawText("ЗАБИРАЕТЕ",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(155,235,155,255));
@@ -4901,8 +4919,8 @@ int main(void)
             DrawRectangle(0,0,screenWidth,screenHeight,C(3,10,18,225));
             float ms=fminf(fminf(screenWidth*0.78f,screenHeight*0.70f),430.0f), mx=(screenWidth-ms)*0.5f, my=(screenHeight-ms)*0.5f;
             Rectangle mapPanel={mx-12,my-36,ms+24,ms+82};
-            DrawRectangleRounded(mapPanel,0.06f,12,C(15,29,34,250));
-            DrawRectangleRoundedLinesEx(mapPanel,0.06f,12,2,C(115,165,150,230));
+            DrawRectangleRounded(mapPanel,0.06f,12,C(12, 27, 45, 250));
+            DrawRectangleRoundedLinesEx(mapPanel,0.06f,12,2,C(105, 174, 218, 235));
             DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,22,RAYWHITE);
 
             // Круглая карта и всё её содержимое образуют единый подвижный слой.
@@ -5126,7 +5144,7 @@ int main(void)
                         C(100, 225, 145, 255)
                     );
                     DrawText(
-                        "0/20 ИГРОКОВ",
+                        "0/20 PLAYERS",
                         (int)serverCard.x+18,
                         (int)serverCard.y+75, 18,
                         C(190, 215, 235, 255)
@@ -5192,7 +5210,7 @@ int main(void)
 
             DrawRectangleRounded(
                 moveButtonsButton, 0.25f, 14,
-                C(42, 54, 43, 255)
+                C(24, 56, 83, 255)
             );
 
             DrawText(
@@ -5222,17 +5240,17 @@ int main(void)
 
             Color lowColor =
                 graphicsQuality == 0 ?
-                C(83, 103, 67, 255) :
+                C(38, 103, 148, 255) :
                 C(42, 65, 91, 255);
 
             Color medColor =
                 graphicsQuality == 1 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             Color highColor =
                 graphicsQuality == 2 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             DrawRectangleRounded(lowButton, 0.22f, 12, lowColor);
@@ -5260,7 +5278,7 @@ int main(void)
             {
                 Color fpsColor =
                     (targetFps == fpsValues[fi]) ?
-                    C(42, 150, 100, 255) :
+                    C(35, 112, 164, 255) :
                     C(42, 65, 91, 255);
 
                 DrawRectangleRounded(
@@ -5291,17 +5309,17 @@ int main(void)
 
             Color moreColor =
                 detailLevel == 0 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             Color someColor =
                 detailLevel == 1 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             Color fewColor =
                 detailLevel == 2 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             DrawRectangleRounded(
@@ -5345,17 +5363,17 @@ int main(void)
 
             Color fullColor =
                 resolutionLevel == 0 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             Color midResColor =
                 resolutionLevel == 1 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             Color lowResColor =
                 resolutionLevel == 2 ?
-                C(42, 150, 100, 255) :
+                C(35, 112, 164, 255) :
                 C(42, 65, 91, 255);
 
             DrawRectangleRounded(
