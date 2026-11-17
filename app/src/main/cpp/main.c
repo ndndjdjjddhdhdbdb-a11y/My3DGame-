@@ -902,8 +902,9 @@ static bool IsBuildPlacementBlocked(float x, float z, int type, int storedType,
     else if(type==2) {hx=0.72f;hz=0.12f;}
     if (IsBuildZoneForbidden(x,z,hx,hz)) return true;
 
-    const float sample[5][2]={{0,0},{-1,-1},{1,-1},{1,1},{-1,1}};
-    for(int i=0;i<5;i++)
+    const float sample[9][2]={{0,0},{-1,-1},{1,-1},{1,1},{-1,1},
+                                {0,-1},{1,0},{0,1},{-1,0}};
+    for(int i=0;i<9;i++)
     {
         float sx=x+sample[i][0]*hx;
         float sz=z+sample[i][1]*hz;
