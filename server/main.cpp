@@ -6,6 +6,9 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cctype>
+#include <cerrno>
+#include <cstdint>
 #include <csignal>
 #include <cstring>
 #include <iostream>
@@ -137,7 +140,10 @@ void clientLoop(int socket) {
                 float x, y, z, yaw;
                 if (input >> x >> y >> z >> yaw &&
                     std::isfinite(x) && std::isfinite(y) && std::isfinite(z) && std::isfinite(yaw)) {
-                    player->x = x; player->y = y; player->z = z; player->yaw = yaw;
+                    {
+                        std::lock_guard<std::mutex> lock(playersMutex);
+                        player->x = x; player->y = y; player->z = z; player->yaw = yaw;
+                    }
                 }
             } else if (command == "PING") {
                 sendLine(player, "PONG");
