@@ -3308,25 +3308,9 @@ int main(void)
                     // Во время фырканья кабан полностью стоит на месте.
                     if(wildAnimalTimer[animal]<=0.0f)
                     {
-                        wildAnimalState[animal]=ANIMAL_COOLDOWN;
-                        wildAnimalTimer[animal]=30.0f;
-                        // После фырканья кабан разворачивается от игрока
-                        // и первые 3 секунды отходит, затем стоит до конца паузы.
-                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
-                    }
-                }
-                else if(wildAnimalState[animal]==ANIMAL_COOLDOWN)
-                {
-                    // Если игрок подошёл ближе 3 метров, кабан снова атакует.
-                    if(distance<=3.0f)
-                    {
-                        wildAnimalState[animal]=ANIMAL_CHASE;
-                        wildAnimalChaseStarted[animal]=animalNow;
-                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
-                        if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
-                    }
-                    else if(wildAnimalTimer[animal]<=0.0f)
-                    {
+                        // После фырканья кабан возвращается к обычному блужданию.
+                        // Игрока он будет игнорировать до истечения 30 секунд
+                        // с момента окончания погони.
                         wildAnimalState[animal]=ANIMAL_WANDER;
                         wildAnimalTimer[animal]=2.0f;
                     }
@@ -3374,7 +3358,9 @@ int main(void)
                 }
                 else if(wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
-                    if(seesPlayer)
+                    bool boarIgnoringPlayer=(wildAnimalTypes[animal]!=0 &&
+                        animalNow-wildAnimalLastChase[animal]<30.0);
+                    if(seesPlayer && !boarIgnoringPlayer)
                     {
                         wildAnimalState[animal]=ANIMAL_CHASE;
                         wildAnimalChaseStarted[animal]=animalNow;
@@ -3406,12 +3392,6 @@ int main(void)
                         wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                 }
                 else if(wildAnimalState[animal]==ANIMAL_FLEE)
-                {
-                    dx=player.x-a->x; dz=player.z-a->z;
-                    if(dx*dx+dz*dz>0.001f)
-                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
-                }
-                else if(wildAnimalState[animal]==ANIMAL_COOLDOWN)
                 {
                     dx=player.x-a->x; dz=player.z-a->z;
                     if(dx*dx+dz*dz>0.001f)
@@ -3463,8 +3443,7 @@ int main(void)
 
                 float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
                                   (wildAnimalState[animal]==ANIMAL_FLEE?8.5f:
-                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:
-                                  (wildAnimalState[animal]==ANIMAL_COOLDOWN && wildAnimalTimer[animal]>27.0f?0.9f:0.0f)));
+                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
                 if(!isDeer && nearestAnimalDist2<1.30f*1.30f)
                     animalSpeed=0.0f;
                 if(animalSpeed>0.0f)
