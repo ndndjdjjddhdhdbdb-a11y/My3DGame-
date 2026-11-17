@@ -2297,7 +2297,7 @@ int main(void)
         {
             Vector2 pos = GetMousePosition();
 
-            if (showBuildCursor && buildPlanHeld)
+            if (buildPlanHeld && buildMode && !mainMenuOpen && !settingsOpen && !inventoryOpen && !mapOpen)
             {
                 if (CheckCollisionPointRec(pos, buildFloorButton)) selectedBuildType = 0;
                 else if (CheckCollisionPointRec(pos, buildWallButton)) selectedBuildType = 1;
