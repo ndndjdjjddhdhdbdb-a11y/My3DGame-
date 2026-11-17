@@ -639,7 +639,7 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
             if(fabsf(x-wallX)<0.24f+radius && z>-19.5f && z<-18.2f) return true;
             if(fabsf(x-wallX)<0.24f+radius && z>-16.0f && z<-13.5f) return true;
         }
-        if(fabsf(z+14.0f)<0.24f+radius && fabsf(x)<4.0f+radius) return true;
+        // Убрана старая невидимая перегородка за бензоколонками.
     }
     // Коллизии ящиков совпадают с новыми местами их моделей.
     if(playerY<1.35f)
@@ -3929,14 +3929,23 @@ int main(void)
                 DrawSurvivalButton(buildButton, buildMode ? "СТРОИТЬ: ВКЛ." : "СТРОИТЬ", 16, buildMode);
                 if (buildMode)
                 {
-                    if (buildPlanHeld)
+                    bool showTouchBuildControls = false;
+#if defined(PLATFORM_ANDROID)
+                    showTouchBuildControls = true;
+#endif
+                    if (buildPlanHeld || showTouchBuildControls)
                     {
-                        DrawRectangleRounded((Rectangle){8, 218, 356, 88}, 0.12f, 12, C(8, 19, 32, 240));
+                        DrawRectangleRounded((Rectangle){8, 218, 356, 94}, 0.12f, 12, C(8, 19, 32, 240));
                         DrawSurvivalButton(buildFloorButton, "ФУНДАМЕНТ", 10, selectedBuildType == 0);
                         DrawSurvivalButton(buildWallButton, "СТЕНА", 10, selectedBuildType == 1);
                         DrawSurvivalButton(buildRoofButton, "ПОТОЛОК", 10, selectedBuildType == 3);
                         DrawSurvivalButton(buildDoorButton, "ДВЕРЬ", 10, selectedBuildType == 2);
-                        DrawText("УДЕРЖИВАЙТЕ X • ВЫБЕРИТЕ ПОСТРОЙКУ", 12, 307, 10, RAYWHITE);
+                        DrawSurvivalButton(buildPlaceButton, "ПОСТАВИТЬ", 13, false);
+#if defined(PLATFORM_ANDROID)
+                        DrawText("ВЫБЕРИ ДЕТАЛЬ И НАЖМИ «ПОСТАВИТЬ»", 12, 311, 10, RAYWHITE);
+#else
+                        DrawText("УДЕРЖИВАЙТЕ X • ВЫБЕРИТЕ ПОСТРОЙКУ", 12, 311, 10, RAYWHITE);
+#endif
                     }
                     else
                     {
