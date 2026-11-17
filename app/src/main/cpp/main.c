@@ -947,19 +947,15 @@ static void GetBuildPlacement(Vector3 player, float angle, int type,
     *outStoredType = storedType;
 }
 
-// Зоны, где запрещено размещать постройки: территория заправки и обе дороги.
+// Земля и дороги доступны для строительства. Запрет оставлен только
+// на самой заправке и небольшом отступе вокруг её корпуса.
 static bool IsBuildZoneForbidden(float x, float z, float halfX, float halfZ)
 {
-    // Большая свободная от построек территория вокруг заправки.
-    if (x+halfX > -20.0f && x-halfX < 20.0f &&
-        z+halfZ > -51.0f && z-halfZ < 8.0f) return true;
-
-    // Продольная и поперечная дороги (с запасом под размер фундамента).
-    if (fabsf(x) < 6.25f+halfX || fabsf(z) < 6.25f+halfZ)
-    {
-        if (fabsf(x) < 6.25f+halfX && fabsf(z) < 190.0f+halfZ) return true;
-        if (fabsf(z) < 6.25f+halfZ && fabsf(x) < 190.0f+halfX) return true;
-    }
+    const float stationHalfWidth = 15.5f;
+    const float stationMinZ = -35.5f;
+    const float stationMaxZ = -8.5f;
+    if (x+halfX > -stationHalfWidth && x-halfX < stationHalfWidth &&
+        z+halfZ > stationMinZ && z-halfZ < stationMaxZ) return true;
     return false;
 }
 
@@ -1267,6 +1263,7 @@ int main(void)
     char commandInput[80] = {0};
     char commandOutput[180] = "Введите /console";
     bool buildMode = false;
+    bool buildPlanHeld = false;
     float buildMessageTimer = 0.0f;
     int buildMessageType = 0; // 1 — запрет зоны, 2 — мешают объекты
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
@@ -1525,7 +1522,11 @@ int main(void)
             if (IsKeyPressed(KEY_TWO)) selectedHotbarSlot = 1;
             if (IsKeyPressed(KEY_THREE)) selectedHotbarSlot = 2;
             if (IsKeyPressed(KEY_FOUR)) selectedHotbarSlot = 3;
-            if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_F)) attackRequested = true;
+            if (IsKeyPressed(KEY_TAB)) { inventoryOpen = !inventoryOpen; joystickActive = false; lookTouchId = -1; }
+            if (IsKeyPressed(KEY_V)) firstPerson = !firstPerson;
+            if (IsKeyPressed(KEY_X)) buildMode = true;
+            buildPlanHeld = IsKeyDown(KEY_X);
+            if (IsKeyPressed(KEY_E)) attackRequested = true;
         }
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
@@ -2296,7 +2297,14 @@ int main(void)
         {
             Vector2 pos = GetMousePosition();
 
-            if (mainMenuOpen && !settingsOpen && !editControls && !loadingScreen)
+            if (showBuildCursor && buildPlanHeld)
+            {
+                if (CheckCollisionPointRec(pos, buildFloorButton)) selectedBuildType = 0;
+                else if (CheckCollisionPointRec(pos, buildWallButton)) selectedBuildType = 1;
+                else if (CheckCollisionPointRec(pos, buildRoofButton)) selectedBuildType = 3;
+                else if (CheckCollisionPointRec(pos, buildDoorButton)) selectedBuildType = 2;
+            }
+            else if (mainMenuOpen && !settingsOpen && !editControls && !loadingScreen)
             {
                 if (menuPage == 0)
                 {
@@ -2944,10 +2952,52 @@ int main(void)
         if (settingsOpen || editControls || mainMenuOpen || inventoryOpen || mapOpen)
             lookTouchId = -1;
 
-        // Правая кнопка мыши удерживается для обзора камерой на ПК/планшете.
+        // ПК: левая кнопка — удар/взаимодействие, правая — установка постройки.
+        if (touchCount == 0 && !mainMenuOpen && !settingsOpen && !editControls &&
+            !inventoryOpen && !mapOpen && !gasCrateOpen &&
+            !commandChatOpen && !commandConsoleOpen && !resourcePanelOpen &&
+            !buildPlanHeld)
+        {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                attackRequested = true;
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && buildMode)
+            {
+                if (selectedBuildType != 2 || itemCounts[6] > 0)
+                {
+                    bool placed = PlaceBuildPiece(player, cameraYaw, selectedBuildType,
+                        buildPieces, buildPieceTypes, &buildPieceCount,
+                        &itemCounts[4], barrelPositions, barrelDestroyed);
+                    if (placed && selectedBuildType == 2) itemCounts[6]--;
+                    if (!placed)
+                    {
+                        float bx, bz; int bt;
+                        GetBuildPlacement(player, cameraYaw, selectedBuildType,
+                            buildPieces, buildPieceTypes, buildPieceCount, &bx, &bz, &bt);
+                        float bhx = (selectedBuildType == 1 && bt == 4) ? 0.12f : 1.25f;
+                        float bhz = (selectedBuildType == 1 && bt != 4) ? 0.12f : 1.25f;
+                        buildMessageType = IsBuildZoneForbidden(bx, bz, bhx, bhz) ? 1 : 2;
+                        buildMessageTimer = 2.2f;
+                    }
+                    SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
+                                  buildPieceCount, itemCounts[4]);
+                }
+            }
+        }
+
+        // В игровом режиме курсор захвачен, а движение мыши вращает камеру.
+        // При удержании X курсор освобождается для выбора элемента Building Plan.
+        bool showBuildCursor = buildPlanHeld && buildMode &&
+            !mainMenuOpen && !settingsOpen && !inventoryOpen && !mapOpen;
+        if (showBuildCursor) EnableCursor();
+        else if (!mainMenuOpen && !settingsOpen && !editControls &&
+                 !inventoryOpen && !mapOpen && !commandChatOpen &&
+                 !commandConsoleOpen && !resourcePanelOpen) DisableCursor();
+        else EnableCursor();
+
         if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
             !mapOpen && !commandChatOpen && !commandConsoleOpen &&
-            IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+            !showBuildCursor && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
         {
             Vector2 mouseDelta = GetMouseDelta();
             float mouseSensitivity = lookSensitivity*0.004f;
@@ -3681,13 +3731,17 @@ int main(void)
                 DrawSurvivalButton(buildButton, buildMode ? "СТРОИТЬ: ВКЛ." : "СТРОИТЬ", 16, buildMode);
                 if (buildMode)
                 {
-                    DrawSurvivalButton(buildFloorButton, "ОСНОВА", 10, selectedBuildType == 0);
-                    DrawSurvivalButton(buildWallButton, "СТЕНА", 10, selectedBuildType == 1);
-                    DrawSurvivalButton(buildRoofButton, "КРЫША", 10, selectedBuildType == 3);
-                    DrawSurvivalButton(buildDoorButton, "ДВЕРЬ", 10, selectedBuildType == 2);
-                    DrawSurvivalButton(buildPlaceButton, "ПОСТАВИТЬ", 15, true);
+                    if (buildPlanHeld)
+                    {
+                        DrawRectangleRounded((Rectangle){8, 218, 356, 88}, 0.12f, 12, C(8, 19, 32, 240));
+                        DrawSurvivalButton(buildFloorButton, "ФУНДАМЕНТ", 10, selectedBuildType == 0);
+                        DrawSurvivalButton(buildWallButton, "СТЕНА", 10, selectedBuildType == 1);
+                        DrawSurvivalButton(buildRoofButton, "ПОТОЛОК", 10, selectedBuildType == 3);
+                        DrawSurvivalButton(buildDoorButton, "ДВЕРЬ", 10, selectedBuildType == 2);
+                        DrawText("УДЕРЖИВАЙТЕ X • ВЫБЕРИТЕ ПОСТРОЙКУ", 12, 307, 10, RAYWHITE);
+                    }
                     int buildCost = selectedBuildType == 0 ? 30 : ((selectedBuildType == 1 || selectedBuildType == 3) ? 15 : 0);
-                    DrawText(TextFormat("ДЕРЕВО: %d  |  %s", itemCounts[4], selectedBuildType == 2 ? TextFormat("ДВЕРИ: %d", itemCounts[6]) : TextFormat("ЦЕНА: %d", buildCost)),
+                    DrawText(TextFormat("ДЕРЕВО: %d  |  %s  | ПКМ — ПОСТАВИТЬ", itemCounts[4], selectedBuildType == 2 ? TextFormat("ДВЕРИ: %d", itemCounts[6]) : TextFormat("ЦЕНА: %d", buildCost)),
                         164, 278, 12, C(225, 235, 245, 255));
                 }
             }
