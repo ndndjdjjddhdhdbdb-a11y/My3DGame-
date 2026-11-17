@@ -1306,7 +1306,7 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
     bool deer=(type==0);
     bool moving=(state==ANIMAL_WANDER || state==ANIMAL_CHASE || state==ANIMAL_FLEE);
     float gait= moving ? sinf(phase)*((state==ANIMAL_CHASE || state==ANIMAL_FLEE)?0.34f:0.15f) : 0.0f;
-    float bob=moving?fabsf(sinf(phase*2.0f))*0.045f:sinf(phase*0.45f)*0.012f;
+    float bob=(deer && state==ANIMAL_STARTLE)?0.16f:(moving?fabsf(sinf(phase*2.0f))*0.045f:sinf(phase*0.45f)*0.012f);
     float headDown=(state==ANIMAL_GRAZE)?0.30f:0.0f;
     float headShift=sinf(headYaw)*0.20f;
     Color fur=deer?C(145,101,59,255):C(82,65,50,255);
@@ -1360,14 +1360,28 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
         float swing=moving?gait*(leg==0?1.0f:-1.0f)*(side==1?1.0f:-1.0f):0.0f;
         float lz=(leg==0?-0.39f:0.43f)+swing;
         float top=deer?0.79f:0.60f, knee=deer?0.40f:0.34f;
-        DrawCylinderEx((Vector3){lx,top+bob, lz},
-                       (Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
-                       deer?0.065f:0.105f,deer?0.048f:0.075f,7,fur);
-        DrawCylinderEx((Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
-                       (Vector3){lx,0.12f,lz+0.03f+swing},
-                       deer?0.045f:0.075f,deer?0.035f:0.055f,7,dark);
-        DrawCube((Vector3){lx,0.08f,lz+0.03f+swing},
-                 deer?0.12f:0.17f,0.12f,0.16f,C(35,30,26,255));
+        if(deer && state==ANIMAL_STARTLE && leg==0)
+        {
+            // Передние ноги подняты — олень привстаёт перед рывком.
+            DrawCylinderEx((Vector3){lx,top+bob,lz},
+                           (Vector3){lx+side*0.12f,0.98f+bob,lz-0.10f},
+                           0.065f,0.050f,7,fur);
+            DrawCylinderEx((Vector3){lx+side*0.12f,0.98f+bob,lz-0.10f},
+                           (Vector3){lx+side*0.18f,0.86f+bob,lz-0.28f},
+                           0.050f,0.035f,7,dark);
+            DrawCube((Vector3){lx+side*0.18f,0.84f+bob,lz-0.29f},0.12f,0.08f,0.14f,C(35,30,26,255));
+        }
+        else
+        {
+            DrawCylinderEx((Vector3){lx,top+bob, lz},
+                           (Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
+                           deer?0.065f:0.105f,deer?0.048f:0.075f,7,fur);
+            DrawCylinderEx((Vector3){lx+side*0.015f,knee+bob,lz+0.02f},
+                           (Vector3){lx,0.12f,lz+0.03f+swing},
+                           deer?0.045f:0.075f,deer?0.035f:0.055f,7,dark);
+            DrawCube((Vector3){lx,0.08f,lz+0.03f+swing},
+                     deer?0.12f:0.17f,0.12f,0.16f,C(35,30,26,255));
+        }
     }
     rlPopMatrix();
 }
@@ -3253,7 +3267,7 @@ int main(void)
                 {
                     wildAnimalState[animal]=ANIMAL_FLEE;
                     wildAnimalChaseStarted[animal]=animalNow;
-                    wildAnimalHeading[animal]=atan2f(-dx,dz);
+                    wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
                     wildAnimalHeadYaw[animal]=0.0f;
                 }
 
@@ -3270,7 +3284,7 @@ int main(void)
                     }
                     else if(distance>0.001f)
                     {
-                        wildAnimalHeading[animal]=atan2f(-dx,dz);
+                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
                     }
                 }
                 else if(wildAnimalState[animal]==ANIMAL_CHASE)
@@ -3288,7 +3302,7 @@ int main(void)
                 }
                 else if(wildAnimalState[animal]==ANIMAL_INSPECT)
                 {
-                    wildAnimalHeading[animal]=atan2f(dx,-dz);
+                    wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                     wildAnimalHeadYaw[animal]=0.0f;
                     if(wildAnimalTimer[animal]<=0.0f)
                     {
@@ -3303,7 +3317,7 @@ int main(void)
                     {
                         wildAnimalState[animal]=ANIMAL_INSPECT;
                         wildAnimalTimer[animal]=1.15f;
-                        wildAnimalHeading[animal]=atan2f(dx,-dz);
+                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                         wildAnimalHeadYaw[animal]=0.0f;
                         if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
                     }
@@ -3348,7 +3362,7 @@ int main(void)
                     }
                     else if(wildAnimalTimer[animal]<=0.0f)
                     {
-                        wildAnimalHeading[animal]=((float)rand()/(float)RAND_MAX)*6.2831853f;
+                        wildAnimalTargetHeading[animal]=((float)rand()/(float)RAND_MAX)*6.2831853f;
                         wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*4.0f;
                     }
                 }
@@ -3358,13 +3372,13 @@ int main(void)
                     dx=player.x-a->x; dz=player.z-a->z;
                     distance=sqrtf(dx*dx+dz*dz);
                     if(distance>1.35f)
-                        wildAnimalHeading[animal]=atan2f(dx,-dz);
+                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                 }
                 else if(wildAnimalState[animal]==ANIMAL_FLEE)
                 {
                     dx=player.x-a->x; dz=player.z-a->z;
                     if(dx*dx+dz*dz>0.001f)
-                        wildAnimalHeading[animal]=atan2f(-dx,dz);
+                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
                 }
 
                 // Животные стараются не идти прямо друг в друга.
@@ -3398,7 +3412,7 @@ int main(void)
                         float side=(animal%2==0)?1.0f:-1.0f;
                         float steerX=desiredX-side*avoidZ*0.65f;
                         float steerZ=desiredZ+side*avoidX*0.65f;
-                        wildAnimalHeading[animal]=atan2f(steerX,-steerZ);
+                        wildAnimalTargetHeading[animal]=atan2f(steerX,-steerZ);
                     }
                 }
 
