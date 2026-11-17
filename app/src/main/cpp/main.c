@@ -1941,7 +1941,7 @@ int main(void)
                 float x=cosf(angle)*radius, z=sinf(angle)*radius;
                 if (!IsVillageClear(x,z)) continue;
                 bool clear=true;
-                for(int t=0;t<treeCount;t++){float dx=x-treePositions[t].x,dz=z-treePositions[t].z;if(dx*dx+dz*dz<16.0f){clear=false;break;}}
+                for(int t=0;t<treeCount;t++){float dx=x-treePositions[t].x,dz=z-treePositions[t].z;if(dx*dx+dz*dz<25.0f){clear=false;break;}}
                 for(int b=0;b<MAX_BARRELS&&clear;b++){float dx=x-barrelPositions[b].x,dz=z-barrelPositions[b].z;if(dx*dx+dz*dz<36.0f)clear=false;}
                 for(int other=0;other<MAX_ORE_NODES&&clear;other++){if(other==ore||!gOreActive[other])continue;float dx=x-gOrePositions[other].x,dz=z-gOrePositions[other].z;if(dx*dx+dz*dz<64.0f)clear=false;}
                 if(!clear)continue;
@@ -4019,7 +4019,7 @@ int main(void)
 
         // Большой остров с тремя климатическими поясами: снег, лес и песок.
         DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){1200, 1200}, C(43, 112, 143, 255));
-        float terrainView=fmaxf(180.0f,chunkDistance*50.0f);
+        float terrainView=fminf(500.0f,fmaxf(220.0f,chunkDistance*25.0f));
         float terrainView2=terrainView*terrainView;
         for (int ix=-14; ix<=14; ix++)
         {
@@ -4182,8 +4182,8 @@ int main(void)
 
         // На низкой детализации ограничиваем лес ближней зоной.
         // Это заметно сокращает количество 3D-объектов на слабых телефонах.
-        float detailTreeView = (detailLevel >= 2) ? 105.0f :
-                               ((detailLevel == 1) ? 165.0f : 245.0f);
+        float detailTreeView = (detailLevel >= 2) ? 155.0f :
+                               ((detailLevel == 1) ? 215.0f : 260.0f);
         float treeView = fminf(chunkView, detailTreeView);
         float treeView2 = treeView*treeView;
 
