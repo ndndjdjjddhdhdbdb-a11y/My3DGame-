@@ -3190,10 +3190,10 @@ int main(void)
                 }
 
                 if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(nextX,player.z,wildAnimals,wildAnimalTypes,-1))
+                    !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,-1))
                     player.x = nextX;
                 if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(player.x,nextZ,wildAnimals,wildAnimalTypes,-1))
+                    !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,-1))
                     player.z = nextZ;
 
                 playerMoving = true;
