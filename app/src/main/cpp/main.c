@@ -1688,13 +1688,13 @@ int main(void)
             }
             else if (gasCrateOpen)
             {
-                Rectangle cp={screenWidth*0.08f,screenHeight*0.23f,screenWidth*0.84f,screenHeight*0.54f};
-                Rectangle close={cp.x+cp.width-92,cp.y+12,78,34};
+                Rectangle cp={screenWidth*0.10f,screenHeight*0.27f,screenWidth*0.80f,screenHeight*0.46f};
+                Rectangle close={cp.x+cp.width-82,cp.y+12,70,32};
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;}
                 else if(openedGasCrate>=0){
-                    float gap=8.0f,cw=(cp.width-40.0f-gap*3.0f)/4.0f,ch=(cp.height-100.0f-gap)/2.0f;
+                    float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-100.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
                     for(int slot=0;slot<8;slot++){
-                        Rectangle cell={cp.x+12+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
+                        Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
                         if(CheckCollisionPointRec(pos,cell)&&gasCrateAmounts[openedGasCrate][slot]>0){
                             int item=gasCrateItems[openedGasCrate][slot],room=99-itemCounts[item];
                             int take=gasCrateAmounts[openedGasCrate][slot]<room?gasCrateAmounts[openedGasCrate][slot]:room;
@@ -2036,7 +2036,7 @@ int main(void)
                                       screenWidth*0.84f, screenHeight*0.72f};
                 for (int item = 2; item <= 3; item++)
                 {
-                    float w = (invPanel.width-56.0f)/3.0f;
+                    float w = (invPanel.width-40.0f-24.0f)/4.0f;
                     Rectangle r = {invPanel.x+16+(item%3)*(w+12),
                                    invPanel.y+72+(item/3)*42, w, 38};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
@@ -3325,8 +3325,8 @@ int main(void)
             {
                 DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
                 Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f, screenWidth*0.84f, screenHeight*0.72f};
-                DrawRectangleRounded(invPanel, 0.08f, 14, C(10, 24, 45, 248));
-                DrawRectangleRoundedLinesEx(invPanel, 0.08f, 14, 2.2f, C(112, 190, 235, 245));
+                DrawRectangleRounded(invPanel, 0.025f, 8, C(30, 32, 30, 248));
+                DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
                 DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
                 for (int item = 0; item < 12; item++)
@@ -3373,16 +3373,16 @@ int main(void)
 
         if(gasCrateOpen&&openedGasCrate>=0){
             DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,190));
-            Rectangle cp={screenWidth*0.08f,screenHeight*0.23f,screenWidth*0.84f,screenHeight*0.54f};
-            DrawRectangleRounded(cp,0.08f,14,C(18,29,38,250));
-            DrawRectangleRoundedLinesEx(cp,0.08f,14,2.2f,C(160,178,153,255));
+            Rectangle cp={screenWidth*0.10f,screenHeight*0.27f,screenWidth*0.80f,screenHeight*0.46f};
+            DrawRectangleRounded(cp,0.025f,8,C(30,32,29,250));
+            DrawRectangleRoundedLinesEx(cp,0.025f,8,1.6f,C(135,145,119,255));
             DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",(int)cp.x+16,(int)cp.y+18,20,RAYWHITE);
-            Rectangle close={cp.x+cp.width-92,cp.y+12,78,34};
+            Rectangle close={cp.x+cp.width-82,cp.y+12,70,32};
             DrawRectangleRounded(close,0.18f,8,C(105,48,43,255)); DrawText("CLOSE",(int)close.x+13,(int)close.y+10,12,RAYWHITE);
-            float gap=8.0f,cw=(cp.width-40.0f-gap*3.0f)/4.0f,ch=(cp.height-100.0f-gap)/2.0f;
+            float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-100.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
             for(int slot=0;slot<8;slot++){
-                Rectangle cell={cp.x+12+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
-                DrawRectangleRounded(cell,0.12f,8,C(37,48,54,255)); DrawRectangleRoundedLinesEx(cell,0.12f,8,1.4f,C(125,150,148,230));
+                Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
+                DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(49,51,47,255)); DrawRectangleLinesEx(cell,1.2f,C(112,119,105,235)); DrawRectangle(cell.x,cell.y,3,cell.height,C(112,135,77,255));
                 int amount=gasCrateAmounts[openedGasCrate][slot],item=gasCrateItems[openedGasCrate][slot];
                 if(amount>0){DrawText(itemNames[item],(int)cell.x+5,(int)(cell.y+cell.height*0.34f),cell.width<100?10:13,RAYWHITE);DrawText(TextFormat("x%d",amount),(int)cell.x+5,(int)(cell.y+cell.height*0.68f),12,C(170,220,190,255));}
                 else DrawText("EMPTY",(int)cell.x+5,(int)(cell.y+cell.height*0.48f),11,C(125,140,145,255));
