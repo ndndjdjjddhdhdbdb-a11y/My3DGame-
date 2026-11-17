@@ -1672,7 +1672,7 @@ int main(void)
             {
                 sprintEnabled = !sprintEnabled;
             }
-            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !gasCrateOpen &&
                      CheckCollisionPointRec(pos, inventoryButton))
             {
                 inventoryOpen = !inventoryOpen;
@@ -2012,7 +2012,7 @@ int main(void)
             {
                 sprintEnabled = !sprintEnabled;
             }
-            else if (!mainMenuOpen && !settingsOpen && !editControls &&
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !gasCrateOpen &&
                      CheckCollisionPointRec(pos, inventoryButton))
             {
                 inventoryOpen = !inventoryOpen;
