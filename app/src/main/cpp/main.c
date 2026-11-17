@@ -1639,6 +1639,10 @@ int main(void)
     Vector3 treePositions[MAX_TREES] = {{0}}, woodDrops[MAX_WOOD_DROPS] = {{0}};
     Vector3 wildAnimals[MAX_WILD_ANIMALS] = {{0}};
     int wildAnimalTypes[MAX_WILD_ANIMALS] = {0};
+    int wildAnimalHealth[MAX_WILD_ANIMALS] = {0};
+    int deerApproachCount[MAX_WILD_ANIMALS] = {0};
+    bool deerWasNearPlayer[MAX_WILD_ANIMALS] = {false};
+    bool deerProvoked[MAX_WILD_ANIMALS] = {false};
     int wildAnimalState[MAX_WILD_ANIMALS] = {0};
     float wildAnimalHeading[MAX_WILD_ANIMALS] = {0};
     float wildAnimalTargetHeading[MAX_WILD_ANIMALS] = {0};
@@ -1747,6 +1751,7 @@ int main(void)
         wildAnimalGrazeTimer[animal]=20.0f+((float)rand()/(float)RAND_MAX)*10.0f;
         wildAnimalHeadYaw[animal]=0.0f;
         wildAnimalLastChase[animal]=-1000.0;
+        wildAnimalHealth[animal]=(wildAnimalTypes[animal]==0)?50:100;
         wildAnimalChaseStarted[animal]=0.0;
     }
 
@@ -3245,32 +3250,26 @@ int main(void)
                 wildAnimalLookTimer[animal]-=frameTime;
                 wildAnimalGrazeTimer[animal]-=frameTime;
 
-                // Олень сначала пугается вблизи, затем убегает.
-                if(wildAnimalTypes[animal]==0 &&
-                   wildAnimalState[animal]!=ANIMAL_STARTLE &&
-                   wildAnimalState[animal]!=ANIMAL_FLEE &&
-                   distance<0.78f)
+                // Олень постепенно привыкает к игроку после нескольких близких подходов.
+                if(wildAnimalTypes[animal]==0 && !deerProvoked[animal])
                 {
-                    wildAnimalState[animal]=ANIMAL_STARTLE;
-                    wildAnimalTimer[animal]=0.72f;
-                    wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
-                    wildAnimalHeadYaw[animal]=0.0f;
-                }
-                if(wildAnimalState[animal]==ANIMAL_STARTLE && wildAnimalTimer[animal]<=0.0f)
-                {
-                    wildAnimalState[animal]=ANIMAL_FLEE;
-                    wildAnimalChaseStarted[animal]=animalNow;
-                    wildAnimalTargetHeading[animal]=atan2f(a->x-player.x,player.z-a->z);
-                }
-
-                // Олень пугается игрока и убегает, кабан наоборот может атаковать.
-                if(wildAnimalTypes[animal]==0 && seesPlayer &&
-                   wildAnimalState[animal]!=ANIMAL_FLEE && wildAnimalState[animal]!=ANIMAL_STARTLE)
-                {
-                    wildAnimalState[animal]=ANIMAL_FLEE;
-                    wildAnimalChaseStarted[animal]=animalNow;
-                    wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
-                    wildAnimalHeadYaw[animal]=0.0f;
+                    if(distance<4.0f && !deerWasNearPlayer[animal])
+                    {
+                        deerWasNearPlayer[animal]=true;
+                        deerApproachCount[animal]++;
+                        if(deerApproachCount[animal]>=4)
+                        {
+                            deerProvoked[animal]=true;
+                            wildAnimalState[animal]=ANIMAL_CHASE;
+                            wildAnimalChaseStarted[animal]=animalNow;
+                            wildAnimalHeadYaw[animal]=0.0f;
+                            if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
+                        }
+                    }
+                    else if(distance>6.0f)
+                    {
+                        deerWasNearPlayer[animal]=false;
+                    }
                 }
 
                 if(wildAnimalState[animal]==ANIMAL_FLEE)
@@ -3291,7 +3290,17 @@ int main(void)
                 }
                 else if(wildAnimalState[animal]==ANIMAL_CHASE)
                 {
-                    if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>12.0)
+                    if(wildAnimalTypes[animal]==0)
+                    {
+                        if(distance>28.0f || animalNow-wildAnimalChaseStarted[animal]>90.0)
+                        {
+                            deerProvoked[animal]=false;
+                            wildAnimalState[animal]=ANIMAL_WANDER;
+                            wildAnimalTimer[animal]=2.0f;
+                            wildAnimalLookTimer[animal]=6.0f;
+                        }
+                    }
+                    else if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>12.0)
                     {
                         // Кабан прекращает погоню: замирает, фыркает,
                         // затем отходит от игрока и 30 секунд не нападает.
@@ -3390,7 +3399,18 @@ int main(void)
                     dx=player.x-a->x; dz=player.z-a->z;
                     distance=sqrtf(dx*dx+dz*dz);
                     if(distance>1.35f)
-                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
+                    {
+                        if(wildAnimalTypes[animal]!=0)
+                        {
+                            // Кабан слегка меняет линию атаки, стараясь обойти игрока.
+                            float side=(animal%2==0)?1.0f:-1.0f;
+                            float sway=sinf((float)animalNow*1.7f+animal*2.1f)*0.48f;
+                            float steerX=dx-side*dz*sway;
+                            float steerZ=dz+side*dx*sway;
+                            wildAnimalTargetHeading[animal]=atan2f(steerX,-steerZ);
+                        }
+                        else wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
+                    }
                 }
                 else if(wildAnimalState[animal]==ANIMAL_FLEE)
                 {
@@ -3755,6 +3775,23 @@ int main(void)
                 targetedTree = t;
             }
         }
+        int targetedAnimal=-1;
+        float closestAnimalDistance=9999.0f;
+        for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
+        {
+            if(wildAnimalHealth[animal]<=0)continue;
+            Vector3 animalCenter={wildAnimals[animal].x,0.82f,wildAnimals[animal].z};
+            float dx=animalCenter.x-aimOrigin.x,dy=animalCenter.y-aimOrigin.y,dz=animalCenter.z-aimOrigin.z;
+            float distance=sqrtf(dx*dx+dy*dy+dz*dz);
+            if(distance>2.5f||distance<0.1f)continue;
+            RayCollision hit=GetRayCollisionSphere(centerAimRay,animalCenter,0.78f);
+            if(hit.hit && hit.distance<closestAnimalDistance)
+            {
+                closestAnimalDistance=hit.distance;
+                targetedAnimal=animal;
+            }
+        }
+
         float closestOreDistance=9999.0f;
         for (int o=0; o<MAX_ORE_NODES; o++)
         {
@@ -3800,6 +3837,24 @@ int main(void)
                 SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                               buildPieceCount, itemCounts[4]);
                 attackAnimation = 0.0f;
+            }
+            else if(targetedAnimal>=0 && wildAnimalHealth[targetedAnimal]>0)
+            {
+                int damage=(rand()%100==0)?10:5;
+                wildAnimalHealth[targetedAnimal]-=damage;
+                if(wildAnimalHealth[targetedAnimal]<0)wildAnimalHealth[targetedAnimal]=0;
+                if(wildAnimalTypes[targetedAnimal]==0)
+                {
+                    // Удар по оленю заставляет его сразу спасаться бегством.
+                    deerProvoked[targetedAnimal]=false;
+                    deerApproachCount[targetedAnimal]=0;
+                    deerWasNearPlayer[targetedAnimal]=false;
+                    wildAnimalState[targetedAnimal]=ANIMAL_FLEE;
+                    wildAnimalChaseStarted[targetedAnimal]=GetTime();
+                    wildAnimalTargetHeading[targetedAnimal]=atan2f(
+                        wildAnimals[targetedAnimal].x-player.x,
+                        player.z-wildAnimals[targetedAnimal].z);
+                }
             }
             else if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
             {
