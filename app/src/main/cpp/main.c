@@ -2021,6 +2021,7 @@ int main(void)
     {
         float frameTime = GetFrameTime();
         attackRequested = false;
+        eatRequested = false;
         if (loadingScreen)
         {
             loadingProgress += frameTime/2.4f;
@@ -2078,15 +2079,6 @@ int main(void)
         if (eatCooldown < 0.0f) eatCooldown = 0.0f;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
-        if (eatRequested && eatCooldown <= 0.0f && hotbarItemIds[selectedHotbarSlot] == 2 && itemCounts[2] > 0 &&
-            !mainMenuOpen && !settingsOpen && !inventoryOpen && !gasCrateOpen)
-        {
-            itemCounts[2]--;
-            foodLevel = fminf(100.0f, foodLevel + 25.0f);
-            consumeAnimationType = 2;
-            consumeAnimationTime = consumeAnimationDuration;
-            eatCooldown = 1.0f;
-        }
         if (attackAnimation > 0.0f) attackAnimation -= frameTime;
         if (attackAnimation < 0.0f) attackAnimation = 0.0f;
         if (consumeAnimationTime > 0.0f) {
@@ -4060,6 +4052,15 @@ int main(void)
             }
         }
 
+        if (eatRequested && eatCooldown <= 0.0f && hotbarItemIds[selectedHotbarSlot] == 2 && itemCounts[2] > 0 &&
+            !mainMenuOpen && !settingsOpen && !inventoryOpen && !gasCrateOpen)
+        {
+            itemCounts[2]--;
+            foodLevel = fminf(100.0f, foodLevel + 25.0f);
+            consumeAnimationType = 2;
+            consumeAnimationTime = consumeAnimationDuration;
+            eatCooldown = 1.0f;
+        }
         if (attackRequested && attackCooldown <= 0.0f &&
             !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && !gasCrateOpen)
         {
