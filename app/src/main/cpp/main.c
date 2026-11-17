@@ -1756,6 +1756,9 @@ int main(void)
     bool thirdPersonCameraReady = false;
     float lookSensitivity = 3.0f;
     float playerSpeed = 0.08f;
+    float playerVerticalVelocity = 0.0f;
+    const float playerJumpSpeed = 6.4f;
+    const float playerGravity = 18.0f;
     float walkPhase = 0.0f;
     float thirdPersonBobPhase = 0.0f;
     float thirdPersonBobBlend = 0.0f;
@@ -1908,6 +1911,7 @@ int main(void)
     int gasCrateItems[4][8] = {{2,3,4,5,8,9,10,11},{2,3,4,5,8,9,10,11},{2,3,4,5,8,9,10,11},{0,1,7,8,9,10,11,4}};
     int gasCrateAmounts[4][8] = {{3,2,18,12,4,2,3,4},{2,3,14,10,3,4,2,3},{3,2,20,8,5,3,2,4},{1,2,1,6,4,5,5,25}};
     Rectangle interactButton = {0};
+    Rectangle jumpButton = {0};
     Rectangle sprintButton = {0};
     Rectangle inventoryButton = {0};
     Rectangle buildButton = {0};
@@ -1953,6 +1957,7 @@ int main(void)
     int selectedActionControl = 0;
     Rectangle editSizeSlider, editAlphaSlider;
     bool attackRequested = false;
+    bool jumpRequested = false;
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
     float attackAnimation = 0.0f;
@@ -2092,6 +2097,7 @@ int main(void)
     {
         float frameTime = GetFrameTime();
         attackRequested = false;
+        jumpRequested = false;
         eatRequested = false;
         drinkRequested = false;
         if (loadingScreen)
@@ -2135,6 +2141,7 @@ int main(void)
         else if (!mainMenuOpen && !loadingScreen && !settingsOpen && !editControls && !inventoryOpen &&
                  !mapOpen && !gasCrateOpen && !resourcePanelOpen)
         {
+            if (IsKeyPressed(KEY_SPACE)) jumpRequested = true;
             if (IsKeyPressed(KEY_ONE)) selectedHotbarSlot = 0;
             if (IsKeyPressed(KEY_TWO)) selectedHotbarSlot = 1;
             if (IsKeyPressed(KEY_THREE)) selectedHotbarSlot = 2;
@@ -2352,6 +2359,7 @@ int main(void)
         interactButton = (Rectangle){actionButtonCenters[0].x-hitW/2, actionButtonCenters[0].y-hitH/2, hitW, hitH};
         eatButton = interactButton;
         sprintButton = (Rectangle){actionButtonCenters[1].x-runW/2, actionButtonCenters[1].y-runH/2, runW, runH};
+        jumpButton = (Rectangle){screenWidth-190.0f, screenHeight-292.0f, 170.0f, 58.0f};
         inventoryButton = (Rectangle){actionButtonCenters[2].x-bagW/2, actionButtonCenters[2].y-bagH/2, bagW, bagH};
 
         editSizeSlider = (Rectangle){screenWidth*0.18f, 68.0f, screenWidth*0.64f, 16.0f};
@@ -2736,6 +2744,11 @@ int main(void)
             { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
             { itemCounts[4] += 15; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, jumpButton))
+            {
+                jumpRequested = true;
+            }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, eatButton) && hotbarItemIds[selectedHotbarSlot] == 2)
             {
@@ -3533,6 +3546,36 @@ int main(void)
             }
         }
 
+        // Прыжок с гравитацией. Высота 3.72 — крыша заправки; на лестнице
+        // вертикальное перемещение остаётся под управлением существующей механики.
+        bool jumpLadderZone = fabsf(player.x-12.25f)<0.95f &&
+                              player.z>-27.35f && player.z<-25.65f;
+        bool jumpRoofSurface = fabsf(player.x)<11.55f &&
+                               player.z>-30.75f && player.z<-13.25f &&
+                               player.y>=3.35f;
+        float jumpGroundHeight = jumpRoofSurface ? 3.72f : 0.0f;
+        bool groundedForJump = (player.y <= 0.02f) ||
+                               (jumpRoofSurface && player.y >= 3.35f && player.y <= 3.74f);
+        if (jumpRequested && groundedForJump && !jumpLadderZone &&
+            !mainMenuOpen && !loadingScreen && !settingsOpen && !inventoryOpen && !mapOpen)
+        {
+            playerVerticalVelocity = playerJumpSpeed;
+        }
+        if (!jumpLadderZone && (playerVerticalVelocity != 0.0f || player.y > jumpGroundHeight + 0.01f))
+        {
+            player.y += playerVerticalVelocity*frameTime;
+            playerVerticalVelocity -= playerGravity*frameTime;
+            if (player.y <= jumpGroundHeight)
+            {
+                player.y = jumpGroundHeight;
+                playerVerticalVelocity = 0.0f;
+            }
+        }
+        else if (jumpLadderZone)
+        {
+            playerVerticalVelocity = 0.0f;
+        }
+
         // Дикая жизнь: блуждание, осмотр, проверка цели, погоня и выпас.
         if(!mainMenuOpen && !loadingScreen)
         {
@@ -3892,6 +3935,7 @@ int main(void)
             CheckCollisionPointRec(desktopMousePos, sprintButton) ||
             CheckCollisionPointRec(desktopMousePos, inventoryButton) ||
             CheckCollisionPointRec(desktopMousePos, interactButton) ||
+            CheckCollisionPointRec(desktopMousePos, jumpButton) ||
             CheckCollisionPointRec(desktopMousePos, chatButton) ||
             CheckCollisionPointRec(desktopMousePos, takeButton);
         for (int hs = 0; hs < 4; hs++)
@@ -3902,7 +3946,9 @@ int main(void)
             !commandChatOpen && !commandConsoleOpen && !resourcePanelOpen &&
             !buildPlanHeld)
         {
-            if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 2 &&
+            if (mouseLeftPressed && CheckCollisionPointRec(desktopMousePos, jumpButton))
+                jumpRequested = true;
+            else if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 2 &&
                 CheckCollisionPointRec(desktopMousePos, eatButton)) eatRequested = true;
             else if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 3 &&
                 CheckCollisionPointRec(desktopMousePos, eatButton)) drinkRequested = true;
@@ -4912,6 +4958,7 @@ int main(void)
                 {
                     DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
                     DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
+                    DrawSurvivalButtonAlpha(jumpButton, "ПРЫЖОК", 15, false, 230);
                 }
             }
 
