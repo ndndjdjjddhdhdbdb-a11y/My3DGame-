@@ -3754,6 +3754,10 @@ int main(void)
                         DrawSurvivalButton(buildDoorButton, "ДВЕРЬ", 10, selectedBuildType == 2);
                         DrawText("УДЕРЖИВАЙТЕ X • ВЫБЕРИТЕ ПОСТРОЙКУ", 12, 307, 10, RAYWHITE);
                     }
+                    else
+                    {
+                        DrawText("ЗАЖМИТЕ X — ВЫБОР ПОСТРОЙКИ", 12, 307, 10, C(180, 215, 240, 255));
+                    }
                     int buildCost = selectedBuildType == 0 ? 30 : ((selectedBuildType == 1 || selectedBuildType == 3) ? 15 : 0);
                     DrawText(TextFormat("ДЕРЕВО: %d  |  %s  | ПКМ — ПОСТАВИТЬ", itemCounts[4], selectedBuildType == 2 ? TextFormat("ДВЕРИ: %d", itemCounts[6]) : TextFormat("ЦЕНА: %d", buildCost)),
                         164, 278, 12, C(225, 235, 245, 255));
