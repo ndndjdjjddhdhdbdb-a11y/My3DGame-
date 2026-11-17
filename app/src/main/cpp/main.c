@@ -3214,8 +3214,9 @@ int main(void)
                 float dx=player.x-a->x, dz=player.z-a->z;
                 float distance=sqrtf(dx*dx+dz*dz);
                 float vision=(wildAnimalTypes[animal]==0)?17.0f:21.0f;
-                float forwardX=sinf(wildAnimalHeading[animal]);
-                float forwardZ=-cosf(wildAnimalHeading[animal]);
+                float sightHeading=wildAnimalHeading[animal]+wildAnimalHeadYaw[animal];
+                float forwardX=sinf(sightHeading);
+                float forwardZ=-cosf(sightHeading);
                 float sightDot=(distance>0.001f)?(dx*forwardX+dz*forwardZ)/distance:1.0f;
                 bool seesPlayer=(distance<vision && distance>0.001f &&
                                  sightDot>cosf(0.62f) && player.y<2.8f);
