@@ -3002,15 +3002,16 @@ int main(void)
         // При удержании X курсор освобождается для выбора элемента Building Plan.
         bool showBuildCursor = buildPlanHeld && buildMode &&
             !mainMenuOpen && !settingsOpen && !inventoryOpen && !mapOpen;
-        if (showBuildCursor) EnableCursor();
-        else if (!mainMenuOpen && !settingsOpen && !editControls &&
-                 !inventoryOpen && !mapOpen && !commandChatOpen &&
-                 !commandConsoleOpen && !resourcePanelOpen) DisableCursor();
-        else EnableCursor();
+        // Android raylib does not implement real pointer capture. Hide/show the
+        // cursor without recentering it, otherwise mouse delta becomes zero.
+        if (showBuildCursor || mainMenuOpen || settingsOpen || editControls ||
+            inventoryOpen || mapOpen || commandChatOpen || commandConsoleOpen ||
+            resourcePanelOpen) ShowCursor();
+        else HideCursor();
 
         if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
             !mapOpen && !commandChatOpen && !commandConsoleOpen &&
-            !showBuildCursor && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+            !showBuildCursor)
         {
             Vector2 mouseDelta = GetMouseDelta();
             float mouseSensitivity = lookSensitivity*0.004f;
