@@ -615,63 +615,41 @@ static void DrawMountain(float x, float z, float scale, bool snowy)
                    2.2f*scale, rock);
 }
 
- // Горный проход: каменные боковые стены и верхняя арка, центр остаётся свободным.
+ // Сквозной горный проход: широкая ровная площадка внутри подходит для строительства.
 static void DrawMountainPassage(float x, float z, float scale, bool snowy)
 {
     Color stone = snowy ? C(151, 164, 164, 255) : C(91, 106, 91, 255);
     Color edge = snowy ? C(190, 201, 199, 255) : C(126, 137, 120, 255);
-    Color inside = C(25, 29, 30, 255);
-
-    // Большая скала вокруг единственного входа. Туннель открыт только спереди (-Z).
-    DrawSphere((Vector3){x-7.0f*scale, 2.1f*scale, z+4.0f*scale}, 5.0f*scale, stone);
-    DrawSphere((Vector3){x+7.0f*scale, 2.1f*scale, z+4.0f*scale}, 5.0f*scale, stone);
-    DrawSphere((Vector3){x, 7.0f*scale, z+4.0f*scale}, 7.0f*scale, stone);
-
-    // Каменная арка входа, оставляющая один широкий проём.
-    DrawSphere((Vector3){x-3.0f*scale, 2.3f*scale, z}, 2.0f*scale, edge);
-    DrawSphere((Vector3){x+3.0f*scale, 2.3f*scale, z}, 2.0f*scale, edge);
-    DrawSphere((Vector3){x, 5.1f*scale, z}, 3.1f*scale, edge);
-
-    // Внутренние стены и потолок уходят вглубь и постепенно опускаются.
-    for (int seg=0; seg<5; seg++)
-    {
-        float zz=z+(1.5f+seg*2.2f)*scale;
-        float drop=seg*0.48f*scale;
-        DrawCube((Vector3){x-2.75f*scale, 1.8f*scale-drop, zz},
-                 0.65f*scale, 4.0f*scale, 2.35f*scale, stone);
-        DrawCube((Vector3){x+2.75f*scale, 1.8f*scale-drop, zz},
-                 0.65f*scale, 4.0f*scale, 2.35f*scale, stone);
-        DrawCube((Vector3){x, 4.0f*scale-drop, zz},
-                 5.2f*scale, 0.65f*scale, 2.35f*scale, stone);
-        // Пол туннеля ступенчато спускается вниз.
-        DrawCube((Vector3){x, -0.12f*scale-drop, zz},
-                 4.9f*scale, 0.28f*scale, 2.35f*scale, edge);
-    }
-    // Тёмный тупиковый конец подчёркивает, что это один вход, а не сквозной проход.
-    DrawCube((Vector3){x, 1.2f*scale-2.0f*scale, z+12.8f*scale},
-             5.1f*scale, 5.0f*scale, 0.35f*scale, inside);
+    // Боковые массивы и верх горы оставляют широкий проход насквозь.
+    DrawCube((Vector3){x-5.0f*scale, 3.5f*scale, z+4.0f*scale},
+             4.0f*scale, 7.0f*scale, 24.0f*scale, stone);
+    DrawCube((Vector3){x+5.0f*scale, 3.5f*scale, z+4.0f*scale},
+             4.0f*scale, 7.0f*scale, 24.0f*scale, stone);
+    DrawCube((Vector3){x, 7.0f*scale, z+4.0f*scale},
+             14.0f*scale, 2.0f*scale, 24.0f*scale, stone);
+    // Каменные склоны снаружи подчёркивают форму горы.
+    DrawSphere((Vector3){x-7.0f*scale, 2.0f*scale, z-3.0f*scale}, 4.5f*scale, edge);
+    DrawSphere((Vector3){x+7.0f*scale, 2.0f*scale, z-3.0f*scale}, 4.5f*scale, edge);
+    DrawSphere((Vector3){x-7.0f*scale, 2.0f*scale, z+11.0f*scale}, 4.5f*scale, stone);
+    DrawSphere((Vector3){x+7.0f*scale, 2.0f*scale, z+11.0f*scale}, 4.5f*scale, stone);
 }
 
-// Гора с большим тёмным отверстием на склоне.
+// Большое сквозное отверстие: просторный тоннель с ровным полом для постройки дома.
 static void DrawMountainHole(float x, float z, float scale, bool snowy)
 {
     Color stone = snowy ? C(148, 160, 160, 255) : C(91, 105, 91, 255);
     Color edge = snowy ? C(190, 201, 199, 255) : C(125, 135, 119, 255);
-    Color dark = C(18, 22, 24, 255);
-
-    // Массив горы расположен вокруг отверстия, не закрывая его центр.
-    DrawSphere((Vector3){x-7.0f*scale, 2.0f*scale, z+2.0f*scale}, 5.0f*scale, stone);
-    DrawSphere((Vector3){x+7.0f*scale, 2.0f*scale, z+2.0f*scale}, 5.0f*scale, stone);
-    DrawSphere((Vector3){x, 8.0f*scale, z+3.0f*scale}, 7.0f*scale, stone);
-    DrawSphere((Vector3){x, -2.0f*scale, z+3.0f*scale}, 5.0f*scale, stone);
-
-    // Очень большое круглое отверстие: каменный обод по краям и сверху.
-    DrawSphere((Vector3){x-4.5f*scale, 2.8f*scale, z}, 2.8f*scale, edge);
-    DrawSphere((Vector3){x+4.5f*scale, 2.8f*scale, z}, 2.8f*scale, edge);
-    DrawSphere((Vector3){x, 6.3f*scale, z}, 3.1f*scale, edge);
-    // Тёмная плоскость далеко внутри показывает глубину большого отверстия.
-    DrawCube((Vector3){x, 2.9f*scale, z+4.0f*scale},
-             7.0f*scale, 5.8f*scale, 0.25f*scale, dark);
+    DrawCube((Vector3){x-6.5f*scale, 3.5f*scale, z+3.0f*scale},
+             4.0f*scale, 7.0f*scale, 20.0f*scale, stone);
+    DrawCube((Vector3){x+6.5f*scale, 3.5f*scale, z+3.0f*scale},
+             4.0f*scale, 7.0f*scale, 20.0f*scale, stone);
+    DrawCube((Vector3){x, 7.0f*scale, z+3.0f*scale},
+             17.0f*scale, 2.0f*scale, 20.0f*scale, stone);
+    // Наружные каменные склоны, не перекрывающие сквозной проём.
+    DrawSphere((Vector3){x-8.0f*scale, 2.0f*scale, z-2.0f*scale}, 5.0f*scale, edge);
+    DrawSphere((Vector3){x+8.0f*scale, 2.0f*scale, z-2.0f*scale}, 5.0f*scale, edge);
+    DrawSphere((Vector3){x-8.0f*scale, 2.0f*scale, z+9.0f*scale}, 5.0f*scale, stone);
+    DrawSphere((Vector3){x+8.0f*scale, 2.0f*scale, z+9.0f*scale}, 5.0f*scale, stone);
 }
 
 // Более крупные залежи с хорошо заметными цветными вкраплениями.
@@ -748,6 +726,21 @@ static void DrawLootBarrel(Vector3 p)
                  0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
 }
 
+// Коллизия гор: внутри коридора можно пройти и строить, каменные боковины непроходимы.
+static bool IsMountainBlockedAt(float x, float z, float radius)
+{
+    const Vector3 passage[2] = {{-118,0,-112}, {132,0,94}};
+    const Vector3 holes[2] = {{108,0,-126}, {-142,0,78}};
+    for (int i=0; i<2; i++)
+    {
+        float dx=x-passage[i].x, dz=z-passage[i].z;
+        if (fabsf(dz) < 12.4f && fabsf(dx) > 2.55f-radius) return true;
+        dx=x-holes[i].x; dz=z-holes[i].z;
+        if (fabsf(dz) < 10.4f && fabsf(dx) > 4.05f-radius) return true;
+    }
+    return false;
+}
+
 static bool IsBlockedAt(float x, float z, float playerY,
                            Vector3 *barrels, bool *barrelDestroyed)
 {
@@ -766,6 +759,7 @@ static bool IsBlockedAt(float x, float z, float playerY,
     }
 
     if(IsGasStationBlocked(x,z,playerRadius,playerY)) return true;
+    if (IsMountainBlockedAt(x,z,playerRadius)) return true;
 
     // Стены небольших пещер: центр входа оставлен свободным.
     const Vector3 caveSites[3] = {{-140,0,-42}, {140,0,18}, {122,0,122}};
@@ -811,6 +805,7 @@ static bool IsCameraBlockedAt(float x, float z,
     const float cameraRadius = 0.12f;
 
     if(IsGasStationBlocked(x,z,cameraRadius,0.0f)) return true;
+    if (IsMountainBlockedAt(x,z,cameraRadius)) return true;
 
     for (int b = 0; b < MAX_BARRELS; b++)
     {
