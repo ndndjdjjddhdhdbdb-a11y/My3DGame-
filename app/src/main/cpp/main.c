@@ -1241,7 +1241,7 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
     }
 }
 
-enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4 };
+enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5 };
 
 static Sound gBoarAlertSound = {0};
 static bool gAnimalAudioReady = false;
@@ -1304,8 +1304,8 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
                            int state, float headYaw)
 {
     bool deer=(type==0);
-    bool moving=(state==ANIMAL_WANDER || state==ANIMAL_CHASE);
-    float gait= moving ? sinf(phase)*(state==ANIMAL_CHASE?0.34f:0.15f) : 0.0f;
+    bool moving=(state==ANIMAL_WANDER || state==ANIMAL_CHASE || state==ANIMAL_FLEE);
+    float gait= moving ? sinf(phase)*((state==ANIMAL_CHASE || state==ANIMAL_FLEE)?0.34f:0.15f) : 0.0f;
     float bob=moving?fabsf(sinf(phase*2.0f))*0.045f:sinf(phase*0.45f)*0.012f;
     float headDown=(state==ANIMAL_GRAZE)?0.30f:0.0f;
     float headShift=sinf(headYaw)*0.20f;
@@ -3227,7 +3227,33 @@ int main(void)
                 wildAnimalLookTimer[animal]-=frameTime;
                 wildAnimalGrazeTimer[animal]-=frameTime;
 
-                if(wildAnimalState[animal]==ANIMAL_CHASE)
+                // Олень пугается игрока и убегает, кабан наоборот может атаковать.
+                if(wildAnimalTypes[animal]==0 && seesPlayer &&
+                   wildAnimalState[animal]!=ANIMAL_FLEE)
+                {
+                    wildAnimalState[animal]=ANIMAL_FLEE;
+                    wildAnimalChaseStarted[animal]=animalNow;
+                    wildAnimalHeading[animal]=atan2f(-dx,dz);
+                    wildAnimalHeadYaw[animal]=0.0f;
+                }
+
+                if(wildAnimalState[animal]==ANIMAL_FLEE)
+                {
+                    dx=player.x-a->x; dz=player.z-a->z;
+                    distance=sqrtf(dx*dx+dz*dz);
+                    if(distance>34.0f || animalNow-wildAnimalChaseStarted[animal]>14.0)
+                    {
+                        wildAnimalState[animal]=ANIMAL_WANDER;
+                        wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*9.0f;
+                        wildAnimalGrazeTimer[animal]=25.0f+((float)rand()/(float)RAND_MAX)*10.0f;
+                        wildAnimalTimer[animal]=2.0f;
+                    }
+                    else if(distance>0.001f)
+                    {
+                        wildAnimalHeading[animal]=atan2f(-dx,dz);
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_CHASE)
                 {
                     if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>24.0)
                     {
@@ -3312,16 +3338,23 @@ int main(void)
                     if(distance>1.35f)
                         wildAnimalHeading[animal]=atan2f(dx,-dz);
                 }
+                else if(wildAnimalState[animal]==ANIMAL_FLEE)
+                {
+                    dx=player.x-a->x; dz=player.z-a->z;
+                    if(dx*dx+dz*dz>0.001f)
+                        wildAnimalHeading[animal]=atan2f(-dx,dz);
+                }
 
                 float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
-                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f);
+                                  (wildAnimalState[animal]==ANIMAL_FLEE?5.0f:
+                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
                 if(animalSpeed>0.0f)
                 {
                     float moveX=sinf(wildAnimalHeading[animal])*animalSpeed*frameTime;
                     float moveZ=-cosf(wildAnimalHeading[animal])*animalSpeed*frameTime;
                     float nextX=a->x+moveX, nextZ=a->z+moveZ;
                     float px=nextX-player.x, pz=nextZ-player.z;
-                    bool tooClose=(px*px+pz*pz<1.55f*1.55f);
+                    bool tooClose=(wildAnimalState[animal]!=ANIMAL_FLEE && px*px+pz*pz<1.55f*1.55f);
                     bool blocked=(nextX*nextX+nextZ*nextZ>258.0f*258.0f) ||
                                  IsAnimalBlockedAt(nextX,nextZ,0.0f,wildAnimals,wildAnimalTypes,animal) ||
                                  IsGasStationBlocked(nextX,nextZ,0.65f,0.0f) ||
@@ -3920,7 +3953,7 @@ int main(void)
             float adx=wildAnimals[animal].x-player.x, adz=wildAnimals[animal].z-player.z;
             if(adx*adx+adz*adz>chunkView2) continue;
             DrawWildAnimal(wildAnimals[animal],wildAnimalTypes[animal],
-                           (float)GetTime()*((wildAnimalState[animal]==ANIMAL_CHASE)?10.0f:6.0f)+animal*1.7f,
+                           (float)GetTime()*((wildAnimalState[animal]==ANIMAL_CHASE || wildAnimalState[animal]==ANIMAL_FLEE)?10.0f:6.0f)+animal*1.7f,
                            wildAnimalHeading[animal],wildAnimalState[animal],
                            wildAnimalHeadYaw[animal]);
         }
