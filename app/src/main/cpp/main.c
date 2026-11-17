@@ -2464,29 +2464,12 @@ int main(void)
                 }
                 else if (CheckCollisionPointRec(pos, craftDoorButton) && itemCounts[4] >= 10 && itemCounts[6] < 99)
                 { itemCounts[4] -= 10; itemCounts[6]++; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
-                for (int item = 2; item <= 3; item++)
+                int dragSlot=GetInventorySlotAt(pos,screenWidth,screenHeight);
+                if(dragSlot>=0 && inventoryDragItem<0)
                 {
-                    float gap = 8.0f;
-                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
-                    float gridWidth = cellSize*4.0f+gap*3.0f;
-                    float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
-                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
-                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
-                    if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
-                    {
-                        if (item == 2)
-                        {
-                            foodLevel += 25.0f;
-                            if (foodLevel > 100.0f) foodLevel = 100.0f;
-                        }
-                        else
-                        {
-                            waterLevel += 25.0f;
-                            if (waterLevel > 100.0f) waterLevel = 100.0f;
-                        }
-                        itemCounts[item]--;
-                        break;
-                    }
+                    inventoryDragItem=inventoryOrder[dragSlot];
+                    inventoryDragSourceSlot=dragSlot;
+                    inventoryDragPosition=pos;
                 }
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
@@ -2834,29 +2817,12 @@ int main(void)
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f,
                                       screenWidth*0.80f, screenHeight*0.76f};
-                for (int item = 2; item <= 3; item++)
+                int dragSlot=GetInventorySlotAt(pos,screenWidth,screenHeight);
+                if(dragSlot>=0 && inventoryDragItem<0)
                 {
-                    float gap = 8.0f;
-                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
-                    float gridWidth = cellSize*4.0f+gap*3.0f;
-                    float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
-                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
-                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
-                    if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
-                    {
-                        if (item == 2)
-                        {
-                            foodLevel += 25.0f;
-                            if (foodLevel > 100.0f) foodLevel = 100.0f;
-                        }
-                        else
-                        {
-                            waterLevel += 25.0f;
-                            if (waterLevel > 100.0f) waterLevel = 100.0f;
-                        }
-                        itemCounts[item]--;
-                        break;
-                    }
+                    inventoryDragItem=inventoryOrder[dragSlot];
+                    inventoryDragSourceSlot=dragSlot;
+                    inventoryDragPosition=pos;
                 }
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyOreDrop = FindNearestOreDrop(player, oreDrops, oreDropActive)) >= 0)
@@ -3976,6 +3942,39 @@ int main(void)
             }
         }
 
+        // Перетаскивание предмета завершается, когда палец отпущен.
+        if(inventoryDragItem>=0)
+        {
+            int liveTouches=GetTouchPointCount();
+            if(liveTouches>0)
+                inventoryDragPosition=GetTouchPosition(0);
+            else
+            {
+                int targetSlot=GetInventorySlotAt(inventoryDragPosition,screenWidth,screenHeight);
+                if(targetSlot>=0 && inventoryDragSourceSlot>=0)
+                {
+                    if(targetSlot!=inventoryDragSourceSlot)
+                    {
+                        int tmp=inventoryOrder[targetSlot];
+                        inventoryOrder[targetSlot]=inventoryOrder[inventoryDragSourceSlot];
+                        inventoryOrder[inventoryDragSourceSlot]=tmp;
+                    }
+                    else if(inventoryDragItem==2 && itemCounts[2]>0)
+                    {
+                        foodLevel=fminf(100.0f,foodLevel+25.0f);
+                        itemCounts[2]--;
+                    }
+                    else if(inventoryDragItem==3 && itemCounts[3]>0)
+                    {
+                        waterLevel=fminf(100.0f,waterLevel+25.0f);
+                        itemCounts[3]--;
+                    }
+                }
+                inventoryDragItem=-1;
+                inventoryDragSourceSlot=-1;
+            }
+        }
+
         // Полноразмерный 3D-рендер: пониженное разрешение давало
         // сильное мерцание и рывки деталей земли при вращении камеры.
         float renderScale = 1.0f;
@@ -4750,24 +4749,33 @@ int main(void)
                 DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
                 DrawUiTextBold("ИНВЕНТАРЬ", (int)invPanel.x+18, (int)invPanel.y+13, 26, RAYWHITE);
                 DrawUiTextBold("ПРЕДМЕТЫ / БЫСТРЫЙ ДОСТУП", (int)invPanel.x+20, (int)invPanel.y+47, 14, C(165, 205, 232, 255));
-                for (int item = 0; item < 12; item++)
+                for (int slot = 0; slot < 12; slot++)
                 {
+                    int item=inventoryOrder[slot];
                     float gap = 8.0f;
                     float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
                     float gridWidth = cellSize*4.0f+gap*3.0f;
                     float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
-                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
-                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
+                    Rectangle r = {gridX+(slot%4)*(cellSize+gap),
+                                   invPanel.y+72+(slot/4)*58, cellSize, cellSize};
                     DrawRectangle((int)r.x+2,(int)r.y+3,(int)r.width,(int)r.height,C(0,0,0,105));
                     DrawRectangle(r.x,r.y,r.width,r.height,C(42,46,42,255));
                     DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(51,55,49,255));
-                    DrawRectangleLinesEx(r,1.2f,C(105,116,99,235));
+                    DrawRectangleLinesEx(r,1.2f,inventoryDragItem==item?C(245,205,100,255):C(105,116,99,235));
                     DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(142,169,91,255):C(103,119,91,255));
                     int labelSize = (item == 7) ? 9 : 10;
                     DrawUiTextBold(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(225,231,218,255));
                     DrawUiTextBold(TextFormat("x%d",itemCounts[item]),
                         (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),12)-5),
                         (int)(r.y+r.height-16),12,C(202,222,171,255));
+                }
+                if(inventoryDragItem>=0)
+                {
+                    Rectangle dragCard={inventoryDragPosition.x-42,inventoryDragPosition.y-25,84,50};
+                    DrawRectangleRounded(dragCard,0.12f,6,C(30,43,38,235));
+                    DrawRectangleRoundedLinesEx(dragCard,0.12f,6,2,C(245,205,100,255));
+                    DrawUiTextBold(itemNames[inventoryDragItem],(int)dragCard.x+5,(int)dragCard.y+7,9,RAYWHITE);
+                    DrawUiTextBold(TextFormat("x%d",itemCounts[inventoryDragItem]),(int)dragCard.x+5,(int)dragCard.y+27,10,C(220,235,180,255));
                 }
                 DrawSurvivalButton(inventoryButton, "СУМКА", 13, true);
                 DrawUiTextBold("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+240,
