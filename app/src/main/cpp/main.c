@@ -3251,7 +3251,8 @@ int main(void)
                 wildAnimalLookTimer[animal]-=frameTime;
                 wildAnimalGrazeTimer[animal]-=frameTime;
 
-                // Олень постепенно привыкает к игроку после нескольких близких подходов.
+                // При каждом новом приближении олень убегает.
+                // После четвёртого отдельного подхода он начинает атаковать.
                 if(wildAnimalTypes[animal]==0 && !deerProvoked[animal] &&
                    wildAnimalState[animal]!=ANIMAL_FLEE && wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
@@ -3267,6 +3268,12 @@ int main(void)
                             wildAnimalHeadYaw[animal]=0.0f;
                             if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
                         }
+                        else
+                        {
+                            wildAnimalState[animal]=ANIMAL_FLEE;
+                            wildAnimalChaseStarted[animal]=animalNow;
+                            wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
+                        }
                     }
                     else if(distance>6.0f)
                     {
@@ -3278,7 +3285,8 @@ int main(void)
                 {
                     dx=player.x-a->x; dz=player.z-a->z;
                     distance=sqrtf(dx*dx+dz*dz);
-                    if(distance>34.0f || animalNow-wildAnimalChaseStarted[animal]>14.0)
+                    // Олень убегает до 15 секунд или пока игрок не отдалится.
+                    if(distance>12.0f || animalNow-wildAnimalChaseStarted[animal]>15.0)
                     {
                         wildAnimalState[animal]=ANIMAL_WANDER;
                         wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*9.0f;
