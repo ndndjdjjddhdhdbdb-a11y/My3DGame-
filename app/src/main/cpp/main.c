@@ -1287,12 +1287,13 @@ static void InitAnimalAudio(void)
 
 static bool IsAnimalBlockedAt(float x, float z, float playerY,
                               Vector3 animals[MAX_WILD_ANIMALS],
-                              int animalTypes[MAX_WILD_ANIMALS], int ignoreAnimal)
+                              int animalTypes[MAX_WILD_ANIMALS],
+                              int animalHealth[MAX_WILD_ANIMALS], int ignoreAnimal)
 {
     if(playerY>1.8f)return false;
     for(int i=0;i<MAX_WILD_ANIMALS;i++)
     {
-        if(i==ignoreAnimal)continue;
+        if(i==ignoreAnimal || animalHealth[i]<=0)continue;
         float dx=x-animals[i].x, dz=z-animals[i].z;
         float radius=0.42f+(animalTypes[i]==0?0.52f:0.66f);
         if(dx*dx+dz*dz<radius*radius)return true;
@@ -3121,7 +3122,7 @@ int main(void)
 
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
                     if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,-1))
+                        !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                         player.x = nextX;
                     if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed) &&
                         !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,-1))
@@ -3475,7 +3476,7 @@ int main(void)
                     float px=nextX-player.x, pz=nextZ-player.z;
                     bool tooClose=(wildAnimalState[animal]!=ANIMAL_FLEE && px*px+pz*pz<1.55f*1.55f);
                     bool blocked=(nextX*nextX+nextZ*nextZ>258.0f*258.0f) ||
-                                 IsAnimalBlockedAt(nextX,nextZ,0.0f,wildAnimals,wildAnimalTypes,animal) ||
+                                 IsAnimalBlockedAt(nextX,nextZ,0.0f,wildAnimals,wildAnimalTypes,wildAnimalHealth,animal) ||
                                  IsGasStationBlocked(nextX,nextZ,0.65f,0.0f) ||
                                  IsMountainBlockedAt(nextX,nextZ,0.65f);
                     for(int t=0;t<treeCount && !blocked;t++)
@@ -4104,6 +4105,7 @@ int main(void)
 
         for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
         {
+            if(wildAnimalHealth[animal]<=0)continue;
             float adx=wildAnimals[animal].x-player.x, adz=wildAnimals[animal].z-player.z;
             if(adx*adx+adz*adz>chunkView2) continue;
             DrawWildAnimal(wildAnimals[animal],wildAnimalTypes[animal],
