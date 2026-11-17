@@ -1484,7 +1484,21 @@ int main(void)
             loadingProgress += frameTime/2.4f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
-        if(commandChatOpen || commandConsoleOpen) ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
+        if(commandChatOpen || commandConsoleOpen)
+        {
+            // Android передаёт одно событие после отпускания клавиши;
+            // ReadSoftKeyboardUtf8 сразу очищает его, поэтому символ не дублируется.
+            ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
+        }
+        else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                 !mapOpen && !gasCrateOpen && !resourcePanelOpen)
+        {
+            if (IsKeyPressed(KEY_ONE)) selectedHotbarSlot = 0;
+            if (IsKeyPressed(KEY_TWO)) selectedHotbarSlot = 1;
+            if (IsKeyPressed(KEY_THREE)) selectedHotbarSlot = 2;
+            if (IsKeyPressed(KEY_FOUR)) selectedHotbarSlot = 3;
+            if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_F)) attackRequested = true;
+        }
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
@@ -2372,8 +2386,18 @@ int main(void)
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen)
             {
+                bool clickedHotbar = false;
                 for (int slot = 0; slot < 4; slot++)
-                    if (CheckCollisionPointRec(pos, hotbarSlots[slot])) selectedHotbarSlot = slot;
+                {
+                    if (CheckCollisionPointRec(pos, hotbarSlots[slot]))
+                    {
+                        selectedHotbarSlot = slot;
+                        clickedHotbar = true;
+                        break;
+                    }
+                }
+                // Щелчок по игровому миру — удар/взаимодействие.
+                if (!clickedHotbar) attackRequested = true;
             }
             else if (settingsOpen)
             {
@@ -2712,6 +2736,72 @@ int main(void)
             joystickKnob = joystickPosition;
         }
 
+        // Управление с физической клавиатуры: WASD или стрелки.
+        // Работает одновременно с сенсорным управлением, не перехватывая ввод чата.
+        if (!joystickActive && !mainMenuOpen && !settingsOpen && !editControls &&
+            !inventoryOpen && !mapOpen && !gasCrateOpen && !commandChatOpen &&
+            !commandConsoleOpen && !resourcePanelOpen)
+        {
+            float moveX = (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT) ? 1.0f : 0.0f) -
+                          (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT) ? 1.0f : 0.0f);
+            float moveForward = (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) ? 1.0f : 0.0f) -
+                                (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN) ? 1.0f : 0.0f);
+            float moveLength = sqrtf(moveX*moveX + moveForward*moveForward);
+
+            if (moveLength > 0.01f)
+            {
+                if (moveLength > 1.0f) { moveX /= moveLength; moveForward /= moveLength; }
+                float worldMoveX = cosf(cameraYaw)*moveX + sinf(cameraYaw)*moveForward;
+                float worldMoveZ = sinf(cameraYaw)*moveX - cosf(cameraYaw)*moveForward;
+                float survivalSpeed = playerSpeed;
+                if (foodLevel < 20.0f || waterLevel < 20.0f) survivalSpeed *= 0.72f;
+                if (sprintEnabled || IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))
+                    survivalSpeed *= 1.80f;
+
+                float nextX = player.x + worldMoveX*survivalSpeed;
+                float nextZ = player.z + worldMoveZ*survivalSpeed;
+                bool ladderZone = fabsf(player.x-12.25f)<0.78f &&
+                                  player.z>-27.35f && player.z<-25.65f;
+                if (ladderZone &&
+                    ((player.y<3.72f && moveForward>0.12f) ||
+                     (player.y>0.0f && moveForward< -0.12f)))
+                {
+                    player.y += moveForward*survivalSpeed*1.15f;
+                    if (player.y<0.0f) player.y=0.0f;
+                    if (player.y>3.72f) player.y=3.72f;
+                    nextX=12.25f;
+                    nextZ=-26.5f;
+                }
+                else if (player.y>0.0f)
+                {
+                    bool roofSurface = fabsf(player.x)<11.55f &&
+                                       player.z>-30.75f && player.z<-13.25f &&
+                                       player.y>=3.35f;
+                    bool ladderTop = fabsf(player.x-12.25f)<0.95f &&
+                                     player.z>-27.35f && player.z<-25.65f &&
+                                     player.y>=3.35f;
+                    if (!(roofSurface || ladderTop))
+                    {
+                        player.y -= frameTime*4.0f;
+                        if (player.y<0.0f) player.y=0.0f;
+                    }
+                }
+
+                if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed))
+                    player.x = nextX;
+                if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed))
+                    player.z = nextZ;
+
+                playerMoving = true;
+                walkPhase += 0.22f;
+                float targetAngle = atan2f(worldMoveX, -worldMoveZ);
+                float angleDiff = targetAngle-playerAngle;
+                while (angleDiff > 3.14159265f) angleDiff -= 6.28318530f;
+                while (angleDiff < -3.14159265f) angleDiff += 6.28318530f;
+                playerAngle += angleDiff*0.22f;
+            }
+        }
+
         if (draggingSlider)
         {
             bool found = false;
@@ -2776,6 +2866,19 @@ int main(void)
 
         if (settingsOpen || editControls || mainMenuOpen || inventoryOpen || mapOpen)
             lookTouchId = -1;
+
+        // Правая кнопка мыши удерживается для обзора камерой на ПК/планшете.
+        if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+            !mapOpen && !commandChatOpen && !commandConsoleOpen &&
+            IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+        {
+            Vector2 mouseDelta = GetMouseDelta();
+            float mouseSensitivity = lookSensitivity*0.004f;
+            cameraYaw += mouseDelta.x*mouseSensitivity;
+            cameraPitch -= mouseDelta.y*mouseSensitivity;
+            if (cameraPitch > 1.2f) cameraPitch = 1.2f;
+            if (cameraPitch < -1.2f) cameraPitch = -1.2f;
+        }
 
         for (int i = 0; i < MAX_TOUCHES; i++)
             previousTouchIds[i] = currentTouchIds[i];
