@@ -2222,8 +2222,11 @@ int main(void)
                     else if(player.y>0.0f)
                     {
                         // На крыше высота сохраняется, за её краем персонаж падает.
-                        bool standingOnRoof = fabsf(player.x)<6.95f &&
-                                              player.z>-26.65f && player.z<-17.35f;
+                        bool roofSurface = fabsf(player.x)<6.95f &&
+                                            player.z>-26.65f && player.z<-17.35f;
+                        bool ladderTop = fabsf(player.x-7.15f)<1.0f &&
+                                         player.z>-25.5f && player.z<-21.0f;
+                        bool standingOnRoof = roofSurface || ladderTop;
                         if(!standingOnRoof || player.y<2.8f)
                         {
                             player.y-=GetFrameTime()*4.0f;
