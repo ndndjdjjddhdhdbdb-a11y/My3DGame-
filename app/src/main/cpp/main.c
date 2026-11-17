@@ -1058,6 +1058,8 @@ int main(void)
 
     // Главное меню.
     bool mainMenuOpen = true;
+    bool loadingScreen = true;
+    float loadingProgress = 0.0f;
     int menuPage = 0;
 
     Rectangle menuPlayButton;
@@ -1252,6 +1254,11 @@ int main(void)
     while (!WindowShouldClose())
     {
         float frameTime = GetFrameTime();
+        if (loadingScreen)
+        {
+            loadingProgress += frameTime/2.4f;
+            if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
+        }
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
         if (attackAnimation > 0.0f) attackAnimation -= frameTime;
@@ -1584,7 +1591,7 @@ int main(void)
                     { dragTarget=7; dragTouchId=id; dragOffset=(Vector2){mapButton.x-pos.x,mapButton.y-pos.y}; }
                 }
             }
-            else if (mainMenuOpen && !settingsOpen)
+            else if (mainMenuOpen && !settingsOpen && !loadingScreen)
             {
                 if (menuPage == 0)
                 {
@@ -1943,7 +1950,7 @@ int main(void)
         {
             Vector2 pos = GetMousePosition();
 
-            if (mainMenuOpen && !settingsOpen && !editControls)
+            if (mainMenuOpen && !settingsOpen && !editControls && !loadingScreen)
             {
                 if (menuPage == 0)
                 {
@@ -3949,6 +3956,32 @@ int main(void)
                 doneButton.y+20,
                 22, RAYWHITE
             );
+        }
+
+        if (loadingScreen)
+        {
+            DrawRectangleGradientV(0, 0, screenWidth, screenHeight,
+                                   C(7, 15, 31, 255), C(18, 39, 65, 255));
+            DrawRectangleLinesEx((Rectangle){24, 24, screenWidth-48, screenHeight-48},
+                                 2.0f, C(85, 160, 215, 130));
+            const char *loadTitle = "boltSurvival";
+            int loadTitleSize = (int)fminf(48.0f, screenWidth*0.10f);
+            DrawText(loadTitle, screenWidth/2-MeasureText(loadTitle, loadTitleSize)/2,
+                     screenHeight/2-90, loadTitleSize, RAYWHITE);
+            const char *loadLabel = "LOADING RESOURCES";
+            DrawText(loadLabel, screenWidth/2-MeasureText(loadLabel, 20)/2,
+                     screenHeight/2-20, 20, C(190, 220, 245, 255));
+            Rectangle loadBar = {screenWidth*0.20f, screenHeight/2+25,
+                                 screenWidth*0.60f, 14};
+            DrawRectangleRounded(loadBar, 0.5f, 12, C(35, 55, 77, 255));
+            DrawRectangleRounded((Rectangle){loadBar.x, loadBar.y,
+                                 loadBar.width*loadingProgress, loadBar.height},
+                                 0.5f, 12, C(55, 175, 245, 255));
+            DrawRectangleRoundedLinesEx(loadBar, 0.5f, 12, 1.5f,
+                                        C(130, 195, 235, 220));
+            const char *percentText = TextFormat("%d%%", (int)(loadingProgress*100.0f));
+            DrawText(percentText, screenWidth/2-MeasureText(percentText, 18)/2,
+                     screenHeight/2+55, 18, RAYWHITE);
         }
 
         EndDrawing();
