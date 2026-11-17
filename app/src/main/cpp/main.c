@@ -875,6 +875,43 @@ static void GetBuildPlacement(Vector3 player, float angle, int type,
     *outStoredType = storedType;
 }
 
+// Зоны, где запрещено размещать постройки: территория заправки и обе дороги.
+static bool IsBuildZoneForbidden(float x, float z, float halfX, float halfZ)
+{
+    // Большая свободная от построек территория вокруг заправки.
+    if (x+halfX > -20.0f && x-halfX < 20.0f &&
+        z+halfZ > -51.0f && z-halfZ < 8.0f) return true;
+
+    // Продольная и поперечная дороги (с запасом под размер фундамента).
+    if (fabsf(x) < 6.25f+halfX || fabsf(z) < 6.25f+halfZ)
+    {
+        if (fabsf(x) < 6.25f+halfX && fabsf(z) < 190.0f+halfZ) return true;
+        if (fabsf(z) < 6.25f+halfZ && fabsf(x) < 190.0f+halfX) return true;
+    }
+    return false;
+}
+
+// Проверяем не только центр, но и края постройки: нельзя ставить фундамент
+// поверх стен, колонн, скал и других физических препятствий.
+static bool IsBuildPlacementBlocked(float x, float z, int type, int storedType,
+                                    float playerY, Vector3 *barrels,
+                                    bool *barrelDestroyed)
+{
+    float hx=1.25f, hz=1.25f;
+    if (type==1) { if(storedType==4) {hx=0.12f;hz=1.25f;} else {hx=1.25f;hz=0.12f;} }
+    else if(type==2) {hx=0.72f;hz=0.12f;}
+    if (IsBuildZoneForbidden(x,z,hx,hz)) return true;
+
+    const float sample[5][2]={{0,0},{-1,-1},{1,-1},{1,1},{-1,1}};
+    for(int i=0;i<5;i++)
+    {
+        float sx=x+sample[i][0]*hx;
+        float sz=z+sample[i][1]*hz;
+        if(IsBlockedAt(sx,sz,playerY,barrels,barrelDestroyed)) return true;
+    }
+    return false;
+}
+
 static bool PlaceBuildPiece(Vector3 player, float angle, int type,
                                Vector3 *pieces, int *pieceTypes, int *pieceCount,
                                int *woodCount, Vector3 *barrels,
@@ -890,7 +927,7 @@ static bool PlaceBuildPiece(Vector3 player, float angle, int type,
                       &x, &z, &storedType);
     if (storedType < 0) return false;
     if (fabsf(x-player.x) < 2.0f && fabsf(z-player.z) < 2.0f) return false;
-    if (IsBlockedAt(x, z, player.y, barrels, barrelDestroyed)) return false;
+    if (IsBuildPlacementBlocked(x,z,type,storedType,player.y,barrels,barrelDestroyed)) return false;
     for (int i = 0; i < *pieceCount; i++)
     {
         float dx = pieces[i].x-x, dz = pieces[i].z-z;
@@ -1101,6 +1138,8 @@ int main(void)
     bool inventoryOpen = false;
     bool mapOpen = false;
     bool buildMode = false;
+    float buildMessageTimer = 0.0f;
+    int buildMessageType = 0; // 1 — запрет зоны, 2 — мешают объекты
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
     int selectedHotbarSlot = 0;
     // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE,
@@ -1727,6 +1766,18 @@ int main(void)
                         buildPieces, buildPieceTypes, &buildPieceCount,
                         &itemCounts[4], barrelPositions, barrelDestroyed);
                     if (placed && selectedBuildType == 2) itemCounts[6]--;
+                    if (!placed)
+                    {
+                        float bx,bz; int bt;
+                        GetBuildPlacement(player,cameraYaw,selectedBuildType,
+                            buildPieces,buildPieceTypes,buildPieceCount,&bx,&bz,&bt);
+                        float bhx=(selectedBuildType==1 && bt==4)?0.12f:1.25f;
+                        float bhz=(selectedBuildType==1 && bt!=4)?0.12f:1.25f;
+                        bool zone=IsBuildZoneForbidden(bx,bz,bhx,bhz);
+                        buildMessageType=zone?1:((selectedBuildType==0)?2:0);
+                        buildMessageTimer=buildMessageType?2.8f:0.0f;
+                    }
+                    else { buildMessageType=0; buildMessageTimer=0.0f; }
                 }
                 SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                               buildPieceCount, itemCounts[4]);
@@ -2904,7 +2955,7 @@ int main(void)
             bool previewValid=selectedBuildType==2?itemCounts[6]>0:itemCounts[4]>=previewCost;
             if(previewStoredType<0)previewValid=false;
             if(fabsf(previewX-player.x)<2.0f&&fabsf(previewZ-player.z)<2.0f)previewValid=false;
-            if(IsBlockedAt(previewX,previewZ,player.y,barrelPositions,barrelDestroyed))previewValid=false;
+            if(IsBuildPlacementBlocked(previewX,previewZ,selectedBuildType,previewStoredType,player.y,barrelPositions,barrelDestroyed))previewValid=false;
             for(int q=0;q<buildPieceCount;q++)if(fabsf(buildPieces[q].x-previewX)<0.01f&&fabsf(buildPieces[q].z-previewZ)<0.01f&&buildPieceTypes[q]==previewStoredType)previewValid=false;
             Color ghost=previewValid?C(90,230,140,115):C(240,75,65,115);
             float gy=selectedBuildType==0?0.14f:(selectedBuildType==1?1.25f:(selectedBuildType==3?2.55f:1.1f));
@@ -3136,8 +3187,12 @@ int main(void)
                 {px-halfX, 0.04f, pz-halfZ}, {px+halfX, 0.04f, pz-halfZ},
                 {px+halfX, 0.04f, pz+halfZ}, {px-halfX, 0.04f, pz+halfZ}
             };
-            Color markerColor = (selectedBuildType == 2 ? itemCounts[6] > 0 :
-                itemCounts[4] >= (selectedBuildType == 0 ? 30 : 15)) ?
+            bool hudHasResources = selectedBuildType == 2 ? itemCounts[6] > 0 :
+                itemCounts[4] >= (selectedBuildType == 0 ? 30 : 15);
+            bool hudBlocked = hudStoredType < 0 ||
+                IsBuildPlacementBlocked(px,pz,selectedBuildType,hudStoredType,player.y,
+                                        barrelPositions,barrelDestroyed);
+            Color markerColor = (hudHasResources && !hudBlocked) ?
                 C(80,255,145,255) : C(255,75,65,255);
             Vector2 screenCorners[4];
             for (int k=0; k<4; k++) screenCorners[k] = GetWorldToScreen(corners[k], camera);
@@ -3145,6 +3200,27 @@ int main(void)
                 DrawLineEx(screenCorners[k], screenCorners[(k+1)%4], 5.0f, markerColor);
             DrawCircleLines(screenWidth/2, screenHeight/2, 13.0f, markerColor);
             DrawText("BUILD TARGET", screenWidth/2-58, screenHeight/2+22, 18, markerColor);
+        }
+
+        if(buildMessageTimer>0.0f) buildMessageTimer-=GetFrameTime();
+        // Предупреждение при приближении к заправке; после отхода исчезает.
+        bool nearGasStation = fabsf(player.x) < 25.0f && player.z > -56.0f && player.z < 13.0f;
+        if (nearGasStation && !mainMenuOpen && !settingsOpen && !inventoryOpen)
+        {
+            const char *msg = "СТРОИТЕЛЬСТВО ЗАПРЕЩЕНО";
+            int tw=MeasureText(msg,20);
+            DrawRectangleRounded((Rectangle){screenWidth/2-tw/2-14,82,tw+28,36},
+                                 0.25f,8,C(75,25,20,225));
+            DrawText(msg,screenWidth/2-tw/2,91,20,C(255,210,190,255));
+        }
+        if(buildMessageTimer>0.0f && !mainMenuOpen)
+        {
+            const char *msg = buildMessageType==1 ? "СТРОИТЕЛЬСТВО ЗАПРЕЩЕНО" :
+                              "ФУНДАМЕНТ НЕЛЬЗЯ РАЗМЕСТИТЬ: МЕШАЮТ ОБЪЕКТЫ";
+            int tw=MeasureText(msg,16);
+            DrawRectangleRounded((Rectangle){screenWidth/2-tw/2-12,124,tw+24,32},
+                                 0.22f,8,C(60,25,20,220));
+            DrawText(msg,screenWidth/2-tw/2,132,16,C(255,220,205,255));
         }
 
         // Игровой интерфейс скрывается в главном меню.
