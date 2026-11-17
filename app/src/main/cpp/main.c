@@ -1688,13 +1688,13 @@ int main(void)
             }
             else if (gasCrateOpen)
             {
-                Rectangle cp={screenWidth*0.10f,screenHeight*0.27f,screenWidth*0.80f,screenHeight*0.46f};
-                Rectangle close={cp.x+cp.width-82,cp.y+12,70,32};
+                Rectangle cp={screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
+                Rectangle close={cp.x+cp.width-76,cp.y+9,66,29};
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;}
                 else if(openedGasCrate>=0){
-                    float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-100.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
+                    float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-76.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
                     for(int slot=0;slot<8;slot++){
-                        Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
+                        Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+52+(slot/4)*(ch+gap),cw,ch};
                         if(CheckCollisionPointRec(pos,cell)&&gasCrateAmounts[openedGasCrate][slot]>0){
                             int item=gasCrateItems[openedGasCrate][slot],room=99-itemCounts[item];
                             int take=gasCrateAmounts[openedGasCrate][slot]<room?gasCrateAmounts[openedGasCrate][slot]:room;
@@ -3332,16 +3332,21 @@ int main(void)
                 for (int item = 0; item < 12; item++)
                 {
                     float gap = 8.0f;
-                    float w = (invPanel.width-40.0f-gap*3.0f)/4.0f;
-                    Rectangle r = {invPanel.x+16+(item%4)*(w+gap),
-                                   invPanel.y+72+(item/4)*58, w, 54};
-                    DrawRectangle(r.x, r.y, r.width, r.height, C(48, 50, 47, 255));
-                    DrawRectangleLinesEx(r, 1.2f, C(104, 111, 99, 235));
-                    DrawRectangle(r.x, r.y, 3, r.height, (item == 2 || item == 3) ? C(142, 169, 91, 255) : C(83, 91, 78, 255));
-                    DrawText(itemNames[item], (int)r.x+5, (int)r.y+9,
-                        (item == 7) ? 8 : 10, RAYWHITE);
-                    DrawText(TextFormat("x%d", itemCounts[item]),
-                        (int)r.x+5, (int)r.y+32, 11, C(160, 205, 235, 255));
+                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
+                    float gridWidth = cellSize*4.0f+gap*3.0f;
+                    float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
+                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
+                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
+                    DrawRectangle((int)r.x+2,(int)r.y+3,(int)r.width,(int)r.height,C(0,0,0,105));
+                    DrawRectangle(r.x,r.y,r.width,r.height,C(42,46,42,255));
+                    DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(51,55,49,255));
+                    DrawRectangleLinesEx(r,1.2f,C(105,116,99,235));
+                    DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(142,169,91,255):C(103,119,91,255));
+                    int labelSize = (item == 7) ? 7 : 8;
+                    DrawText(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(210,218,204,255));
+                    DrawText(TextFormat("x%d",itemCounts[item]),
+                        (int)(r.x+r.width-MeasureText(TextFormat("x%d",itemCounts[item]),10)-5),
+                        (int)(r.y+r.height-14),10,C(190,211,164,255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
                 DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+242,
@@ -3373,21 +3378,30 @@ int main(void)
 
         if(gasCrateOpen&&openedGasCrate>=0){
             DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,190));
-            Rectangle cp={screenWidth*0.10f,screenHeight*0.27f,screenWidth*0.80f,screenHeight*0.46f};
-            DrawRectangleRounded(cp,0.025f,8,C(30,32,29,250));
-            DrawRectangleRoundedLinesEx(cp,0.025f,8,1.6f,C(135,145,119,255));
-            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",(int)cp.x+16,(int)cp.y+18,20,RAYWHITE);
-            Rectangle close={cp.x+cp.width-82,cp.y+12,70,32};
-            DrawRectangleRounded(close,0.18f,8,C(105,48,43,255)); DrawText("CLOSE",(int)close.x+13,(int)close.y+10,12,RAYWHITE);
-            float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-100.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
+            Rectangle cp={screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
+            DrawRectangleRounded(cp,0.025f,8,C(25,28,27,250));
+            DrawRectangleRoundedLinesEx(cp,0.025f,8,1.7f,C(135,145,119,255));
+            DrawRectangle((int)cp.x+1,(int)cp.y+48,(int)cp.width-2,1,C(95,108,89,210));
+            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",(int)cp.x+15,(int)cp.y+14,18,RAYWHITE);
+            Rectangle close={cp.x+cp.width-76,cp.y+9,66,29};
+            DrawRectangleRounded(close,0.18f,8,C(78,48,43,255));
+            DrawText("CLOSE",(int)close.x+11,(int)close.y+9,11,RAYWHITE);
+            float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-76.0f-gap)/2.0f),ch=cw;
+            float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
             for(int slot=0;slot<8;slot++){
-                Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+64+(slot/4)*(ch+gap),cw,ch};
-                DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(49,51,47,255)); DrawRectangleLinesEx(cell,1.2f,C(112,119,105,235)); DrawRectangle(cell.x,cell.y,3,cell.height,C(112,135,77,255));
+                Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+52+(slot/4)*(ch+gap),cw,ch};
+                DrawRectangle((int)cell.x+2,(int)cell.y+3,(int)cell.width,(int)cell.height,C(0,0,0,100));
+                DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(43,47,43,255));
+                DrawRectangle((int)cell.x+2,(int)cell.y+2,(int)cell.width-4,(int)cell.height-4,C(51,55,49,255));
+                DrawRectangleLinesEx(cell,1.2f,C(105,116,99,235));
+                DrawRectangle(cell.x,cell.y,3,cell.height,C(112,145,76,255));
                 int amount=gasCrateAmounts[openedGasCrate][slot],item=gasCrateItems[openedGasCrate][slot];
-                if(amount>0){DrawText(itemNames[item],(int)cell.x+5,(int)(cell.y+cell.height*0.34f),cell.width<100?10:13,RAYWHITE);DrawText(TextFormat("x%d",amount),(int)cell.x+5,(int)(cell.y+cell.height*0.68f),12,C(170,220,190,255));}
-                else DrawText("EMPTY",(int)cell.x+5,(int)(cell.y+cell.height*0.48f),11,C(125,140,145,255));
+                if(amount>0){
+                    DrawText(itemNames[item],(int)cell.x+6,(int)(cell.y+cell.height*0.39f),cell.width<100?9:12,C(225,229,218,255));
+                    DrawText(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),11)-5),(int)(cell.y+cell.height-17),11,C(190,211,164,255));
+                } else DrawText("EMPTY",(int)cell.x+6,(int)(cell.y+cell.height*0.48f),10,C(116,128,115,255));
             }
-            DrawText("TAP A SLOT TO TAKE ITEMS",(int)cp.x+16,(int)(cp.y+cp.height-22),10,C(170,195,205,255));
+            DrawText("TAP A SLOT TO TAKE ITEMS",(int)cp.x+15,(int)(cp.y+cp.height-17),9,C(160,180,160,255));
         }
 
         if (mapOpen && !mainMenuOpen)
