@@ -1420,6 +1420,8 @@ int main(void)
     const char *itemNames[12] = {"ТОПОР", "АПТЕЧКА", "ЕДА", "ВОДА", "ДЕРЕВО", "КАМЕНЬ", "ДВЕРЬ", "ОРУЖИЕ",
                                  "ЖЕЛЕЗО", "ЛАЗУРИТ", "СЕРА", "КРЕМНИЙ"};
     int itemCounts[12] = {1, 1, 3, 3, 0, 0, 0, 1, 0, 0, 0, 0};
+    int giveSelectedItem = 0;
+    int giveSelectedAmount = 1;
     const int hotbarItemIds[4] = {0, 7, 2, 3}; // AXE, ORF PIXCADE, FOOD, WATER.
 
     // Главное меню.
@@ -1911,11 +1913,8 @@ int main(void)
         sprintButton = (Rectangle){actionButtonCenters[1].x-runW/2, actionButtonCenters[1].y-runH/2, runW, runH};
         inventoryButton = (Rectangle){actionButtonCenters[2].x-bagW/2, actionButtonCenters[2].y-bagH/2, bagW, bagH};
 
-        float editSelectW = (screenWidth-40.0f)/3.0f;
-        for (int control = 0; control < 3; control++)
-            editSelectButtons[control] = (Rectangle){20.0f+control*editSelectW, 52.0f, editSelectW-5.0f, 38.0f};
-        editSizeSlider = (Rectangle){screenWidth*0.18f, 119.0f, screenWidth*0.64f, 16.0f};
-        editAlphaSlider = (Rectangle){screenWidth*0.18f, 174.0f, screenWidth*0.64f, 16.0f};
+        editSizeSlider = (Rectangle){screenWidth*0.18f, 68.0f, screenWidth*0.64f, 16.0f};
+        editAlphaSlider = (Rectangle){screenWidth*0.18f, 126.0f, screenWidth*0.64f, 16.0f};
         float slotSize = fminf(54.0f, (screenWidth-165.0f)/4.0f);
         float slotGap = 6.0f;
         float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
@@ -1974,15 +1973,29 @@ int main(void)
             {
                 Rectangle rp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,screenHeight*0.78f};
                 Rectangle closeRp={rp.x+rp.width-82,rp.y+10,68,34};
-                float rowH=(rp.height-76.0f)/12.0f;
+                float rowH=(rp.height-158.0f)/12.0f;
+                float controlsY=rp.y+rp.height-94.0f;
+                Rectangle minusTen={rp.x+14,controlsY,48,32};
+                Rectangle minusOne={rp.x+68,controlsY,42,32};
+                Rectangle plusOne={rp.x+rp.width-156,controlsY,42,32};
+                Rectangle plusTen={rp.x+rp.width-108,controlsY,48,32};
+                Rectangle giveButton={rp.x+14,controlsY+38,rp.width-28,38};
                 if(CheckCollisionPointRec(pos,closeRp)) resourcePanelOpen=false;
+                else if(CheckCollisionPointRec(pos,minusTen)) giveSelectedAmount=fmaxf(1,giveSelectedAmount-10);
+                else if(CheckCollisionPointRec(pos,minusOne)) giveSelectedAmount=fmaxf(1,giveSelectedAmount-1);
+                else if(CheckCollisionPointRec(pos,plusOne)) giveSelectedAmount=fminf(9999,giveSelectedAmount+1);
+                else if(CheckCollisionPointRec(pos,plusTen)) giveSelectedAmount=fminf(9999,giveSelectedAmount+10);
+                else if(CheckCollisionPointRec(pos,giveButton))
+                {
+                    itemCounts[giveSelectedItem]+=giveSelectedAmount;
+                    if(itemCounts[giveSelectedItem]>9999)itemCounts[giveSelectedItem]=9999;
+                    SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]);
+                }
                 else for(int item=0;item<12;item++)
                 {
-                    float ry=rp.y+58+item*rowH;
-                    Rectangle minus={rp.x+rp.width-126,ry,48,rowH-4};
-                    Rectangle plus={rp.x+rp.width-70,ry,48,rowH-4};
-                    if(CheckCollisionPointRec(pos,minus)){itemCounts[item]-=10;if(itemCounts[item]<0)itemCounts[item]=0;SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]);break;}
-                    if(CheckCollisionPointRec(pos,plus)){itemCounts[item]+=10;if(itemCounts[item]>9999)itemCounts[item]=9999;SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]);break;}
+                    float ry=rp.y+54+item*rowH;
+                    Rectangle row={rp.x+10,ry,rp.width-20,rowH-2};
+                    if(CheckCollisionPointRec(pos,row)){giveSelectedItem=item;break;}
                 }
             }
             else if(commandChatOpen || commandConsoleOpen)
@@ -2023,38 +2036,35 @@ int main(void)
                         graphicsQuality, targetFps, detailLevel,
                         resolutionLevel, chunkDistance);
                 }
-                else if (CheckCollisionPointRec(pos, editSelectButtons[0]))
-                    selectedActionControl = 0;
-                else if (CheckCollisionPointRec(pos, editSelectButtons[1]))
-                    selectedActionControl = 1;
-                else if (CheckCollisionPointRec(pos, editSelectButtons[2]))
-                    selectedActionControl = 2;
                 else if (CheckCollisionPointRec(pos, editSizeSlider))
                 {
                     dragTarget = 8; dragTouchId = id;
                     float t = (pos.x-editSizeSlider.x)/editSizeSlider.width;
-                    actionButtonScale[selectedActionControl] = 0.55f+fmaxf(0.0f,fminf(1.0f,t))*1.15f;
+                    actionButtonScale[selectedActionControl] = 0.10f+fmaxf(0.0f,fminf(1.0f,t))*2.90f;
                 }
                 else if (CheckCollisionPointRec(pos, editAlphaSlider))
                 {
                     dragTarget = 9; dragTouchId = id;
                     float t = (pos.x-editAlphaSlider.x)/editAlphaSlider.width;
-                    actionButtonAlpha[selectedActionControl] = (int)(60.0f+fmaxf(0.0f,fminf(1.0f,t))*195.0f);
+                    actionButtonAlpha[selectedActionControl] = (int)(fmaxf(0.0f,fminf(1.0f,t))*255.0f);
                 }
                 else if (CheckCollisionPointRec(pos, interactButton))
                 {
+                    selectedActionControl = 0;
                     dragTarget = 4;
                     dragTouchId = id;
                     dragOffset = (Vector2){actionButtonCenters[0].x-pos.x, actionButtonCenters[0].y-pos.y};
                 }
                 else if (CheckCollisionPointRec(pos, sprintButton))
                 {
+                    selectedActionControl = 1;
                     dragTarget = 5;
                     dragTouchId = id;
                     dragOffset = (Vector2){actionButtonCenters[1].x-pos.x, actionButtonCenters[1].y-pos.y};
                 }
                 else if (CheckCollisionPointRec(pos, inventoryButton))
                 {
+                    selectedActionControl = 2;
                     dragTarget = 6;
                     dragTouchId = id;
                     dragOffset = (Vector2){actionButtonCenters[2].x-pos.x, actionButtonCenters[2].y-pos.y};
@@ -2859,12 +2869,12 @@ int main(void)
                     else if (dragTarget == 8)
                     {
                         float t = fmaxf(0.0f, fminf(1.0f, (pos.x-editSizeSlider.x)/editSizeSlider.width));
-                        actionButtonScale[selectedActionControl] = 0.55f+t*1.15f;
+                        actionButtonScale[selectedActionControl] = 0.10f+t*2.90f;
                     }
                     else if (dragTarget == 9)
                     {
                         float t = fmaxf(0.0f, fminf(1.0f, (pos.x-editAlphaSlider.x)/editAlphaSlider.width));
-                        actionButtonAlpha[selectedActionControl] = (int)(60.0f+t*195.0f);
+                        actionButtonAlpha[selectedActionControl] = (int)(t*255.0f);
                     }
                     else if (dragTarget >= 4 && dragTarget <= 6)
                     {
@@ -4159,17 +4169,29 @@ int main(void)
                 Rectangle rp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,screenHeight*0.78f};
                 DrawRectangleRounded(rp,0.06f,10,C(24,31,35,252));
                 DrawRectangleRoundedLinesEx(rp,0.06f,10,2,C(130,165,125,255));
-                DrawTextEx(cyrillicFont,"ВЫДАЧА РЕСУРСОВ",(Vector2){rp.x+14,rp.y+12},20,1,RAYWHITE);
+                DrawTextEx(cyrillicFont,"ВЫДАЧА ПРЕДМЕТОВ",(Vector2){rp.x+14,rp.y+12},20,1,RAYWHITE);
                 DrawSurvivalButton((Rectangle){rp.x+rp.width-82,rp.y+10,68,34},"X",16,false);
-                float rowH=(rp.height-76.0f)/12.0f;
+                float rowH=(rp.height-158.0f)/12.0f;
                 for(int item=0;item<12;item++)
                 {
-                    float ry=rp.y+58+item*rowH;
-                    DrawText(itemNames[item],(int)rp.x+16,(int)ry+5,14,RAYWHITE);
-                    DrawText(TextFormat("x%d",itemCounts[item]),(int)(rp.x+rp.width-178),(int)ry+5,14,C(190,220,175,255));
-                    DrawSurvivalButton((Rectangle){rp.x+rp.width-126,ry,48,rowH-4},"-10",11,false);
-                    DrawSurvivalButton((Rectangle){rp.x+rp.width-70,ry,48,rowH-4},"+10",11,true);
+                    float ry=rp.y+54+item*rowH;
+                    Rectangle row={rp.x+10,ry,rp.width-20,rowH-2};
+                    bool selected=(giveSelectedItem==item);
+                    DrawRectangleRounded(row,0.12f,6,selected?C(48,91,73,255):C(35,43,43,230));
+                    if(selected) DrawRectangleRoundedLinesEx(row,0.12f,6,2,C(165,215,135,255));
+                    DrawTextEx(cyrillicFont,itemNames[item],(Vector2){rp.x+18,ry+5},14,1,RAYWHITE);
+                    DrawText(TextFormat("В ИНВЕНТАРЕ: %d",itemCounts[item]),
+                        (int)(rp.x+rp.width-150),(int)ry+6,11,C(190,220,175,255));
                 }
+                float controlsY=rp.y+rp.height-94.0f;
+                DrawSurvivalButton((Rectangle){rp.x+14,controlsY,48,32},"-10",12,false);
+                DrawSurvivalButton((Rectangle){rp.x+68,controlsY,42,32},"-1",12,false);
+                DrawTextEx(cyrillicFont,TextFormat("%d шт.",giveSelectedAmount),
+                    (Vector2){rp.x+116,controlsY+7},16,1,RAYWHITE);
+                DrawSurvivalButton((Rectangle){rp.x+rp.width-156,controlsY,42,32},"+1",12,true);
+                DrawSurvivalButton((Rectangle){rp.x+rp.width-108,controlsY,48,32},"+10",12,true);
+                DrawSurvivalButton((Rectangle){rp.x+14,controlsY+38,rp.width-28,38},
+                    TextFormat("ВЫДАТЬ: %s",itemNames[giveSelectedItem]),14,true);
             }
             if (inventoryOpen)
             {
@@ -4321,7 +4343,7 @@ int main(void)
                 float distance=sqrtf(dx*dx+dy*dy);
                 if(mapPinchPreviousDistance>1.0f)
                 {
-                    mapZoom*=distance/mapPinchPreviousDistance;
+                    mapZoom*=mapPinchPreviousDistance/distance;
                     mapZoom=fmaxf(0.65f,fminf(2.8f,mapZoom));
                     mapPanOffset.x+=(center.x-mapPinchPreviousCenter.x)*1.15f;
                     mapPanOffset.y+=(center.y-mapPinchPreviousCenter.y)*1.15f;
@@ -4845,35 +4867,24 @@ int main(void)
                 20, RAYWHITE
             );
 
-            const char *controlNames[3] = {"УДАР", "БЕГ", "СУМКА"};
-            for (int control = 0; control < 3; control++)
-            {
-                DrawRectangleRounded(editSelectButtons[control], 0.18f, 8,
-                    selectedActionControl == control ? C(39, 112, 158, 245) : C(20, 39, 58, 235));
-                DrawRectangleRoundedLinesEx(editSelectButtons[control], 0.18f, 8, 1.5f,
-                    selectedActionControl == control ? C(150, 220, 255, 255) : C(100, 150, 190, 220));
-                int labelW = MeasureText(controlNames[control], 15);
-                DrawText(controlNames[control],
-                    (int)(editSelectButtons[control].x+editSelectButtons[control].width/2-labelW/2),
-                    (int)(editSelectButtons[control].y+11), 15, RAYWHITE);
-            }
-
-            DrawText("РАЗМЕР", (int)editSizeSlider.x, 99, 14, RAYWHITE);
-            DrawText("ПРОЗРАЧНОСТЬ", (int)editAlphaSlider.x, 151, 14, RAYWHITE);
+            DrawText("НАЖМИ НА КНОПКУ, ЧТОБЫ ВЫБРАТЬ ЕЁ",
+                screenWidth/2-170, 39, 13, C(205,220,235,255));
+            DrawText("РАЗМЕР (10–300%)", (int)editSizeSlider.x, 51, 13, RAYWHITE);
+            DrawText("ПРОЗРАЧНОСТЬ", (int)editAlphaSlider.x, 108, 13, RAYWHITE);
 
             DrawRectangleRounded(editSizeSlider, 0.5f, 8, C(35, 55, 72, 255));
             DrawRectangleRounded(editAlphaSlider, 0.5f, 8, C(35, 55, 72, 255));
-            float sizeT = (actionButtonScale[selectedActionControl]-0.55f)/1.15f;
-            float alphaT = (actionButtonAlpha[selectedActionControl]-60.0f)/195.0f;
+            float sizeT = fmaxf(0.0f,fminf(1.0f,(actionButtonScale[selectedActionControl]-0.10f)/2.90f));
+            float alphaT = actionButtonAlpha[selectedActionControl]/255.0f;
             DrawRectangleRounded((Rectangle){editSizeSlider.x,editSizeSlider.y,editSizeSlider.width*sizeT,editSizeSlider.height},0.5f,8,C(65,175,235,255));
             DrawRectangleRounded((Rectangle){editAlphaSlider.x,editAlphaSlider.y,editAlphaSlider.width*alphaT,editAlphaSlider.height},0.5f,8,C(65,175,235,255));
             DrawCircleV((Vector2){editSizeSlider.x+editSizeSlider.width*sizeT,editSizeSlider.y+8},10,RAYWHITE);
             DrawCircleV((Vector2){editAlphaSlider.x+editAlphaSlider.width*alphaT,editAlphaSlider.y+8},10,RAYWHITE);
 
             DrawText(TextFormat("%d%%", (int)(actionButtonScale[selectedActionControl]*100.0f)),
-                (int)(editSizeSlider.x+editSizeSlider.width+8), 116, 13, RAYWHITE);
+                (int)(editSizeSlider.x+editSizeSlider.width+8), 65, 13, RAYWHITE);
             DrawText(TextFormat("%d%%", actionButtonAlpha[selectedActionControl]*100/255),
-                (int)(editAlphaSlider.x+editAlphaSlider.width+8), 171, 13, RAYWHITE);
+                (int)(editAlphaSlider.x+editAlphaSlider.width+8), 123, 13, RAYWHITE);
 
             // Показываем сами кнопки в режиме редактирования, чтобы было
             // понятно, какую именно область пользователь перетаскивает.
@@ -4888,9 +4899,12 @@ int main(void)
             DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false,
                 (unsigned char)actionButtonAlpha[2]);
 
-            DrawRectangleLinesEx(interactButton, 2, C(255, 210, 120, 230));
-            DrawRectangleLinesEx(sprintButton, 2, C(255, 210, 120, 230));
-            DrawRectangleLinesEx(inventoryButton, 2, C(255, 210, 120, 230));
+            DrawRectangleLinesEx(interactButton, selectedActionControl==0?4:2,
+                selectedActionControl==0?C(255,235,110,255):C(255,210,120,180));
+            DrawRectangleLinesEx(sprintButton, selectedActionControl==1?4:2,
+                selectedActionControl==1?C(255,235,110,255):C(255,210,120,180));
+            DrawRectangleLinesEx(inventoryButton, selectedActionControl==2?4:2,
+                selectedActionControl==2?C(255,235,110,255):C(255,210,120,180));
 
             DrawRectangleLinesEx(
                 settingsButton, 3,
