@@ -432,8 +432,8 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawCube((Vector3){x+1.35f,1.45f,z-4.55f},0.055f,0.85f,0.045f,C(190,198,190,255));
 
     // Внутренние перегородки: торговый зал и две небольшие подсобки.
-    DrawCube((Vector3){x-4.55f,1.35f,z+0.75f},4.35f,2.7f,0.14f,wall);
-    DrawCube((Vector3){x+4.55f,1.35f,z+0.75f},4.35f,2.7f,0.14f,wall);
+    DrawCube((Vector3){x-4.55f,1.35f,z+2.35f},4.35f,2.7f,0.14f,wall);
+    DrawCube((Vector3){x+4.55f,1.35f,z+2.35f},4.35f,2.7f,0.14f,wall);
     DrawCube((Vector3){x-2.65f,1.35f,z+2.35f},0.14f,2.7f,4.0f,wall);
     DrawCube((Vector3){x+2.65f,1.35f,z+2.35f},0.14f,2.7f,4.0f,wall);
     // Дверные проёмы подсобок отмечены металлическими стойками.
@@ -531,6 +531,17 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
         if(fabsf(z+22.0f)<4.45f+radius && fabsf(x)>6.6f-radius &&
            fabsf(x)<7.05f+radius &&
            !(fabsf(x-7.15f)<0.9f && z>-25.5f && z<-21.0f)) return true;
+    }
+    // Коллизии трёх ящиков в торговом зале.
+    if(playerY<1.35f)
+    {
+        const float crateX[3]={-3.8f,0.0f,3.8f};
+        for(int i=0;i<3;i++)
+        {
+            float dx=x-crateX[i], dz=z+20.8f;
+            float crateRadius=0.72f+radius;
+            if(dx*dx+dz*dz<crateRadius*crateRadius) return true;
+        }
     }
     // Опоры навеса и бензоколонки.
     const float posts[4][2]={{-9.5f,-18.3f},{9.5f,-18.3f},{-9.5f,-8.8f},{9.5f,-8.8f}};
