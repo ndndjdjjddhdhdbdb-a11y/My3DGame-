@@ -1145,7 +1145,7 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
 }
 
 static void DrawPlayer(Vector3 player, float angle,
-                       float walkPhase, bool moving, float attackProgress)
+                       float walkPhase, bool moving, float attackProgress, int heldItemId)
 {
     float swing = moving ? sinf(walkPhase)*0.30f : sinf(walkPhase)*0.025f;
     float bob = moving ? fabsf(cosf(walkPhase))*0.035f : 0.0f;
@@ -1217,6 +1217,16 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawCylinderEx(elbowR, wristR, 0.085f, 0.068f, 10, jacket);
     DrawSphere(wristL, 0.075f, skinLight);
     DrawSphere(wristR, 0.075f, skinLight);
+
+    // Предмет в правой руке персонажа от третьего лица.
+    Vector3 heldBase=PlayerPoint(player,angle,0.45f,0.82f,-0.08f);
+    Vector3 heldTip=PlayerPoint(player,angle,0.58f,1.18f,-0.42f);
+    DrawCylinderEx(heldBase,heldTip,0.045f,0.035f,7,C(111,75,45,255));
+    if(heldItemId==0)
+        DrawCube(PlayerPoint(player,angle,0.68f,1.25f,-0.48f),0.32f,0.16f,0.14f,C(125,132,137,255));
+    else
+        DrawCube(heldTip,0.16f,0.16f,0.16f,
+            heldItemId==2?C(178,116,55,255):heldItemId==3?C(70,150,215,255):C(139,112,77,255));
 
     // Голова без кепки, с простыми волосами и лицом.
     DrawSphere(PlayerPoint(player, angle, 0, 1.86f+bob, 0),
@@ -4009,12 +4019,16 @@ int main(void)
 
         // Большой остров с тремя климатическими поясами: снег, лес и песок.
         DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){1200, 1200}, C(43, 112, 143, 255));
+        float terrainView=fmaxf(180.0f,chunkDistance*50.0f);
+        float terrainView2=terrainView*terrainView;
         for (int ix=-14; ix<=14; ix++)
         {
             for (int iz=-14; iz<=14; iz++)
             {
                 float px = ix*40.0f;
                 float pz = iz*40.0f;
+                float tdx=px-player.x, tdz=pz-player.z;
+                if(tdx*tdx+tdz*tdz>terrainView2) continue;
                 if (px*px+pz*pz > 540.0f*540.0f) continue;
                 bool coast = (px*px+pz*pz > 490.0f*490.0f);
                 int groundBiome=GetWorldBiome(px,pz);
@@ -4281,7 +4295,8 @@ int main(void)
             DrawPlayerShadow(player);
             DrawPlayer(
                 player, playerAngle, walkPhase, playerMoving,
-                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f
+                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f,
+                hotbarItemIds[selectedHotbarSlot]
             );
         }
         else
