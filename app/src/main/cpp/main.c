@@ -1174,7 +1174,12 @@ int main(void)
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
     const char *fontPath = GetAndroidCyrillicFontPath();
-    Font cyrillicFont = fontPath ? LoadFontEx(fontPath, 32, cyrillicCodepoints, cpIndex) : GetFontDefault();
+    int fontDataSize = 0;
+    unsigned char *fontData = fontPath ? (unsigned char *)ReadFromAppStorage("Roboto-Regular.ttf", &fontDataSize) : NULL;
+    Font cyrillicFont = (fontData && fontDataSize > 0)
+        ? LoadFontFromMemory(".ttf", fontData, fontDataSize, 32, cyrillicCodepoints, cpIndex)
+        : GetFontDefault();
+    if (fontData) free(fontData);
     if (cyrillicFont.texture.id == 0) {
         TraceLog(LOG_ERROR, "CYRILLIC FONT LOAD FAILED");
         cyrillicFont = GetFontDefault();
