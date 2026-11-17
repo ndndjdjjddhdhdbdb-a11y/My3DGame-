@@ -1730,9 +1730,11 @@ int main(void)
                 for (int item = 2; item <= 3; item++)
                 {
                     float gap = 8.0f;
-                    float w = (invPanel.width-40.0f-gap*3.0f)/4.0f;
-                    Rectangle r = {invPanel.x+16+(item%4)*(w+gap),
-                                   invPanel.y+72+(item/4)*58, w, 54};
+                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
+                    float gridWidth = cellSize*4.0f+gap*3.0f;
+                    float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
+                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
+                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -2036,9 +2038,12 @@ int main(void)
                                       screenWidth*0.80f, screenHeight*0.76f};
                 for (int item = 2; item <= 3; item++)
                 {
-                    float w = (invPanel.width-40.0f-24.0f)/4.0f;
-                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
-                                   invPanel.y+72+(item/3)*42, w, 38};
+                    float gap = 8.0f;
+                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
+                    float gridWidth = cellSize*4.0f+gap*3.0f;
+                    float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
+                    Rectangle r = {gridX+(item%4)*(cellSize+gap),
+                                   invPanel.y+72+(item/4)*58, cellSize, cellSize};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
