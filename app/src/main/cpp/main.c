@@ -1241,7 +1241,7 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
     }
 }
 
-enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5 };
+enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5, ANIMAL_STARTLE=6 };
 
 static Sound gBoarAlertSound = {0};
 static bool gAnimalAudioReady = false;
@@ -1627,6 +1627,7 @@ int main(void)
     int wildAnimalTypes[MAX_WILD_ANIMALS] = {0};
     int wildAnimalState[MAX_WILD_ANIMALS] = {0};
     float wildAnimalHeading[MAX_WILD_ANIMALS] = {0};
+    float wildAnimalTargetHeading[MAX_WILD_ANIMALS] = {0};
     float wildAnimalTimer[MAX_WILD_ANIMALS] = {0};
     float wildAnimalLookTimer[MAX_WILD_ANIMALS] = {0};
     float wildAnimalGrazeTimer[MAX_WILD_ANIMALS] = {0};
@@ -1726,6 +1727,7 @@ int main(void)
     {
         wildAnimalState[animal]=ANIMAL_WANDER;
         wildAnimalHeading[animal]=((float)rand()/(float)RAND_MAX)*6.2831853f;
+        wildAnimalTargetHeading[animal]=wildAnimalHeading[animal];
         wildAnimalTimer[animal]=2.0f+((float)rand()/(float)RAND_MAX)*4.0f;
         wildAnimalLookTimer[animal]=5.0f+((float)rand()/(float)RAND_MAX)*9.0f;
         wildAnimalGrazeTimer[animal]=20.0f+((float)rand()/(float)RAND_MAX)*10.0f;
@@ -3227,9 +3229,27 @@ int main(void)
                 wildAnimalLookTimer[animal]-=frameTime;
                 wildAnimalGrazeTimer[animal]-=frameTime;
 
+                // Олень сначала пугается вблизи, затем убегает.
+                if(wildAnimalTypes[animal]==0 &&
+                   wildAnimalState[animal]!=ANIMAL_STARTLE &&
+                   wildAnimalState[animal]!=ANIMAL_FLEE &&
+                   distance<0.78f)
+                {
+                    wildAnimalState[animal]=ANIMAL_STARTLE;
+                    wildAnimalTimer[animal]=0.72f;
+                    wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
+                    wildAnimalHeadYaw[animal]=0.0f;
+                }
+                if(wildAnimalState[animal]==ANIMAL_STARTLE && wildAnimalTimer[animal]<=0.0f)
+                {
+                    wildAnimalState[animal]=ANIMAL_FLEE;
+                    wildAnimalChaseStarted[animal]=animalNow;
+                    wildAnimalTargetHeading[animal]=atan2f(a->x-player.x,player.z-a->z);
+                }
+
                 // Олень пугается игрока и убегает, кабан наоборот может атаковать.
                 if(wildAnimalTypes[animal]==0 && seesPlayer &&
-                   wildAnimalState[animal]!=ANIMAL_FLEE)
+                   wildAnimalState[animal]!=ANIMAL_FLEE && wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
                     wildAnimalState[animal]=ANIMAL_FLEE;
                     wildAnimalChaseStarted[animal]=animalNow;
@@ -3255,9 +3275,11 @@ int main(void)
                 }
                 else if(wildAnimalState[animal]==ANIMAL_CHASE)
                 {
-                    if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>24.0)
+                    if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>12.0)
                     {
                         wildAnimalState[animal]=ANIMAL_WANDER;
+                        wildAnimalTargetHeading[animal]=atan2f(a->x-player.x,player.z-a->z);
+                        if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
                         wildAnimalLastChase[animal]=animalNow;
                         wildAnimalGrazeTimer[animal]=60.0f+((float)rand()/(float)RAND_MAX)*60.0f;
                         wildAnimalLookTimer[animal]=4.0f+((float)rand()/(float)RAND_MAX)*7.0f;
@@ -3380,8 +3402,16 @@ int main(void)
                     }
                 }
 
+                // Плавный поворот с ограничением угловой скорости.
+                float turnDiff=atan2f(sinf(wildAnimalTargetHeading[animal]-wildAnimalHeading[animal]),
+                                      cosf(wildAnimalTargetHeading[animal]-wildAnimalHeading[animal]));
+                float maxTurn=(wildAnimalTypes[animal]==0?2.8f:2.1f)*frameTime;
+                if(turnDiff>maxTurn)turnDiff=maxTurn;
+                if(turnDiff< -maxTurn)turnDiff=-maxTurn;
+                wildAnimalHeading[animal]+=turnDiff;
+
                 float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
-                                  (wildAnimalState[animal]==ANIMAL_FLEE?5.0f:
+                                  (wildAnimalState[animal]==ANIMAL_FLEE?8.5f:
                                   (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
                 if(!isDeer && nearestAnimalDist2<1.30f*1.30f)
                     animalSpeed=0.0f;
