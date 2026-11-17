@@ -93,26 +93,28 @@ static int MeasureUiText(const char *text, int fontSize)
 #define MAX_WILD_ANIMALS 12
 
 // Центры биомов выбираются один раз при создании мира.
-static Vector2 gBiomeCenters[3] = {{-270.0f,-230.0f},{285.0f,235.0f},{-290.0f,260.0f}};
+// Стабильное расположение биомов: зима на северо-западе, песок на юго-востоке,
+ // лес занимает остальную центральную и прибрежную часть острова.
+static Vector2 gBiomeCenters[3] = {{-220.0f,-150.0f},{220.0f,150.0f},{0.0f,0.0f}};
 
 static float BiomeBoundaryRadius(int biome, float angle)
 {
     float phase=(float)biome*1.73f;
-    return 78.0f + 10.0f*sinf(angle*2.0f+phase)
-                  + 7.0f*sinf(angle*3.0f-phase*1.4f)
-                  + 4.0f*cosf(angle*5.0f+phase*0.7f);
+    return 205.0f + 15.0f*sinf(angle*2.0f+phase)
+                   + 8.0f*sinf(angle*3.0f-phase*1.4f)
+                   + 5.0f*cosf(angle*5.0f+phase*0.7f);
 }
 
 static int GetWorldBiome(float x, float z)
 {
-    for (int i=0;i<3;i++)
+    for (int i=0;i<2;i++)
     {
         float dx=x-gBiomeCenters[i].x, dz=z-gBiomeCenters[i].y;
         float angle=atan2f(dz,dx);
         float radius=BiomeBoundaryRadius(i+1,angle);
         if (dx*dx+dz*dz < radius*radius) return i+1;
     }
-    return 0;
+    return 3;
 }
 
 // Текущие залежи руды также участвуют в коллизиях игрока.
@@ -1985,25 +1987,8 @@ int main(void)
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
     srand((unsigned int)(GetTime()*100000.0) ^ 0x51A7u);
-    // Три отдельных биома размещаются в случайных секторах карты один раз при старте мира.
-    for(int bi=0;bi<3;bi++)
-    {
-        bool separated=false;
-        for(int attempt=0;attempt<80 && !separated;attempt++)
-        {
-            float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
-            float radius=230.0f+((float)rand()/(float)RAND_MAX)*125.0f;
-            Vector2 candidate={cosf(a)*radius,sinf(a)*radius};
-            separated=true;
-            for(int prev=0;prev<bi;prev++)
-            {
-                float dx=candidate.x-gBiomeCenters[prev].x;
-                float dz=candidate.y-gBiomeCenters[prev].y;
-                if(dx*dx+dz*dz<250.0f*250.0f) separated=false;
-            }
-            if(separated) gBiomeCenters[bi]=candidate;
-        }
-    }
+    // Биомы имеют постоянную географию, как на карте survival-острова:
+    // снежный северо-запад, песчаный юго-восток и лес между ними.
     // Равномерно распределяем лес по большой карте с расстоянием между деревьями.
     for (int attempt=0; attempt<18000 && treeCount<MAX_TREES; attempt++)
     {
@@ -5343,30 +5328,40 @@ int main(void)
             cy=fmaxf(minCy,fminf(maxCy,my+ms*0.5f+mapPanOffset.y));
             mapPanOffset.x=cx-(mx+ms*0.5f);
             mapPanOffset.y=cy-(my+ms*0.5f);
-            sc=rr/260.0f;
+            sc=rr/540.0f;
 
             // Вся карта рисуется и обрезается только границами неподвижной панели.
             BeginScissorMode((int)mapPanel.x,(int)mapPanel.y,
                              (int)mapPanel.width,(int)mapPanel.height);
+            // Рисуем настоящую карту острова ячейками: биомы образуют большие
+            // связанные регионы, а каждая ячейка проверяется по реальной границе берега.
             DrawCircle((int)cx,(int)cy,(int)rr,C(48,91,83,255));
-            DrawCircle((int)cx,(int)cy,(int)(rr*0.91f),C(75,111,75,255));
-
-            const Color biomeMapColors[3]={ {205,220,229,255},{211,177,116,255},{42,103,53,255} };
+            const Color biomeMapColors[4]={
+                {75,111,75,255}, {205,220,229,255},
+                {211,177,116,255}, {42,103,53,255}
+            };
             const char *biomeMapNames[3]={"ЗИМА","ПЕСОК","ЛЕС"};
             int biomeFont=(int)fmaxf(8.0f,13.0f*mapZoom);
+            float cell=fmaxf(2.0f,5.0f*mapZoom);
+            for(float ty=cy-rr;ty<cy+rr;ty+=cell)
+            {
+                for(float tx=cx-rr;tx<cx+rr;tx+=cell)
+                {
+                    float sx=tx+cell*0.5f-cx, sy=ty+cell*0.5f-cy;
+                    if(sx*sx+sy*sy>rr*rr) continue;
+                    float wx=sx/sc, wz=sy/sc;
+                    int biome=GetWorldBiome(wx,wz);
+                    float worldRadius=sqrtf(wx*wx+wz*wz);
+                    Color tile=biomeMapColors[biome];
+                    if(worldRadius>490.0f)
+                        tile=biome==1?C(176,190,190,255):
+                             biome==2?C(166,145,105,255):C(151,137,102,255);
+                    DrawRectangle((int)tx,(int)ty,(int)ceilf(cell),(int)ceilf(cell),tile);
+                }
+            }
             for(int bi=0;bi<3;bi++)
             {
                 float bx=cx+gBiomeCenters[bi].x*sc, by=cy+gBiomeCenters[bi].y*sc;
-                Vector2 boundary[65];
-                boundary[0]=(Vector2){bx,by};
-                for(int edge=0;edge<=63;edge++)
-                {
-                    float angle=(float)edge*6.2831853f/64.0f;
-                    float radius=BiomeBoundaryRadius(bi+1,angle)*sc;
-                    boundary[edge+1]=(Vector2){bx+cosf(angle)*radius,by+sinf(angle)*radius};
-                }
-                for(int edge=0;edge<64;edge++)
-                    DrawTriangle(boundary[0],boundary[edge+1],boundary[edge+2],biomeMapColors[bi]);
                 DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],biomeFont)/2,
                          (int)by-biomeFont/2,biomeFont,C(25,35,30,255));
             }
@@ -5400,23 +5395,6 @@ int main(void)
             DrawCircleLines((int)px,(int)py,(int)(11*markerScale),RAYWHITE);
             DrawText("ВЫ",(int)(px+12*markerScale),(int)(py-8*markerScale),
                      (int)fmaxf(8.0f,12.0f*mapZoom),RAYWHITE);
-            // Обрезаем все биомы строго по окружности острова.
-            for(int row=(int)mapPanel.y;row<(int)(mapPanel.y+mapPanel.height);row+=2)
-            {
-                float dy=(float)row-cy;
-                float panelRight=mapPanel.x+mapPanel.width;
-                if(fabsf(dy)>=rr)
-                {
-                    DrawRectangle((int)mapPanel.x,row,(int)mapPanel.width,2,C(10,20,32,255));
-                    continue;
-                }
-                float halfWidth=sqrtf(fmaxf(0.0f,rr*rr-dy*dy));
-                float left=cx-halfWidth, right=cx+halfWidth;
-                if(left>mapPanel.x)
-                    DrawRectangle((int)mapPanel.x,row,(int)(left-mapPanel.x+1),2,C(10,20,32,255));
-                if(right<panelRight)
-                    DrawRectangle((int)right,row,(int)(panelRight-right+1),2,C(10,20,32,255));
-            }
             DrawCircleLines((int)cx,(int)cy,(int)rr,C(185,190,157,255));
             EndScissorMode();
 
