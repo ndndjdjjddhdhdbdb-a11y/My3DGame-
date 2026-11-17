@@ -457,14 +457,16 @@ static void DrawMiniGasStation(float x,float z,int quality)
 
 static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
 {
-    // Стены блокируют проход сквозь здание на любой высоте.
-    // Край крыши не блокируется: с него можно свободно упасть.
-    if(fabsf(x)<6.85f+radius && fabsf(z+17.65f)<0.24f+radius) return true;
-    if(fabsf(x)<6.85f+radius && fabsf(z+26.35f)<0.24f+radius &&
-       fabsf(x)>2.65f) return true;
-    if(fabsf(z+22.0f)<4.45f+radius && fabsf(x)>6.6f-radius &&
-       fabsf(x)<7.05f+radius &&
-       !(fabsf(x-7.15f)<0.9f && z>-25.5f && z<-21.0f)) return true;
+    // На крыше можно пройти за край и упасть. На земле стены здания блокируют проход.
+    if(playerY<2.9f)
+    {
+        if(fabsf(x)<6.85f+radius && fabsf(z+17.65f)<0.24f+radius) return true;
+        if(fabsf(x)<6.85f+radius && fabsf(z+26.35f)<0.24f+radius &&
+           fabsf(x)>2.65f) return true;
+        if(fabsf(z+22.0f)<4.45f+radius && fabsf(x)>6.6f-radius &&
+           fabsf(x)<7.05f+radius &&
+           !(fabsf(x-7.15f)<0.9f && z>-25.5f && z<-21.0f)) return true;
+    }
     // Опоры навеса и бензоколонки.
     const float posts[4][2]={{-9.5f,-18.3f},{9.5f,-18.3f},{-9.5f,-8.8f},{9.5f,-8.8f}};
     for(int i=0;i<4;i++){float dx=x-posts[i][0],dz=z-posts[i][1];if(dx*dx+dz*dz<(0.22f+radius)*(0.22f+radius))return true;}
