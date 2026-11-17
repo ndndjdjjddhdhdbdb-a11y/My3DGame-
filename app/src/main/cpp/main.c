@@ -2013,7 +2013,8 @@ int main(void)
         if (!clear) continue;
         treePositions[treeCount]=(Vector3){tx,0,tz};
         treeBiome[treeCount]=GetWorldBiome(tx,tz);
-        treeHealth[treeCount]=GetTreeHits(treeBiome[treeCount]);\n        treeCount++;
+        treeHealth[treeCount]=GetTreeHits(treeBiome[treeCount]);
+        treeCount++;
     }
 
     // Небольшие группы диких животных распределяются по свободным участкам карты.
