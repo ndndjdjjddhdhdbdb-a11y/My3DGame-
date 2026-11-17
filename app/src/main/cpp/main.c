@@ -3191,9 +3191,9 @@ int main(void)
             );
 
             if (nearbyOreDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen)
-                DrawSurvivalButton(takeButton, TextFormat("TAKE %s +%d",GetOreName(oreDropType[nearbyOreDrop]),oreDropAmount[nearbyOreDrop]), 12, true);
+                DrawSurvivalButton(takeButton, TextFormat("ВЗЯТЬ %s +%d",GetOreName(oreDropType[nearbyOreDrop]),oreDropAmount[nearbyOreDrop]), 12, true);
             else if (nearbyWoodDrop >= 0 && !settingsOpen && !editControls && !inventoryOpen)
-                DrawSurvivalButton(takeButton, "TAKE WOOD +15", 13, true);
+                DrawSurvivalButton(takeButton, "ВЗЯТЬ ДЕРЕВО +15", 12, true);
 
             DrawCircleLines(
                 (int)joystickPosition.x,
@@ -3234,38 +3234,29 @@ int main(void)
                 DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "RUN: ON" : "RUN", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
             }
 
-            // Кнопка удара всегда видна во время игры.
-            if (!settingsOpen && !editControls && !inventoryOpen)
+            // Кнопка действия меняет подпись, когда прицел наведён на ящик.
+            if (!settingsOpen && !editControls && !inventoryOpen && !gasCrateOpen)
             {
                 unsigned char hitAlpha = (unsigned char)actionButtonAlpha[0];
-                Color hitColor = attackCooldown <= 0.0f ?
-                    C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha);
+                bool canOpenCrate = targetedGasCrate >= 0;
+                Color hitColor = canOpenCrate ? C(35, 125, 82, hitAlpha) :
+                    (attackCooldown <= 0.0f ? C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha));
+                const char *actionLabel = canOpenCrate ? "ОТКРЫТЬ" : "HIT";
+                int actionFont = canOpenCrate ? 16 : 20;
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
-                DrawRectangleRoundedLinesEx(
-                    interactButton, 0.25f, 14, 2,
-                    C(230, 190, 160, hitAlpha)
-                );
-                DrawText(
-                    "HIT",
-                    (int)(interactButton.x+interactButton.width/2-
-                          MeasureText("HIT", 20)/2),
-                    (int)(interactButton.y+7), 20, C(255, 255, 255, hitAlpha)
-                );
-
-                float cooldownRatio = attackCooldown/attackCooldownDuration;
-                DrawRectangleRounded(
-                    (Rectangle){interactButton.x+12, interactButton.y+34,
-                                (interactButton.width-24)*(1.0f-cooldownRatio), 7},
-                    0.5f, 6, C(105, 225, 150, hitAlpha)
-                );
-                const char *cooldownLabel = attackCooldown <= 0.0f ?
-                    "READY" : TextFormat("%.1f s", attackCooldown);
-                DrawText(
-                    cooldownLabel,
-                    (int)(interactButton.x+interactButton.width/2-
-                          MeasureText(cooldownLabel, 13)/2),
-                    (int)(interactButton.y+44), 13, C(255, 255, 255, hitAlpha)
-                );
+                DrawRectangleRoundedLinesEx(interactButton, 0.25f, 14, 2, C(230, 190, 160, hitAlpha));
+                DrawText(actionLabel,
+                    (int)(interactButton.x+interactButton.width/2-MeasureText(actionLabel,actionFont)/2),
+                    (int)(interactButton.y+7), actionFont, C(255,255,255,hitAlpha));
+                if (!canOpenCrate)
+                {
+                    float cooldownRatio=attackCooldown/attackCooldownDuration;
+                    DrawRectangleRounded((Rectangle){interactButton.x+12,interactButton.y+34,
+                        (interactButton.width-24)*(1.0f-cooldownRatio),7},0.5f,6,C(105,225,150,hitAlpha));
+                    const char *cooldownLabel=attackCooldown<=0.0f?"READY":TextFormat("%.1f s",attackCooldown);
+                    DrawText(cooldownLabel,(int)(interactButton.x+interactButton.width/2-
+                        MeasureText(cooldownLabel,13)/2),(int)(interactButton.y+44),13,C(255,255,255,hitAlpha));
+                }
             }
 
             if (targetedTree >= 0 && !treeChopped[targetedTree])
