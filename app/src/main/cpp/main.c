@@ -2694,9 +2694,9 @@ int main(void)
             }
         }
 
-        float renderScale =
-            (resolutionLevel == 0) ? 1.0f :
-            ((resolutionLevel == 1) ? 0.85f : 0.70f);
+        // Полноразмерный 3D-рендер: пониженное разрешение давало
+        // сильное мерцание и рывки деталей земли при вращении камеры.
+        float renderScale = 1.0f;
 
         int wantedWidth = (int)(screenWidth*renderScale);
         int wantedHeight = (int)(screenHeight*renderScale);
@@ -2740,7 +2740,7 @@ int main(void)
                                     ((pz > 82.0f) ? C(194, 169, 112, 255) :
                                                     C(73, 139, 76, 255));
                 if (coast) biomeGround = (pz < -82.0f) ? C(176, 190, 190, 255) : C(151, 137, 102, 255);
-                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.0f, 40.0f}, biomeGround);
+                DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f}, biomeGround);
             }
         }
 
