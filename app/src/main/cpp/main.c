@@ -4842,6 +4842,29 @@ int main(void)
             }
         }
 
+        // Повторно рисуем хотбар поверх окна инвентаря, чтобы затемнение его не закрывало.
+        if (inventoryOpen)
+        {
+            Rectangle hotbarPanel = {hotbarSlots[0].x-9, hotbarSlots[0].y-7,
+                hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 80};
+            DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(6, 14, 28, 238));
+            DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.4f, C(115, 185, 230, 245));
+            for (int slot = 0; slot < 4; slot++)
+            {
+                Rectangle r = hotbarSlots[slot];
+                bool activeSlot = slot == selectedHotbarSlot;
+                DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 255) : C(16, 31, 49, 250));
+                DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.2f,
+                    activeSlot ? C(155, 225, 255, 255) : C(100, 160, 200, 240));
+                DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10, RAYWHITE);
+                const char *slotName = itemNames[hotbarItemIds[slot]];
+                int nw = MeasureText(slotName, 10);
+                DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+26, 10, RAYWHITE);
+                DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
+                    (int)(r.x+r.width-25), (int)(r.y+r.height-15), 10, C(195, 220, 238, 255));
+            }
+        }
+
         if(gasCrateOpen&&openedGasCrate>=0){
             DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,155));
             float crateSize=fminf(screenHeight*0.62f,screenWidth*0.30f);
