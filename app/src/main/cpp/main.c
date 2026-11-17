@@ -1706,8 +1706,8 @@ int main(void)
             else if (inventoryOpen)
             {
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f,
-                                      screenWidth*0.84f, screenHeight*0.72f};
+                Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f,
+                                      screenWidth*0.80f, screenHeight*0.76f};
                 Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
                 Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
                 Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
@@ -2032,8 +2032,8 @@ int main(void)
             else if (inventoryOpen)
             {
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f,
-                                      screenWidth*0.84f, screenHeight*0.72f};
+                Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f,
+                                      screenWidth*0.80f, screenHeight*0.76f};
                 for (int item = 2; item <= 3; item++)
                 {
                     float w = (invPanel.width-40.0f-24.0f)/4.0f;
@@ -3324,7 +3324,7 @@ int main(void)
             if (inventoryOpen)
             {
                 DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
-                Rectangle invPanel = {screenWidth*0.08f, screenHeight*0.14f, screenWidth*0.84f, screenHeight*0.72f};
+                Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f, screenWidth*0.80f, screenHeight*0.76f};
                 DrawRectangleRounded(invPanel, 0.025f, 8, C(30, 32, 30, 248));
                 DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(116, 124, 104, 245));
                 DrawText("INVENTORY", (int)invPanel.x+18, (int)invPanel.y+16, 22, RAYWHITE);
@@ -3335,9 +3335,9 @@ int main(void)
                     float w = (invPanel.width-40.0f-gap*3.0f)/4.0f;
                     Rectangle r = {invPanel.x+16+(item%4)*(w+gap),
                                    invPanel.y+72+(item/4)*58, w, 54};
-                    DrawRectangleRounded(r, 0.10f, 8,
-                        (item == 2 || item == 3) ? C(30, 66, 88, 255) : C(19, 42, 67, 255));
-                    DrawRectangleRoundedLinesEx(r, 0.10f, 8, 1.6f, C(100, 170, 215, 230));
+                    DrawRectangle(r.x, r.y, r.width, r.height, C(48, 50, 47, 255));
+                    DrawRectangleLinesEx(r, 1.2f, C(104, 111, 99, 235));
+                    DrawRectangle(r.x, r.y, 3, r.height, (item == 2 || item == 3) ? C(142, 169, 91, 255) : C(83, 91, 78, 255));
                     DrawText(itemNames[item], (int)r.x+5, (int)r.y+9,
                         (item == 7) ? 8 : 10, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[item]),
