@@ -3125,7 +3125,7 @@ int main(void)
                         !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                         player.x = nextX;
                     if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,-1))
+                        !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                         player.z = nextZ;
 
                     if (playerMoving)
@@ -3212,10 +3212,10 @@ int main(void)
                 }
 
                 if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,-1))
+                    !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                     player.x = nextX;
                 if (!IsBlockedAt(player.x, nextZ, player.y, barrelPositions, barrelDestroyed) &&
-                    !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,-1))
+                    !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                     player.z = nextZ;
 
                 playerMoving = true;
@@ -4519,6 +4519,20 @@ int main(void)
                 DrawRectangleRoundedLinesEx((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, 2, C(90, 165, 105, 240));
                 DrawText(TextFormat("ДЕРЕВО — %d/3", treeHealth[targetedTree]), (int)(screenWidth/2.0f-105.0f), 119, 19, RAYWHITE);
                 DrawText("УДАРЬТЕ, ЧТОБЫ СРУБИТЬ", (int)(screenWidth/2.0f+15.0f), 122, 13, C(175, 220, 175, 255));
+            }
+
+            if(targetedAnimal>=0 && wildAnimalHealth[targetedAnimal]>0)
+            {
+                float hudX=screenWidth/2.0f-130.0f;
+                Rectangle animalHud={hudX,105,260,58};
+                DrawRectangleRounded(animalHud,0.22f,12,C(18,31,44,225));
+                DrawRectangleRoundedLinesEx(animalHud,0.22f,12,2,
+                    wildAnimalTypes[targetedAnimal]==0?C(150,195,220,240):C(190,145,90,240));
+                DrawText(wildAnimalTypes[targetedAnimal]==0?"ОЛЕНЬ":"КАБАН",
+                    (int)hudX+18,113,18,RAYWHITE);
+                DrawText(TextFormat("ЗДОРОВЬЕ: %d/%d",wildAnimalHealth[targetedAnimal],
+                    wildAnimalTypes[targetedAnimal]==0?50:100),(int)hudX+18,137,16,
+                    C(220,235,240,255));
             }
 
             if (targetedBarrel >= 0 && !barrelDestroyed[targetedBarrel])
