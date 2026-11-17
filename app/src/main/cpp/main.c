@@ -1082,13 +1082,55 @@ static void DrawRotatedCubeY(Vector3 center, float width, float height, float de
 }
 static void DrawHeldAxe(Vector3 grip, Vector3 head, float yaw, float scale)
 {
-    DrawCylinderEx(grip,head,0.040f*scale,0.030f*scale,8,C(104,68,39,255));
-    DrawRotatedCubeY((Vector3){head.x,head.y-0.035f*scale,head.z},
-        0.13f*scale,0.12f*scale,0.12f*scale,yaw,C(72,76,75,255));
+    // Чёрная рукоять с оранжевыми противоскользящими вставками.
+    DrawCylinderEx(grip,head,0.038f*scale,0.030f*scale,10,C(31,34,34,255));
+    Vector3 gripMid={grip.x+(head.x-grip.x)*0.30f,
+                     grip.y+(head.y-grip.y)*0.30f,
+                     grip.z+(head.z-grip.z)*0.30f};
+    DrawCylinderEx(gripMid,
+        (Vector3){gripMid.x+(head.x-grip.x)*0.10f,
+                  gripMid.y+(head.y-grip.y)*0.10f,
+                  gripMid.z+(head.z-grip.z)*0.10f},
+        0.043f*scale,0.040f*scale,10,C(226,91,25,255));
+    Vector3 neck={head.x-(head.x-grip.x)*0.10f,
+                  head.y-(head.y-grip.y)*0.10f,
+                  head.z-(head.z-grip.z)*0.10f};
+    DrawCylinderEx(neck,head,0.052f*scale,0.045f*scale,10,C(47,50,49,255));
+    // Широкое оранжевое лезвие и тёмная металлическая обойма.
     DrawRotatedCubeY((Vector3){head.x,head.y+0.015f*scale,head.z},
-        0.43f*scale,0.23f*scale,0.105f*scale,yaw,C(116,128,135,255));
-    DrawRotatedCubeY((Vector3){head.x,head.y+0.015f*scale,head.z-0.012f*scale},
-        0.46f*scale,0.055f*scale,0.115f*scale,yaw,C(190,198,199,255));
+        0.46f*scale,0.25f*scale,0.13f*scale,yaw,C(224,91,25,255));
+    DrawRotatedCubeY((Vector3){head.x,head.y-0.005f*scale,head.z-0.012f*scale},
+        0.18f*scale,0.29f*scale,0.15f*scale,yaw,C(42,46,45,255));
+    DrawRotatedCubeY((Vector3){head.x,head.y+0.105f*scale,head.z-0.018f*scale},
+        0.43f*scale,0.045f*scale,0.135f*scale,yaw,C(247,126,43,255));
+}
+static void DrawHeldWaterBottle(Vector3 center, float scale)
+{
+    // Грязно-зелёная пластиковая бутылка с синей крышкой.
+    DrawCylinder((Vector3){center.x,center.y,center.z},
+                 0.065f*scale,0.082f*scale,0.27f*scale,12,C(91,111,67,245));
+    DrawSphere((Vector3){center.x,center.y+0.105f*scale,center.z},
+               0.060f*scale,C(105,124,76,245));
+    DrawCylinder((Vector3){center.x,center.y+0.155f*scale,center.z},
+                 0.034f*scale,0.040f*scale,0.075f*scale,10,C(88,109,68,255));
+    DrawCylinder((Vector3){center.x,center.y+0.205f*scale,center.z},
+                 0.043f*scale,0.043f*scale,0.055f*scale,10,C(35,105,194,255));
+    DrawCube((Vector3){center.x-0.032f*scale,center.y-0.005f*scale,
+                       center.z-0.080f*scale},
+             0.018f*scale,0.17f*scale,0.008f*scale,C(174,184,130,125));
+}
+static void DrawHeldMeat(Vector3 center, float scale)
+{
+    // Неровный кусок жареного мяса с румяной корочкой.
+    DrawSphere((Vector3){center.x,center.y,center.z},0.125f*scale,C(111,54,31,255));
+    DrawSphere((Vector3){center.x-0.065f*scale,center.y+0.025f*scale,center.z},
+               0.090f*scale,C(151, seventy, 39,255));
+    DrawSphere((Vector3){center.x+0.055f*scale,center.y+0.035f*scale,center.z+0.015f*scale},
+               0.085f*scale,C(177,91,43,255));
+    DrawSphere((Vector3){center.x,center.y+0.075f*scale,center.z-0.025f*scale},
+               0.075f*scale,C(194,111,54,255));
+    DrawSphere((Vector3){center.x-0.025f*scale,center.y+0.045f*scale,center.z-0.073f*scale},
+               0.035f*scale,C(224,151,79,255));
 }
 
 static void DrawFirstPersonArms(Vector3 eye, float yaw,
@@ -1161,8 +1203,8 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
         DrawRotatedCubeY((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.07f,0.17f,0.025f,yaw,RAYWHITE);
         DrawRotatedCubeY((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.17f,0.07f,0.025f,yaw,RAYWHITE);
     }
-    else if(heldItemId==2) DrawSphere(toolTip,0.13f,C(178,116,55,255));
-    else if(heldItemId==3) DrawCylinderEx(toolBase,toolTip,0.10f,0.10f,8,C(70,150,215,255));
+    else if(heldItemId==2) DrawHeldMeat(toolTip,1.0f);
+    else if(heldItemId==3) DrawHeldWaterBottle(toolTip,1.0f);
     else
     {
         Color itemColor=heldItemId==4?C(126,82,47,255):heldItemId==5?C(105,105,105,255):
@@ -1284,8 +1326,8 @@ static void DrawPlayer(Vector3 player, float angle,
         DrawRotatedCubeY(heldTip,0.25f,0.18f,0.14f,angle,C(190,55,55,255));
         DrawRotatedCubeY(PlayerPoint(player,angle,0.56f,1.14f,-0.47f),0.06f,0.16f,0.025f,angle,RAYWHITE);
     }
-    else if(heldItemId==2) DrawSphere(heldTip,0.12f,C(178,116,55,255));
-    else if(heldItemId==3) DrawCylinderEx(heldBase,heldTip,0.09f,0.09f,8,C(70,150,215,255));
+    else if(heldItemId==2) DrawHeldMeat(heldTip,0.88f);
+    else if(heldItemId==3) DrawHeldWaterBottle(heldTip,0.88f);
     else
     {
         Color itemColor=heldItemId==4?C(126,82,47,255):heldItemId==5?C(105,105,105,255):
