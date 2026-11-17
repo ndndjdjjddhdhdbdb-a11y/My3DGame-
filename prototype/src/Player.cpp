@@ -26,8 +26,6 @@ Player::Player()
     camera_.fovy = 75.0f;
     camera_.projection = CAMERA_PERSPECTIVE;
 
-    // Скрываем курсор, чтобы мышь управляла обзором.
-    DisableCursor();
 }
 
 void Player::Update(float deltaTime)
