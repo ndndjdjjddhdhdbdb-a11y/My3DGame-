@@ -3238,6 +3238,8 @@ int main(void)
                 float sightDot=(distance>0.001f)?(dx*forwardX+dz*forwardZ)/distance:1.0f;
                 bool seesPlayer=(distance<vision && distance>0.001f &&
                                  sightDot>cosf(0.62f) && player.y<2.8f);
+                bool boarIgnoringPlayer=(wildAnimalTypes[animal]!=0 &&
+                    animalNow-wildAnimalLastChase[animal]<30.0);
 
                 wildAnimalTimer[animal]-=frameTime;
                 wildAnimalLookTimer[animal]-=frameTime;
@@ -3313,6 +3315,7 @@ int main(void)
                         // с момента окончания погони.
                         wildAnimalState[animal]=ANIMAL_WANDER;
                         wildAnimalTimer[animal]=2.0f;
+                        wildAnimalLastChase[animal]=animalNow;
                     }
                 }
                 else if(wildAnimalState[animal]==ANIMAL_INSPECT)
@@ -3328,7 +3331,7 @@ int main(void)
                 else if(wildAnimalState[animal]==ANIMAL_LOOK)
                 {
                     wildAnimalHeadYaw[animal]=sinf((float)animalNow*3.4f+animal)*0.62f;
-                    if(seesPlayer)
+                    if(seesPlayer && !boarIgnoringPlayer)
                     {
                         wildAnimalState[animal]=ANIMAL_INSPECT;
                         wildAnimalTimer[animal]=1.15f;
@@ -3358,8 +3361,6 @@ int main(void)
                 }
                 else if(wildAnimalState[animal]!=ANIMAL_STARTLE)
                 {
-                    bool boarIgnoringPlayer=(wildAnimalTypes[animal]!=0 &&
-                        animalNow-wildAnimalLastChase[animal]<30.0);
                     if(seesPlayer && !boarIgnoringPlayer)
                     {
                         wildAnimalState[animal]=ANIMAL_CHASE;
