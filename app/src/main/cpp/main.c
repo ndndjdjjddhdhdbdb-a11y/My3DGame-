@@ -5400,7 +5400,17 @@ int main(void)
             DrawCircleLines((int)px,(int)py,(int)(11*markerScale),RAYWHITE);
             DrawText("ВЫ",(int)(px+12*markerScale),(int)(py-8*markerScale),
                      (int)fmaxf(8.0f,12.0f*mapZoom),RAYWHITE);
-            // Маскируем всё, что выходит за круг карты.
+            // Маскируем всё, что выходит за круг острова:
+            // сначала верх и низ панели, затем левую и правую стороны круга.
+            float panelBottom=mapPanel.y+mapPanel.height;
+            float circleTop=cy-rr;
+            float circleBottom=cy+rr;
+            if(circleTop>mapPanel.y)
+                DrawRectangle((int)mapPanel.x,(int)mapPanel.y,
+                              (int)mapPanel.width,(int)(circleTop-mapPanel.y+1),C(10,20,32,255));
+            if(circleBottom<panelBottom)
+                DrawRectangle((int)mapPanel.x,(int)circleBottom,
+                              (int)mapPanel.width,(int)(panelBottom-circleBottom+1),C(10,20,32,255));
             for(int row=(int)(cy-rr);row<=(int)(cy+rr);row+=2)
             {
                 float dy=(float)row-cy;
