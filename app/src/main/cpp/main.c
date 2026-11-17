@@ -404,26 +404,27 @@ static void DrawMiniGasStation(float x,float z,int quality)
 {
     Color wall=C(116,112,99,255),red=C(151,61,48,255),metal=C(48,54,55,255);
     // Стены магазина оставляют широкий открытый вход, чтобы были видны ящики.
-    DrawCube((Vector3){x,1.65f,z+2.82f},8.6f,3.3f,0.16f,wall);
-    DrawCube((Vector3){x-4.22f,1.65f,z},0.16f,3.3f,5.8f,wall);
-    DrawCube((Vector3){x+4.22f,1.65f,z},0.16f,3.3f,5.8f,wall);
-    DrawCube((Vector3){x-3.0f,1.65f,z-2.82f},2.6f,3.3f,0.16f,wall);
-    DrawCube((Vector3){x+3.0f,1.65f,z-2.82f},2.6f,3.3f,0.16f,wall);
-    DrawCube((Vector3){x,3.22f,z},2.6f,0.25f,0.16f,wall);
-    DrawCube((Vector3){x,3.36f,z},8.9f,0.22f,6.1f,metal);
-    DrawCube((Vector3){x,3.62f,z-0.1f},8.7f,0.24f,0.34f,red);
+    // Увеличенный корпус заправки: шире и глубже прежнего.
+    DrawCube((Vector3){x,1.75f,z+3.35f},10.6f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x-5.2f,1.75f,z},0.18f,3.5f,6.9f,wall);
+    DrawCube((Vector3){x+5.2f,1.75f,z},0.18f,3.5f,6.9f,wall);
+    DrawCube((Vector3){x-3.7f,1.75f,z-3.35f},3.0f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x+3.7f,1.75f,z-3.35f},3.0f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x,3.42f,z},3.0f,0.25f,0.18f,wall);
+    DrawCube((Vector3){x,3.58f,z},10.9f,0.24f,7.2f,metal);
+    DrawCube((Vector3){x,3.86f,z-0.1f},10.7f,0.26f,0.38f,red);
     DrawCube((Vector3){x,2.45f,z-2.96f},2.2f,1.15f,0.08f,C(66,104,111,230));
     DrawCube((Vector3){x-2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
     DrawCube((Vector3){x+2.55f,2.1f,z-2.97f},1.05f,1.0f,0.08f,C(66,104,111,230));
-    DrawCube((Vector3){x+1.15f,1.0f,z-2.99f},0.75f,2.0f,0.12f,C(68,58,47,255));
-    DrawCube((Vector3){x,3.95f,z-3.05f},5.4f,0.48f,0.22f,red);
-    DrawCube((Vector3){x,4.15f,z+7.0f},15.0f,0.35f,11.0f,C(89,86,76,255));
-    DrawCube((Vector3){x,4.36f,z+7.0f},14.7f,0.12f,10.7f,red);
+    DrawCube((Vector3){x+1.45f,1.0f,z-3.52f},0.85f,2.0f,0.12f,C(68,58,47,255));
+    DrawCube((Vector3){x,4.18f,z-3.58f},6.4f,0.5f,0.24f,red);
+    DrawCube((Vector3){x,4.35f,z+8.0f},18.0f,0.38f,13.0f,C(89,86,76,255));
+    DrawCube((Vector3){x,4.58f,z+8.0f},17.7f,0.14f,12.7f,red);
     for(int side=-1;side<=1;side+=2)for(int row=0;row<2;row++)
-        DrawCube((Vector3){x+side*6.7f,2.05f,z+3.1f+row*7.7f},0.22f,4.1f,0.22f,metal);
+        DrawCube((Vector3){x+side*8.0f,2.15f,z+3.7f+row*8.6f},0.22f,4.1f,0.22f,metal);
     for(int pump=0;pump<2;pump++)
     {
-        float px=x+(pump==0?-2.8f:2.8f),pz=z+6.0f;
+        float px=x+(pump==0?-3.4f:3.4f),pz=z+7.0f;
         DrawCube((Vector3){px,1.05f,pz},0.95f,1.9f,0.82f,C(151,145,126,255));
         DrawCube((Vector3){px,1.63f,pz-0.43f},0.58f,0.42f,0.035f,C(29,43,42,255));
         DrawCube((Vector3){px,1.64f,pz-0.46f},0.42f,0.19f,0.025f,C(95,174,132,255));
@@ -431,33 +432,43 @@ static void DrawMiniGasStation(float x,float z,int quality)
     }
     // Лестница на крышу с правой стороны здания.
     for(int rung=0;rung<9;rung++)
-        DrawCube((Vector3){x+4.55f,0.28f+rung*0.39f,z-1.55f},0.12f,0.09f,0.9f,C(105,108,101,255));
-    DrawCylinderEx((Vector3){x+4.48f,0.1f,z-2.0f},(Vector3){x+4.48f,3.45f,z-2.0f},0.07f,0.07f,6,metal);
-    DrawCylinderEx((Vector3){x+4.48f,0.1f,z-1.1f},(Vector3){x+4.48f,3.45f,z-1.1f},0.07f,0.07f,6,metal);
+        DrawCube((Vector3){x+5.55f,0.28f+rung*0.43f,z-1.75f},0.12f,0.09f,0.9f,C(105,108,101,255));
+    DrawCylinderEx((Vector3){x+5.48f,0.1f,z-2.2f},(Vector3){x+5.48f,3.85f,z-2.2f},0.07f,0.07f,6,metal);
+    DrawCylinderEx((Vector3){x+5.48f,0.1f,z-1.3f},(Vector3){x+5.48f,3.85f,z-1.3f},0.07f,0.07f,6,metal);
     // Три обычных ящика внутри и один оружейный наверху.
-    DrawGasCrate((Vector3){x-2.4f,0.48f,z+0.7f},false);
-    DrawGasCrate((Vector3){x,0.48f,z+0.7f},false);
-    DrawGasCrate((Vector3){x+2.4f,0.48f,z+0.7f},false);
-    DrawGasCrate((Vector3){x,3.95f,z},true);
-    DrawCube((Vector3){x,0.015f,z+5.0f},19.0f,0.035f,19.0f,C(62,65,61,255));
+    DrawGasCrate((Vector3){x-3.0f,0.48f,z+0.9f},false);
+    DrawGasCrate((Vector3){x,0.48f,z+0.9f},false);
+    DrawGasCrate((Vector3){x+3.0f,0.48f,z+0.9f},false);
+    DrawGasCrate((Vector3){x,4.05f,z},true);
+    DrawCube((Vector3){x,0.015f,z+5.8f},23.0f,0.035f,23.0f,C(62,65,61,255));
 }
 
 static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
 {
-    if(playerY<2.9f)
+    // На высоте крыши игроку разрешено находиться только над самой крышей
+    // или в узком верхнем участке лестницы. Это убирает невидимый "пол" в воздухе.
+    if(playerY>=2.9f)
     {
-        // Боковые и задняя стены, а также участки фасада по сторонам входа.
-        if(fabsf(x)<4.25f+radius && fabsf(z+19.18f)<0.22f+radius) return true;
-        if(fabsf(x)<4.25f+radius && fabsf(z+24.82f)<0.22f+radius &&
-           fabsf(x)>1.35f) return true;
-        if(fabsf(z+22.0f)<2.9f+radius && fabsf(x)>4.05f-radius &&
-           fabsf(x)<4.45f+radius &&
-           !(fabsf(x-4.55f)<0.85f && z>-25.0f && z<-22.0f)) return true;
+        bool roofArea = fabsf(x)<=5.35f+radius &&
+                        z>=-25.75f-radius && z<=-18.25f+radius;
+        bool ladderTop = x>=5.0f-radius && x<=6.0f+radius &&
+                         z>=-25.2f-radius && z<=-21.0f+radius;
+        if(!roofArea && !ladderTop) return true;
+    }
+    else
+    {
+        // Стены увеличенного корпуса и открытый вход.
+        if(fabsf(x)<5.25f+radius && fabsf(z+18.65f)<0.24f+radius) return true;
+        if(fabsf(x)<5.25f+radius && fabsf(z+25.35f)<0.24f+radius &&
+           fabsf(x)>1.55f) return true;
+        if(fabsf(z+22.0f)<3.45f+radius && fabsf(x)>5.0f-radius &&
+           fabsf(x)<5.45f+radius &&
+           !(fabsf(x-5.55f)<0.9f && z>-25.5f && z<-21.0f)) return true;
     }
     // Опоры навеса и бензоколонки.
-    const float posts[4][2]={{-6.7f,-18.9f},{6.7f,-18.9f},{-6.7f,-11.2f},{6.7f,-11.2f}};
-    for(int i=0;i<4;i++){float dx=x-posts[i][0],dz=z-posts[i][1];if(dx*dx+dz*dz<(0.18f+radius)*(0.18f+radius))return true;}
-    for(int i=0;i<2;i++){float px=(i==0)?-2.8f:2.8f,dx=x-px,dz=z+16.0f;if(dx*dx+dz*dz<(0.55f+radius)*(0.55f+radius))return true;}
+    const float posts[4][2]={{-8.0f,-18.3f},{8.0f,-18.3f},{-8.0f,-9.7f},{8.0f,-9.7f}};
+    for(int i=0;i<4;i++){float dx=x-posts[i][0],dz=z-posts[i][1];if(dx*dx+dz*dz<(0.22f+radius)*(0.22f+radius))return true;}
+    for(int i=0;i<2;i++){float px=(i==0)?-3.4f:3.4f,dx=x-px,dz=z+15.0f;if(dx*dx+dz*dz<(0.58f+radius)*(0.58f+radius))return true;}
     return false;
 }
 
