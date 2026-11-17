@@ -3420,24 +3420,6 @@ int main(void)
                         nextX=12.25f;
                         nextZ=-26.5f;
                     }
-                    else if (player.y>0.0f)
-                    {
-                        // Крыша заправки — сплошная поверхность над всем корпусом.
-                        // На ней высота сохраняется; за внешним краем начинается падение.
-                        bool roofSurface = fabsf(player.x)<11.55f &&
-                                           player.z>-30.75f && player.z<-13.25f &&
-                                           player.y>=3.35f;
-                        bool ladderTop = fabsf(player.x-12.25f)<0.95f &&
-                                         player.z>-27.35f && player.z<-25.65f &&
-                                         player.y>=3.35f;
-                        bool standingOnRoof = roofSurface || ladderTop;
-                        if (!standingOnRoof)
-                        {
-                            player.y -= GetFrameTime()*4.0f;
-                            if (player.y<0.0f) player.y=0.0f;
-                        }
-                    }
-
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
                     if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed) &&
                         !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
@@ -3514,21 +3496,6 @@ int main(void)
                     nextX=12.25f;
                     nextZ=-26.5f;
                 }
-                else if (player.y>0.0f)
-                {
-                    bool roofSurface = fabsf(player.x)<11.55f &&
-                                       player.z>-30.75f && player.z<-13.25f &&
-                                       player.y>=3.35f;
-                    bool ladderTop = fabsf(player.x-12.25f)<0.95f &&
-                                     player.z>-27.35f && player.z<-25.65f &&
-                                     player.y>=3.35f;
-                    if (!(roofSurface || ladderTop))
-                    {
-                        player.y -= frameTime*4.0f;
-                        if (player.y<0.0f) player.y=0.0f;
-                    }
-                }
-
                 if (!IsBlockedAt(nextX, player.z, player.y, barrelPositions, barrelDestroyed) &&
                     !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,wildAnimalHealth,-1))
                     player.x = nextX;
