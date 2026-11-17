@@ -624,14 +624,15 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
         }
         if(fabsf(z+14.0f)<0.24f+radius && fabsf(x)<4.0f+radius) return true;
     }
-    // Коллизии трёх ящиков в торговом зале.
+    // Коллизии ящиков совпадают с новыми местами их моделей.
     if(playerY<1.35f)
     {
-        const float crateX[3]={-3.8f,0.0f,3.8f};
+        const float crateX[3]={-8.6f,-8.6f,8.6f};
+        const float crateZ[3]={-18.0f,-16.0f,-18.0f};
         for(int i=0;i<3;i++)
         {
-            float dx=x-crateX[i], dz=z+20.8f;
-            float crateRadius=0.72f+radius;
+            float dx=x-crateX[i], dz=z-crateZ[i];
+            float crateRadius=0.78f+radius;
             if(dx*dx+dz*dz<crateRadius*crateRadius) return true;
         }
     }
