@@ -1170,7 +1170,9 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
             eye.z + right.z*s*0.48f + forward.z*(0.48f+armSwing*0.65f)
         };
 
-        float punch = (side == 1) ? attackProgress*0.95f : 0.0f;
+        float swingPhase = 1.0f - attackProgress;
+        float swing = sinf(swingPhase*3.1415926f);
+        float punch = (side == 1) ? swing*(heldItemId == 7 ? 0.48f : 0.34f) : 0.0f;
         Vector3 wrist = {
             eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing+punch),
             eye.y - 0.48f + armLift + punch*0.10f + useLift,
@@ -1198,9 +1200,11 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*(0.88f+armSwing),
                         eye.y-0.45f+armLift+useLift,
                         eye.z+right.z*0.30f+forward.z*(0.88f+armSwing)};
-    Vector3 toolTip = {toolBase.x+forward.x*0.20f,
-                       toolBase.y+0.27f,
-                       toolBase.z+forward.z*0.20f};
+    float toolSwing = sinf((1.0f-attackProgress)*3.1415926f);
+    float swingStrength = heldItemId == 7 ? 0.62f : 0.48f;
+    Vector3 toolTip = {toolBase.x+forward.x*(0.20f+toolSwing*swingStrength*0.35f),
+                       toolBase.y+0.27f-toolSwing*swingStrength*0.52f,
+                       toolBase.z+forward.z*(0.20f+toolSwing*swingStrength*0.25f)};
     if(useItem==2 || useItem==3) heldItemId=useItem;
     if(heldItemId==0) DrawHeldAxe(toolBase,toolTip,yaw,1.0f);
     else if(heldItemId==7)
@@ -1884,6 +1888,9 @@ int main(void)
     float attackCooldown = 0.0f;
     const float attackCooldownDuration = 1.0f;
     float attackAnimation = 0.0f;
+    float eatCooldown = 0.0f;
+    bool eatRequested = false;
+    Rectangle eatButton = {0};
     float consumeAnimationTime = 0.0f;
     int consumeAnimationType = -1;
     const float consumeAnimationDuration = 0.72f;
@@ -2067,8 +2074,19 @@ int main(void)
             if (IsKeyPressed(KEY_E)) attackRequested = true;
         }
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
+        if (eatCooldown > 0.0f) eatCooldown -= frameTime;
+        if (eatCooldown < 0.0f) eatCooldown = 0.0f;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
+        if (eatRequested && eatCooldown <= 0.0f && hotbarItemIds[selectedHotbarSlot] == 2 && itemCounts[2] > 0 &&
+            !mainMenuOpen && !settingsOpen && !inventoryOpen && !gasCrateOpen)
+        {
+            itemCounts[2]--;
+            foodLevel = fminf(100.0f, foodLevel + 25.0f);
+            consumeAnimationType = 2;
+            consumeAnimationTime = consumeAnimationDuration;
+            eatCooldown = 1.0f;
+        }
         if (attackAnimation > 0.0f) attackAnimation -= frameTime;
         if (attackAnimation < 0.0f) attackAnimation = 0.0f;
         if (consumeAnimationTime > 0.0f) {
@@ -2266,6 +2284,7 @@ int main(void)
         }
 
         interactButton = (Rectangle){actionButtonCenters[0].x-hitW/2, actionButtonCenters[0].y-hitH/2, hitW, hitH};
+        eatButton = interactButton;
         sprintButton = (Rectangle){actionButtonCenters[1].x-runW/2, actionButtonCenters[1].y-runH/2, runW, runH};
         inventoryButton = (Rectangle){actionButtonCenters[2].x-bagW/2, actionButtonCenters[2].y-bagH/2, bagW, bagH};
 
@@ -2651,6 +2670,11 @@ int main(void)
             { int item=8+oreDropType[nearbyOreDrop]; itemCounts[item]+=oreDropAmount[nearbyOreDrop]; if(itemCounts[item]>99)itemCounts[item]=99; oreDropActive[nearbyOreDrop]=false; }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && CheckCollisionPointRec(pos, takeButton) && (nearbyWoodDrop = FindNearestWoodDrop(player, woodDrops, woodDropActive)) >= 0)
             { itemCounts[4] += 15; if(itemCounts[4]>99)itemCounts[4]=99; woodDropActive[nearbyWoodDrop]=false; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, eatButton) && hotbarItemIds[selectedHotbarSlot] == 2)
+            {
+                eatRequested = true;
+            }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, interactButton))
             {
@@ -3807,7 +3831,9 @@ int main(void)
             !commandChatOpen && !commandConsoleOpen && !resourcePanelOpen &&
             !buildPlanHeld)
         {
-            if (mouseLeftPressed && !mouseOnHud)
+            if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 2 &&
+                CheckCollisionPointRec(desktopMousePos, eatButton)) eatRequested = true;
+            else if (mouseLeftPressed && !mouseOnHud)
                 attackRequested = true;
 
             if (mouseRightPressed && buildMode)
@@ -4100,10 +4126,12 @@ int main(void)
                     targetedBarrel = -1;
                 }
             }
-            else if (targetedTree >= 0 && !treeChopped[targetedTree])
+            else if (targetedTree >= 0 && !treeChopped[targetedTree] && hotbarItemIds[selectedHotbarSlot] == 0)
             {
+                itemCounts[4] = (itemCounts[4] + 15 > 99) ? 99 : itemCounts[4] + 15;
                 treeHealth[targetedTree]--;
-                if(treeHealth[targetedTree]<=0){treeChopped[targetedTree]=true;for(int d=0;d<MAX_WOOD_DROPS;d++)if(!woodDropActive[d]){woodDrops[d]=treePositions[targetedTree];woodDropActive[d]=true;break;}}
+                if(treeHealth[targetedTree]<=0){treeChopped[targetedTree]=true;}
+                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen, buildPieceCount, itemCounts[4]);
             }
             else if (targetedOre >= 0 && gOreActive[targetedOre])
             {
@@ -4800,12 +4828,22 @@ int main(void)
                     (attackCooldown <= 0.0f ? C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha));
                 const char *actionLabel = canOpenCrate ? "ОТКРЫТЬ" : "УДАР";
                 int actionFont = canOpenCrate ? 16 : 20;
+                bool holdingFood = hotbarItemIds[selectedHotbarSlot] == 2;
+                const char *visibleActionLabel = holdingFood ? "ЕСТЬ" : actionLabel;
+                int visibleActionFont = holdingFood ? 18 : actionFont;
+                if (holdingFood) hitColor = eatCooldown <= 0.0f && itemCounts[2] > 0 ? C(45,135,75,hitAlpha) : C(75,83,91,hitAlpha);
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
                 DrawRectangleRoundedLinesEx(interactButton, 0.25f, 14, 2, C(230, 190, 160, hitAlpha));
-                DrawText(actionLabel,
-                    (int)(interactButton.x+interactButton.width/2-MeasureText(actionLabel,actionFont)/2),
-                    (int)(interactButton.y+7), actionFont, C(255,255,255,hitAlpha));
-                if (!canOpenCrate)
+                DrawText(visibleActionLabel,
+                    (int)(interactButton.x+interactButton.width/2-MeasureText(visibleActionLabel,visibleActionFont)/2),
+                    (int)(interactButton.y+7), visibleActionFont, C(255,255,255,hitAlpha));
+                if (holdingFood)
+                {
+                    const char *eatLabel = eatCooldown <= 0.0f ? (itemCounts[2] > 0 ? "ГОТОВО" : "НЕТ ЕДЫ") : TextFormat("%.1f с",eatCooldown);
+                    DrawText(eatLabel,(int)(interactButton.x+interactButton.width/2-MeasureText(eatLabel,13)/2),
+                        (int)(interactButton.y+34),13,C(255,255,255,hitAlpha));
+                }
+                else if (!canOpenCrate)
                 {
                     float cooldownRatio=attackCooldown/attackCooldownDuration;
                     DrawRectangleRounded((Rectangle){interactButton.x+12,interactButton.y+34,
