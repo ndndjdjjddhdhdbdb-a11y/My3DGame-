@@ -1263,13 +1263,28 @@ static void DrawPlayer(Vector3 player, float angle,
 
     // Предмет в правой руке персонажа от третьего лица.
     Vector3 heldBase=PlayerPoint(player,angle,0.45f,0.82f,-0.08f);
-    Vector3 heldTip=PlayerPoint(player,angle,0.58f,1.18f,-0.42f);
-    DrawCylinderEx(heldBase,heldTip,0.045f,0.035f,7,C(111,75,45,255));
-    if(heldItemId==0)
-        DrawCube(PlayerPoint(player,angle,0.68f,1.25f,-0.48f),0.32f,0.16f,0.14f,C(125,132,137,255));
-    else
-        DrawCube(heldTip,0.16f,0.16f,0.16f,
-            heldItemId==2?C(178,116,55,255):heldItemId==3?C(70,150,215,255):C(139,112,77,255));
+    Vector3 heldTip=PlayerPoint(player,angle,0.56f,1.13f,-0.38f);
+    if(heldItemId==0 || heldItemId==4 || heldItemId==5 || heldItemId==6 ||
+       heldItemId==7 || heldItemId>=8)
+        DrawCylinderEx(heldBase,heldTip,0.045f,0.035f,7,C(111,75,45,255));
+    if(heldItemId==0 || heldItemId==5 || heldItemId>=8)
+    {
+        Color metal=heldItemId==9?C(48,91,205,255):
+                    heldItemId==10?C(224,194,49,255):
+                    heldItemId==11?C(205,211,218,255):C(125,132,137,255);
+        DrawCube(PlayerPoint(player,angle,0.66f,1.21f,-0.43f),0.30f,0.15f,0.14f,metal);
+    }
+    else if(heldItemId==1)
+    {
+        DrawCube(heldTip,0.25f,0.18f,0.14f,C(190,55,55,255));
+        DrawCube(PlayerPoint(player,angle,0.56f,1.14f,-0.47f),0.06f,0.16f,0.025f,RAYWHITE);
+    }
+    else if(heldItemId==2) DrawSphere(heldTip,0.12f,C(178,116,55,255));
+    else if(heldItemId==3) DrawCylinder(heldTip,0.09f,0.09f,0.25f,8,C(70,150,215,255));
+    else if(heldItemId==4) DrawCube(heldTip,0.28f,0.10f,0.10f,C(126,82,47,255));
+    else if(heldItemId==6) DrawCube(heldTip,0.22f,0.28f,0.07f,C(115,82,52,255));
+    else if(heldItemId==7) DrawCylinderEx(heldTip,PlayerPoint(player,angle,0.56f,1.13f,-0.72f),0.07f,0.045f,8,C(65,72,78,255));
+    else DrawCube(heldTip,0.16f,0.16f,0.16f,C(139,112,77,255));
 
     // Голова без кепки, с простыми волосами и лицом.
     DrawSphere(PlayerPoint(player, angle, 0, 1.86f+bob, 0),
@@ -3528,7 +3543,7 @@ int main(void)
                 {
                     dx=player.x-a->x; dz=player.z-a->z;
                     distance=sqrtf(dx*dx+dz*dz);
-                    if(distance>1.35f)
+                    if(distance>2.20f)
                     {
                         if(wildAnimalTypes[animal]!=0)
                         {
