@@ -4,10 +4,126 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <jni.h>
+#include <pthread.h>
 
 // Шрифт интерфейса. На Android читаем TTF напрямую через stdio:
 // LoadFontEx использует загрузчик ресурсов Raylib, который не обязан
 // открывать абсолютные пути системных файлов.
+
+/* Bolt multiplayer bridge: WebSocket is managed by Android/OkHttp. */
+#define NET_MAX_PLAYERS 20
+typedef struct NetPlayer { int id; char name[20]; Vector3 position; float yaw; } NetPlayer;
+static JavaVM *gNetVm = NULL;
+static jclass gNetClientClass = NULL;
+static pthread_mutex_t gNetMutex = PTHREAD_MUTEX_INITIALIZER;
+static NetPlayer gNetPlayers[NET_MAX_PLAYERS];
+static int gNetPlayerCount = 0;
+static char gNetStatus[48] = "ПОДКЛЮЧЕНИЕ...";
+static double gNetLastSend = 0.0;
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+    (void)reserved;
+    gNetVm = vm;
+    JNIEnv *env = NULL;
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) return JNI_ERR;
+    jclass local = (*env)->FindClass(env, "com/raylib/raymob/NetClient");
+    if (local == NULL) return JNI_ERR;
+    gNetClientClass = (jclass)(*env)->NewGlobalRef(env, local);
+    (*env)->DeleteLocalRef(env, local);
+    return JNI_VERSION_1_6;
+}
+
+JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeStatus(JNIEnv *env, jclass cls, jstring status)
+{
+    (void)cls;
+    const char *value = (*env)->GetStringUTFChars(env, status, NULL);
+    if (value == NULL) return;
+    pthread_mutex_lock(&gNetMutex);
+    snprintf(gNetStatus, sizeof(gNetStatus), "%s", value);
+    pthread_mutex_unlock(&gNetMutex);
+    (*env)->ReleaseStringUTFChars(env, status, value);
+}
+
+JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *env, jclass cls, jstring message)
+{
+    (void)cls;
+    const char *value = (*env)->GetStringUTFChars(env, message, NULL);
+    if (value == NULL) return;
+    if (strncmp(value, "STATE ", 6) == 0)
+    {
+        char copy[4096];
+        snprintf(copy, sizeof(copy), "%s", value);
+        char *save = NULL;
+        char *token = strtok_r(copy, " ", &save);
+        token = strtok_r(NULL, " ", &save);
+        int count = token ? atoi(token) : 0;
+        if (count < 0) count = 0;
+        if (count > NET_MAX_PLAYERS) count = NET_MAX_PLAYERS;
+        NetPlayer parsed[NET_MAX_PLAYERS];
+        int parsedCount = 0;
+        for (int i = 0; i < count; ++i)
+        {
+            char *id = strtok_r(NULL, " ", &save);
+            char *name = strtok_r(NULL, " ", &save);
+            char *x = strtok_r(NULL, " ", &save);
+            char *y = strtok_r(NULL, " ", &save);
+            char *z = strtok_r(NULL, " ", &save);
+            char *yaw = strtok_r(NULL, " ", &save);
+            if (!id || !name || !x || !y || !z || !yaw) break;
+            parsed[parsedCount].id = atoi(id);
+            snprintf(parsed[parsedCount].name, sizeof(parsed[parsedCount].name), "%s", name);
+            parsed[parsedCount].position = (Vector3){(float)atof(x), (float)atof(y), (float)atof(z)};
+            parsed[parsedCount].yaw = (float)atof(yaw);
+            parsedCount++;
+        }
+        pthread_mutex_lock(&gNetMutex);
+        memcpy(gNetPlayers, parsed, sizeof(NetPlayer)*(size_t)parsedCount);
+        gNetPlayerCount = parsedCount;
+        pthread_mutex_unlock(&gNetMutex);
+    }
+    else if (strncmp(value, "WELCOME ", 8) == 0)
+    {
+        pthread_mutex_lock(&gNetMutex);
+        snprintf(gNetStatus, sizeof(gNetStatus), "ONLINE");
+        pthread_mutex_unlock(&gNetMutex);
+    }
+    else if (strcmp(value, "FULL") == 0)
+    {
+        pthread_mutex_lock(&gNetMutex);
+        snprintf(gNetStatus, sizeof(gNetStatus), "СЕРВЕР ЗАПОЛНЕН");
+        pthread_mutex_unlock(&gNetMutex);
+    }
+    (*env)->ReleaseStringUTFChars(env, message, value);
+}
+
+static void NetSendPosition(Vector3 position, float yaw)
+{
+    if (gNetVm == NULL || gNetClientClass == NULL) return;
+    JNIEnv *env = NULL;
+    int attached = 0;
+    if ((*gNetVm)->GetEnv(gNetVm, (void **)&env, JNI_VERSION_1_6) != JNI_OK)
+    {
+        if ((*gNetVm)->AttachCurrentThread(gNetVm, &env, NULL) != JNI_OK) return;
+        attached = 1;
+    }
+    jmethodID sendMethod = (*env)->GetStaticMethodID(env, gNetClientClass, "send", "(Ljava/lang/String;)V");
+    if (sendMethod != NULL)
+    {
+        char message[160];
+        snprintf(message, sizeof(message), "MOVE %.3f %.3f %.3f %.3f", position.x, position.y, position.z, yaw);
+        jstring text = (*env)->NewStringUTF(env, message);
+        if (text != NULL)
+        {
+            (*env)->CallStaticVoidMethod(env, gNetClientClass, sendMethod, text);
+            (*env)->DeleteLocalRef(env, text);
+        }
+    }
+    if (attached) (*gNetVm)->DetachCurrentThread(gNetVm);
+}
+
+
 static Font cyrillicFont;
 
 static Font LoadAndroidCyrillicFont(int fontSize, int *codepoints, int codepointCount)
@@ -1734,6 +1850,19 @@ static int GetHotbarSlotAt(Vector2 pos, Rectangle hotbarSlots[4])
 int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
+    /* Android starts the secure WebSocket connection asynchronously. */
+    if (gNetVm != NULL && gNetClientClass != NULL)
+    {
+        JNIEnv *env = NULL; int attached = 0;
+        if ((*gNetVm)->GetEnv(gNetVm, (void **)&env, JNI_VERSION_1_6) != JNI_OK &&
+            (*gNetVm)->AttachCurrentThread(gNetVm, &env, NULL) == JNI_OK) attached = 1;
+        if (env != NULL)
+        {
+            jmethodID connectMethod = (*env)->GetStaticMethodID(env, gNetClientClass, "connect", "()V");
+            if (connectMethod != NULL) (*env)->CallStaticVoidMethod(env, gNetClientClass, connectMethod);
+            if (attached) (*gNetVm)->DetachCurrentThread(gNetVm);
+        }
+    }
 
     // Стандартный шрифт Raylib не содержит кириллицу. Загружаем Roboto
     // Android с явным набором русских символов для сообщений интерфейса.
@@ -2081,6 +2210,7 @@ int main(void)
     while (!WindowShouldClose())
     {
         float frameTime = GetFrameTime();
+        if (GetTime() - gNetLastSend >= 0.10) { NetSendPosition(player, playerAngle); gNetLastSend = GetTime(); }
         attackRequested = false;
         jumpRequested = false;
         eatRequested = false;
@@ -4624,6 +4754,17 @@ int main(void)
             }
         }
 
+        pthread_mutex_lock(&gNetMutex);
+        for (int netIndex = 0; netIndex < gNetPlayerCount; ++netIndex)
+        {
+            if (gNetPlayers[netIndex].position.x == player.x &&
+                gNetPlayers[netIndex].position.z == player.z) continue;
+            DrawPlayerShadow(gNetPlayers[netIndex].position);
+            DrawPlayer(gNetPlayers[netIndex].position, gNetPlayers[netIndex].yaw,
+                       0.0f, false, 0.0f, 0, 0.0f, 0);
+        }
+        pthread_mutex_unlock(&gNetMutex);
+
         if (!firstPerson)
         {
             DrawPlayerShadow(player);
@@ -4658,6 +4799,12 @@ int main(void)
         BeginDrawing();
 
         ClearBackground(BLACK);
+        pthread_mutex_lock(&gNetMutex);
+        char netStatusCopy[48]; snprintf(netStatusCopy, sizeof(netStatusCopy), "%s", gNetStatus);
+        int netPlayersCopy = gNetPlayerCount;
+        pthread_mutex_unlock(&gNetMutex);
+        DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
+                 strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
 
         DrawTexturePro(
             sceneTexture.texture,
