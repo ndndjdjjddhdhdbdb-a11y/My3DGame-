@@ -1124,7 +1124,7 @@ static void DrawHeldMeat(Vector3 center, float scale)
     // Неровный кусок жареного мяса с румяной корочкой.
     DrawSphere((Vector3){center.x,center.y,center.z},0.125f*scale,C(111,54,31,255));
     DrawSphere((Vector3){center.x-0.065f*scale,center.y+0.025f*scale,center.z},
-               0.090f*scale,C(151, seventy, 39,255));
+               0.090f*scale,C(151,70,39,255));
     DrawSphere((Vector3){center.x+0.055f*scale,center.y+0.035f*scale,center.z+0.015f*scale},
                0.085f*scale,C(177,91,43,255));
     DrawSphere((Vector3){center.x,center.y+0.075f*scale,center.z-0.025f*scale},
