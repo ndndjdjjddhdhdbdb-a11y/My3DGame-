@@ -2363,7 +2363,14 @@ int main(void)
         menuShopButton = (Rectangle){menuX, menuStartY+menuButtonHeight+menuGap, menuButtonWidth, menuButtonHeight};
         menuSettingsButton = (Rectangle){menuX+menuButtonWidth+menuGap, menuStartY+menuButtonHeight+menuGap, menuButtonWidth, menuButtonHeight};
 
-        menuBackButton = menuShopButton;
+        float serverCardWidth = fminf(360.0f, screenWidth-40.0f);
+        Rectangle menuServerCard = {
+            (screenWidth-serverCardWidth)/2.0f,
+            menuStartY+5.0f, serverCardWidth, 105.0f
+        };
+        menuBackButton = (Rectangle){
+            screenWidth/2.0f-105.0f, menuStartY+122.0f, 210.0f, 52.0f
+        };
 
         menuReturnButton = (Rectangle){
             14.0f, 14.0f, 135.0f, 48.0f
@@ -2692,10 +2699,17 @@ int main(void)
                         settingsOpen = true;
                     }
                 }
-                else
+                else if (menuPage == 1 && CheckCollisionPointRec(pos, menuServerCard))
                 {
-                    if (CheckCollisionPointRec(pos, menuBackButton))
-                        menuPage = 0;
+                    mainMenuOpen = false;
+                    loadingScreen = true;
+                    loadingProgress = 0.0f;
+                    joystickActive = false;
+                    lookTouchId = -1;
+                }
+                else if (CheckCollisionPointRec(pos, menuBackButton))
+                {
+                    menuPage = 0;
                 }
             }
             else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
@@ -3096,6 +3110,14 @@ int main(void)
                         menuPage = 2;
                     else if (CheckCollisionPointRec(pos, menuSettingsButton))
                         settingsOpen = true;
+                }
+                else if (menuPage == 1 && CheckCollisionPointRec(pos, menuServerCard))
+                {
+                    mainMenuOpen = false;
+                    loadingScreen = true;
+                    loadingProgress = 0.0f;
+                    joystickActive = false;
+                    lookTouchId = -1;
                 }
                 else if (CheckCollisionPointRec(pos, menuBackButton))
                 {
@@ -5626,10 +5648,7 @@ int main(void)
                 if (menuPage == 1)
                 {
                     float cardWidth = fminf(360.0f, screenWidth-40.0f);
-                    Rectangle serverCard = {
-                        (screenWidth-cardWidth)/2.0f,
-                        menuStartY+5.0f, cardWidth, 105.0f
-                    };
+                    Rectangle serverCard = menuServerCard;
 
                     DrawRectangleRounded(
                         serverCard, 0.20f, 14, C(30, 52, 68, 250)
@@ -5648,14 +5667,20 @@ int main(void)
                         (int)serverCard.y+25, 6,
                         C(80, 220, 135, 255)
                     );
+                    pthread_mutex_lock(&gNetMutex);
+                    int serverPlayers = gNetPlayerCount;
+                    char serverStatus[48];
+                    snprintf(serverStatus, sizeof(serverStatus), "%s", gNetStatus);
+                    pthread_mutex_unlock(&gNetMutex);
+                    bool serverOnline = strcmp(serverStatus, "ONLINE") == 0;
                     DrawText(
-                        "В СЕТИ",
+                        serverOnline ? "В СЕТИ" : serverStatus,
                         (int)serverCard.x+18,
                         (int)serverCard.y+49, 16,
-                        C(100, 225, 145, 255)
+                        serverOnline ? C(100, 225, 145, 255) : C(255, 180, 110, 255)
                     );
                     DrawText(
-                        "0/20 PLAYERS",
+                        TextFormat("%d/20 PLAYERS", serverPlayers),
                         (int)serverCard.x+18,
                         (int)serverCard.y+75, 18,
                         C(190, 215, 235, 255)
