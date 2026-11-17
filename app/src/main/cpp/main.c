@@ -3518,8 +3518,7 @@ int main(void)
         bool jumpLadderZone = fabsf(player.x-12.25f)<0.95f &&
                               player.z>-27.35f && player.z<-25.65f;
         bool jumpRoofSurface = fabsf(player.x)<11.55f &&
-                               player.z>-30.75f && player.z<-13.25f &&
-                               player.y>=3.35f;
+                               player.z>-30.75f && player.z<-13.25f;
         float jumpGroundHeight = jumpRoofSurface ? 3.72f : 0.0f;
         bool groundedForJump = (player.y <= 0.02f) ||
                                (jumpRoofSurface && player.y >= 3.35f && player.y <= 3.74f);
