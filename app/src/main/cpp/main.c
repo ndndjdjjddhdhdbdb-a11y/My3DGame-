@@ -1071,9 +1071,9 @@ static void GetBuildPlacement(Vector3 player, float angle, int type,
 // на самой заправке и небольшом отступе вокруг её корпуса.
 static bool IsBuildZoneForbidden(float x, float z, float halfX, float halfZ)
 {
-    const float stationHalfWidth = 15.5f;
-    const float stationMinZ = -35.5f;
-    const float stationMaxZ = -8.5f;
+    const float stationHalfWidth = 25.0f;
+    const float stationMinZ = -56.0f;
+    const float stationMaxZ = 13.0f;
     if (x+halfX > -stationHalfWidth && x-halfX < stationHalfWidth &&
         z+halfZ > stationMinZ && z-halfZ < stationMaxZ) return true;
     return false;
@@ -1767,7 +1767,7 @@ int main(void)
     const float waterDrainRate = 0.055f;
 
     bool playerMoving = false;
-    bool firstPerson = false;
+    bool firstPerson = true;
     bool settingsOpen = false;
     bool editControls = false;
     bool sprintEnabled = false;
@@ -1958,6 +1958,8 @@ int main(void)
     float attackAnimation = 0.0f;
     float eatCooldown = 0.0f;
     bool eatRequested = false;
+    bool drinkRequested = false;
+    float drinkCooldown = 0.0f;
     Rectangle eatButton = {0};
     float consumeAnimationTime = 0.0f;
     int consumeAnimationType = -1;
@@ -2091,9 +2093,10 @@ int main(void)
         float frameTime = GetFrameTime();
         attackRequested = false;
         eatRequested = false;
+        drinkRequested = false;
         if (loadingScreen)
         {
-            loadingProgress += frameTime/2.4f;
+            loadingProgress += frameTime/5.5f;
             if (loadingProgress >= 1.0f) { loadingProgress = 1.0f; loadingScreen = false; }
         }
         if(commandChatOpen || commandConsoleOpen)
@@ -2137,7 +2140,7 @@ int main(void)
             if (IsKeyPressed(KEY_THREE)) selectedHotbarSlot = 2;
             if (IsKeyPressed(KEY_FOUR)) selectedHotbarSlot = 3;
             if (IsKeyPressed(KEY_TAB)) { inventoryOpen = !inventoryOpen; joystickActive = false; lookTouchId = -1; }
-            if (IsKeyPressed(KEY_V)) firstPerson = !firstPerson;
+            // Камера всегда остаётся от первого лица.
             // X is a hold-to-open Building Plan key only; it must not
             // permanently switch the build mode on.
             buildPlanHeld = IsKeyDown(KEY_X);
@@ -2145,6 +2148,8 @@ int main(void)
         }
         if (attackCooldown > 0.0f) attackCooldown -= frameTime;
         if (eatCooldown > 0.0f) eatCooldown -= frameTime;
+        if (drinkCooldown > 0.0f) drinkCooldown -= frameTime;
+        if (drinkCooldown < 0.0f) drinkCooldown = 0.0f;
         if (eatCooldown < 0.0f) eatCooldown = 0.0f;
         if (crateTakeCooldown > 0.0f) { crateTakeCooldown -= frameTime; if (crateTakeCooldown <= 0.0f) { crateTakeCooldown = 0.0f; crateGlowSlot = -1; } }
         if (attackCooldown < 0.0f) attackCooldown = 0.0f;
@@ -2604,7 +2609,7 @@ int main(void)
             else if (!mainMenuOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
-                firstPerson = !firstPerson;
+                firstPerson = true;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, buildButton))
@@ -2737,7 +2742,12 @@ int main(void)
                 eatRequested = true;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
-                     CheckCollisionPointRec(pos, interactButton))
+                     CheckCollisionPointRec(pos, eatButton) && hotbarItemIds[selectedHotbarSlot] == 3)
+            {
+                drinkRequested = true;
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, interactButton)
             {
                 attackRequested = true;
             }
@@ -3033,7 +3043,7 @@ int main(void)
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
             {
-                firstPerson = !firstPerson;
+                firstPerson = true;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, buildButton))
@@ -3894,6 +3904,8 @@ int main(void)
         {
             if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 2 &&
                 CheckCollisionPointRec(desktopMousePos, eatButton)) eatRequested = true;
+            else if (mouseLeftPressed && hotbarItemIds[selectedHotbarSlot] == 3 &&
+                CheckCollisionPointRec(desktopMousePos, eatButton)) drinkRequested = true;
             else if (mouseLeftPressed && !mouseOnHud)
                 attackRequested = true;
 
@@ -4129,6 +4141,15 @@ int main(void)
             consumeAnimationType = 2;
             consumeAnimationTime = consumeAnimationDuration;
             eatCooldown = 1.0f;
+        }
+        if (drinkRequested && drinkCooldown <= 0.0f && hotbarItemIds[selectedHotbarSlot] == 3 && itemCounts[3] > 0 &&
+            !mainMenuOpen && !settingsOpen && !inventoryOpen && !gasCrateOpen)
+        {
+            itemCounts[3]--;
+            waterLevel = fminf(100.0f, waterLevel + 25.0f);
+            consumeAnimationType = 3;
+            consumeAnimationTime = consumeAnimationDuration;
+            drinkCooldown = 1.0f;
         }
         if (attackRequested && attackCooldown <= 0.0f &&
             !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && !gasCrateOpen)
@@ -4782,7 +4803,7 @@ int main(void)
             );
 
             DrawText(
-                firstPerson ? "ВИД: 1-Е ЛИЦО" : "ВИД: 3-Е ЛИЦО",
+                "ВИД: 1-Е ЛИЦО",
                 cameraButton.x+10, cameraButton.y+19, 17, RAYWHITE
             );
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,235));
@@ -4904,9 +4925,11 @@ int main(void)
                 const char *actionLabel = canOpenCrate ? "ОТКРЫТЬ" : "УДАР";
                 int actionFont = canOpenCrate ? 16 : 20;
                 bool holdingFood = hotbarItemIds[selectedHotbarSlot] == 2;
-                const char *visibleActionLabel = holdingFood ? "ЕСТЬ" : actionLabel;
-                int visibleActionFont = holdingFood ? 18 : actionFont;
+                bool holdingWater = hotbarItemIds[selectedHotbarSlot] == 3;
+                const char *visibleActionLabel = holdingFood ? "ЕСТЬ" : (holdingWater ? "ПИТЬ" : actionLabel);
+                int visibleActionFont = (holdingFood || holdingWater) ? 18 : actionFont;
                 if (holdingFood) hitColor = eatCooldown <= 0.0f && itemCounts[2] > 0 ? C(45,135,75,hitAlpha) : C(75,83,91,hitAlpha);
+                else if (holdingWater) hitColor = drinkCooldown <= 0.0f && itemCounts[3] > 0 ? C(35,105,165,hitAlpha) : C(75,83,91,hitAlpha);
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
                 DrawRectangleRoundedLinesEx(interactButton, 0.25f, 14, 2, C(230, 190, 160, hitAlpha));
                 DrawText(visibleActionLabel,
@@ -4916,6 +4939,12 @@ int main(void)
                 {
                     const char *eatLabel = eatCooldown <= 0.0f ? (itemCounts[2] > 0 ? "ГОТОВО" : "НЕТ ЕДЫ") : TextFormat("%.1f с",eatCooldown);
                     DrawText(eatLabel,(int)(interactButton.x+interactButton.width/2-MeasureText(eatLabel,13)/2),
+                        (int)(interactButton.y+34),13,C(255,255,255,hitAlpha));
+                }
+                else if (holdingWater)
+                {
+                    const char *drinkLabel = drinkCooldown <= 0.0f ? (itemCounts[3] > 0 ? "ГОТОВО" : "НЕТ ВОДЫ") : TextFormat("%.1f с",drinkCooldown);
+                    DrawText(drinkLabel,(int)(interactButton.x+interactButton.width/2-MeasureText(drinkLabel,13)/2),
                         (int)(interactButton.y+34),13,C(255,255,255,hitAlpha));
                 }
                 else if (!canOpenCrate)
@@ -5925,24 +5954,41 @@ int main(void)
                                    C(7, 15, 31, 255), C(18, 39, 65, 255));
             DrawRectangleLinesEx((Rectangle){24, 24, screenWidth-48, screenHeight-48},
                                  2.0f, C(85, 160, 215, 130));
-            const char *loadTitle = "boltSurvival";
-            int loadTitleSize = (int)fminf(48.0f, screenWidth*0.10f);
-            DrawText(loadTitle, screenWidth/2-MeasureText(loadTitle, loadTitleSize)/2,
-                     screenHeight/2-90, loadTitleSize, RAYWHITE);
-            const char *loadLabel = "ЗАГРУЗКА МИРА";
-            DrawText(loadLabel, screenWidth/2-MeasureText(loadLabel, 20)/2,
-                     screenHeight/2-20, 20, C(190, 220, 245, 255));
-            Rectangle loadBar = {screenWidth*0.20f, screenHeight/2+25,
-                                 screenWidth*0.60f, 14};
-            DrawRectangleRounded(loadBar, 0.5f, 12, C(35, 55, 77, 255));
-            DrawRectangleRounded((Rectangle){loadBar.x, loadBar.y,
-                                 loadBar.width*loadingProgress, loadBar.height},
-                                 0.5f, 12, C(55, 175, 245, 255));
-            DrawRectangleRoundedLinesEx(loadBar, 0.5f, 12, 1.5f,
-                                        C(130, 195, 235, 220));
-            const char *percentText = TextFormat("%d%%", (int)(loadingProgress*100.0f));
-            DrawText(percentText, screenWidth/2-MeasureText(percentText, 18)/2,
-                     screenHeight/2+55, 18, RAYWHITE);
+            // Оригинальная космическая заставка Bolt Survival.
+            DrawRectangleGradientV(0,0,screenWidth,screenHeight,C(5,10,30,255),C(24,42,78,255));
+            for(int star=0;star<90;star++){
+                int sx=(star*97+31)%screenWidth, sy=(star*53+17)%(int)(screenHeight*0.68f);
+                float twinkle=0.55f+0.45f*sinf((float)GetTime()*2.0f+star);
+                DrawCircle(sx,sy,1.0f+(star%3)*0.45f,C(210,225,255,(unsigned char)(150*twinkle)));
+            }
+            DrawCircle(screenWidth*0.77f,screenHeight*0.22f,fminf(screenWidth,screenHeight)*0.105f,C(83,119,169,190));
+            DrawCircle(screenWidth*0.75f,screenHeight*0.20f,fminf(screenWidth,screenHeight)*0.105f,C(5,13,35,255));
+            DrawEllipse(screenWidth*0.50f,screenHeight*0.79f,screenWidth*0.62f,screenHeight*0.15f,C(17,31,52,255));
+            DrawRectangle(0,(int)(screenHeight*0.83f),screenWidth,screenHeight/5,C(7,13,27,255));
+            float rocketX=screenWidth*0.50f, rocketY=screenHeight*0.48f+sinf((float)GetTime()*2.2f)*5.0f;
+            float rocketW=fminf(72.0f,screenWidth*0.085f), rocketH=fminf(190.0f,screenHeight*0.30f);
+            DrawTriangle((Vector2){rocketX,rocketY-rocketH*0.62f},(Vector2){rocketX-rocketW*0.43f,rocketY-rocketH*0.25f},(Vector2){rocketX+rocketW*0.43f,rocketY-rocketH*0.25f},C(218,226,235,255));
+            DrawRectangle((int)(rocketX-rocketW*0.43f),(int)(rocketY-rocketH*0.27f),(int)(rocketW*0.86f),(int)(rocketH*0.62f),C(194,207,220,255));
+            DrawRectangle((int)(rocketX-rocketW*0.43f),(int)(rocketY+rocketH*0.17f),(int)(rocketW*0.86f),(int)(rocketH*0.12f),C(224,104,54,255));
+            DrawTriangle((Vector2){rocketX-rocketW*0.43f,rocketY+rocketH*0.18f},(Vector2){rocketX-rocketW*0.78f,rocketY+rocketH*0.43f},(Vector2){rocketX-rocketW*0.35f,rocketY+rocketH*0.30f},C(219,91,49,255));
+            DrawTriangle((Vector2){rocketX+rocketW*0.43f,rocketY+rocketH*0.18f},(Vector2){rocketX+rocketW*0.78f,rocketY+rocketH*0.43f},(Vector2){rocketX+rocketW*0.35f,rocketY+rocketH*0.30f},C(219,91,49,255));
+            DrawCircle((int)rocketX,(int)(rocketY-rocketH*0.06f),rocketW*0.17f,C(48,112,159,255));
+            DrawCircleLines((int)rocketX,(int)(rocketY-rocketH*0.06f),rocketW*0.19f,C(235,244,255,255));
+            float flame=rocketH*(0.17f+0.07f*fabsf(sinf((float)GetTime()*12.0f)));
+            DrawTriangle((Vector2){rocketX-rocketW*.22f,rocketY+rocketH*.30f},(Vector2){rocketX+rocketW*.22f,rocketY+rocketH*.30f},(Vector2){rocketX,rocketY+rocketH*.30f+flame},C(255,160,55,235));
+            const char *loadTitle="BOLT SURVIVAL"; int loadTitleSize=(int)fminf(43.0f,screenWidth*0.085f);
+            DrawText(loadTitle,screenWidth/2-MeasureText(loadTitle,loadTitleSize)/2,(int)(screenHeight*0.08f),loadTitleSize,RAYWHITE);
+            const char *loadLabel="ПОДГОТОВКА ОСТРОВА";
+            DrawText(loadLabel,screenWidth/2-MeasureText(loadLabel,19)/2,(int)(screenHeight*0.69f),19,C(196,220,245,255));
+            const char *tips[4]={"СОВЕТ: СОБИРАЙ РЕСУРСЫ ДЛЯ СОЗДАНИЯ ИНСТРУМЕНТОВ","СОВЕТ: СЛЕДИ ЗА ГОЛОДОМ И ЗАПАСОМ ВОДЫ","СОВЕТ: ДЕРЕВЬЯ И РУДУ МОЖНО ДОБЫВАТЬ ИНСТРУМЕНТАМИ","СОВЕТ: ОСТЕРЕГАЙСЯ ДИКИХ ЖИВОТНЫХ"};
+            int tipIndex=((int)(GetTime()*0.65f))%4, tipSize=14;
+            DrawText(tips[tipIndex],screenWidth/2-MeasureText(tips[tipIndex],tipSize)/2,(int)(screenHeight*0.75f),tipSize,C(185,204,224,255));
+            Rectangle loadBar={screenWidth*0.18f,screenHeight*0.88f,screenWidth*0.64f,13};
+            DrawRectangleRounded(loadBar,0.5f,12,C(30,47,69,255));
+            DrawRectangleRounded((Rectangle){loadBar.x,loadBar.y,loadBar.width*loadingProgress,loadBar.height},0.5f,12,C(69,174,238,255));
+            DrawRectangleRoundedLinesEx(loadBar,0.5f,12,1.5f,C(145,205,244,230));
+            const char *percentText=TextFormat("%d%%",(int)(loadingProgress*100.0f));
+            DrawText(percentText,screenWidth/2-MeasureText(percentText,17)/2,(int)(screenHeight*0.91f),17,RAYWHITE);
         }
 
         EndDrawing();
