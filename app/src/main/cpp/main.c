@@ -532,8 +532,8 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
         for(int side=-1;side<=1;side+=2)
         {
             float wallX=side*4.0f;
-            if(fabsf(x-wallX)<0.24f+radius && z>-18.9f && z<-19.0f) return true;
-            if(fabsf(x-wallX)<0.24f+radius && z>-19.0f && z<-14.7f) return true;
+            if(fabsf(x-wallX)<0.24f+radius && z>-19.5f && z<-18.2f) return true;
+            if(fabsf(x-wallX)<0.24f+radius && z>-16.0f && z<-13.5f) return true;
         }
         if(fabsf(z+14.0f)<0.24f+radius && fabsf(x)<4.0f+radius) return true;
     }
