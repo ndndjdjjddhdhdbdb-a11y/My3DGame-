@@ -1285,9 +1285,11 @@ static void InitAnimalAudio(void)
     gAnimalAudioReady=(gBoarAlertSound.frameCount>0);
 }
 
-static bool IsAnimalBlockedAt(float x, float z, Vector3 animals[MAX_WILD_ANIMALS],
+static bool IsAnimalBlockedAt(float x, float z, float playerY,
+                              Vector3 animals[MAX_WILD_ANIMALS],
                               int animalTypes[MAX_WILD_ANIMALS], int ignoreAnimal)
 {
+    if(playerY>1.8f)return false;
     for(int i=0;i<MAX_WILD_ANIMALS;i++)
     {
         if(i==ignoreAnimal)continue;
@@ -3098,10 +3100,10 @@ int main(void)
 
                     // Проверяем оси отдельно, чтобы можно было скользить вдоль стен.
                     if (!IsBlockedAt(nextX, player.z,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(nextX,player.z,wildAnimals,wildAnimalTypes,-1))
+                        !IsAnimalBlockedAt(nextX,player.z,player.y,wildAnimals,wildAnimalTypes,-1))
                         player.x = nextX;
                     if (!IsBlockedAt(player.x, nextZ,player.y,barrelPositions,barrelDestroyed) &&
-                        !IsAnimalBlockedAt(player.x,nextZ,wildAnimals,wildAnimalTypes,-1))
+                        !IsAnimalBlockedAt(player.x,nextZ,player.y,wildAnimals,wildAnimalTypes,-1))
                         player.z = nextZ;
 
                     if (playerMoving)
