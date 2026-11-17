@@ -4,8 +4,64 @@
 #include <string.h>
 #include <stdio.h>
 
-// Единый шрифт интерфейса с поддержкой русского языка.
+// Шрифт интерфейса. На Android читаем TTF напрямую через stdio:
+// LoadFontEx использует загрузчик ресурсов Raylib, который не обязан
+// открывать абсолютные пути системных файлов.
 static Font cyrillicFont;
+
+static Font LoadAndroidCyrillicFont(int fontSize, int *codepoints, int codepointCount)
+{
+    const char *fontPaths[] = {
+        "/system/fonts/Roboto-Regular.ttf",
+        "/system/fonts/RobotoStatic-Regular.ttf",
+        "/system/fonts/NotoSans-Regular.ttf"
+    };
+
+    for (int i = 0; i < (int)(sizeof(fontPaths)/sizeof(fontPaths[0])); i++)
+    {
+        FILE *file = fopen(fontPaths[i], "rb");
+        if (file == NULL) continue;
+
+        if (fseek(file, 0, SEEK_END) != 0)
+        {
+            fclose(file);
+            continue;
+        }
+
+        long fileSize = ftell(file);
+        if (fileSize <= 0 || fileSize > 16 * 1024 * 1024 ||
+            fseek(file, 0, SEEK_SET) != 0)
+        {
+            fclose(file);
+            continue;
+        }
+
+        unsigned char *fontBytes = (unsigned char *)malloc((size_t)fileSize);
+        if (fontBytes == NULL)
+        {
+            fclose(file);
+            continue;
+        }
+
+        size_t bytesRead = fread(fontBytes, 1, (size_t)fileSize, file);
+        fclose(file);
+
+        if (bytesRead == (size_t)fileSize)
+        {
+            Font loaded = LoadFontFromMemory(".ttf", fontBytes, (int)fileSize,
+                                             fontSize, codepoints, codepointCount);
+            free(fontBytes);
+            if (loaded.texture.id != 0) return loaded;
+        }
+        else
+        {
+            free(fontBytes);
+        }
+    }
+
+    return GetFontDefault();
+}
+
 static void DrawUiText(const char *text, int x, int y, int fontSize, Color color)
 {
     DrawTextEx(cyrillicFont, text, (Vector2){(float)x, (float)y},
@@ -1175,9 +1231,7 @@ int main(void)
     int cpIndex = 0;
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
-    cyrillicFont = LoadFontEx("/system/fonts/Roboto-Regular.ttf", 32,
-                                   cyrillicCodepoints, cpIndex);
-    if (cyrillicFont.texture.id == 0) cyrillicFont = GetFontDefault();
+    cyrillicFont = LoadAndroidCyrillicFont(32, cyrillicCodepoints, cpIndex);
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
