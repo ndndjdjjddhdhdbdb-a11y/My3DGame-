@@ -406,51 +406,50 @@ static void DrawMiniGasStation(float x,float z,int quality)
     Color shelf=C(83,88,83,255),wood=C(112,83,55,255);
 
     // Основной корпус: передний фасад с широким входом и витринами.
-    DrawCube((Vector3){x,1.75f,z+4.35f},13.8f,3.5f,0.18f,wall);
-    DrawCube((Vector3){x-6.8f,1.75f,z},0.18f,3.5f,8.9f,wall);
-    DrawCube((Vector3){x+6.8f,1.75f,z},0.18f,3.5f,8.9f,wall);
-    DrawCube((Vector3){x-4.7f,1.75f,z-4.35f},4.0f,3.5f,0.18f,wall);
-    DrawCube((Vector3){x+4.7f,1.75f,z-4.35f},4.0f,3.5f,0.18f,wall);
-    DrawCube((Vector3){x,3.58f,z},14.1f,0.24f,9.2f,metal);
-    DrawCube((Vector3){x,3.86f,z-0.1f},13.9f,0.26f,0.38f,red);
+    DrawCube((Vector3){x,1.75f,z+9.0f},24.0f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x-12.0f,1.75f,z},0.18f,3.5f,18.2f,wall);
+    DrawCube((Vector3){x+12.0f,1.75f,z},0.18f,3.5f,18.2f,wall);
+    DrawCube((Vector3){x-8.0f,1.75f,z-9.0f},8.0f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x+8.0f,1.75f,z-9.0f},8.0f,3.5f,0.18f,wall);
+    DrawCube((Vector3){x,3.58f,z},24.4f,0.24f,18.4f,metal);
+    DrawCube((Vector3){x,3.86f,z-0.1f},23.8f,0.26f,0.38f,red);
 
     // Передние витрины, вход остаётся свободным по центру.
     for(int side=-1;side<=1;side+=2)
     {
-        float wx=x+side*4.7f;
-        DrawCube((Vector3){wx,2.0f,z-4.47f},3.55f,2.45f,0.055f,C(75,139,151,175));
-        DrawCube((Vector3){wx-1.82f,2.0f,z-4.52f},0.10f,2.65f,0.10f,metal);
-        DrawCube((Vector3){wx+1.82f,2.0f,z-4.52f},0.10f,2.65f,0.10f,metal);
-        DrawCube((Vector3){wx,3.30f,z-4.52f},3.75f,0.10f,0.10f,metal);
-        DrawCube((Vector3){wx,0.70f,z-4.52f},3.75f,0.10f,0.10f,metal);
-        DrawCube((Vector3){wx,2.0f,z-4.54f},0.07f,2.45f,0.07f,metal);
+        float wx=x+side*8.0f;
+        DrawCube((Vector3){wx,2.0f,z-9.12f},5.2f,2.45f,0.055f,C(75,139,151,175));
+        DrawCube((Vector3){wx-2.65f,2.0f,z-9.16f},0.10f,2.65f,0.10f,metal);
+        DrawCube((Vector3){wx+2.65f,2.0f,z-9.16f},0.10f,2.65f,0.10f,metal);
+        DrawCube((Vector3){wx,3.30f,z-9.16f},5.4f,0.10f,0.10f,metal);
+        DrawCube((Vector3){wx,0.70f,z-9.16f},5.4f,0.10f,0.10f,metal);
+        DrawCube((Vector3){wx,2.0f,z-9.18f},0.07f,2.45f,0.07f,metal);
     }
     // Металлическая рама входа.
-    DrawCube((Vector3){x-1.45f,1.55f,z-4.48f},0.12f,3.05f,0.12f,metal);
-    DrawCube((Vector3){x+1.45f,1.55f,z-4.48f},0.12f,3.05f,0.12f,metal);
-    DrawCube((Vector3){x,3.08f,z-4.48f},2.95f,0.12f,0.12f,metal);
-    DrawCube((Vector3){x+1.35f,1.45f,z-4.55f},0.055f,0.85f,0.045f,C(190,198,190,255));
+    DrawCube((Vector3){x-2.0f,1.55f,z-9.12f},0.12f,3.05f,0.12f,metal);
+    DrawCube((Vector3){x+2.0f,1.55f,z-9.12f},0.12f,3.05f,0.12f,metal);
+    DrawCube((Vector3){x,3.08f,z-9.12f},4.1f,0.12f,0.12f,metal);
+    DrawCube((Vector3){x+1.85f,1.45f,z-9.18f},0.055f,0.85f,0.045f,C(190,198,190,255));
 
     // Внутренние перегородки: торговый зал и две небольшие подсобки.
-    DrawCube((Vector3){x-4.55f,1.35f,z+2.35f},4.35f,2.7f,0.14f,wall);
-    DrawCube((Vector3){x+4.55f,1.35f,z+2.35f},4.35f,2.7f,0.14f,wall);
-    DrawCube((Vector3){x-2.65f,1.35f,z+2.35f},0.14f,2.7f,4.0f,wall);
-    DrawCube((Vector3){x+2.65f,1.35f,z+2.35f},0.14f,2.7f,4.0f,wall);
-    // Дверные проёмы подсобок отмечены металлическими стойками.
+    // Три отдельные комнаты в задней части большой заправки, с дверными проёмами.
     for(int side=-1;side<=1;side+=2)
     {
-        float dx=x+side*2.65f;
-        DrawCube((Vector3){dx,1.35f,z+0.35f},0.12f,2.7f,0.12f,metal);
-        DrawCube((Vector3){dx,1.35f,z+4.25f},0.12f,2.7f,0.12f,metal);
+        float rx=x+side*4.0f;
+        DrawCube((Vector3){rx,1.35f,z+3.15f},0.14f,2.7f,1.3f,wall);
+        DrawCube((Vector3){rx,1.35f,z+7.25f},0.14f,2.7f,2.5f,wall);
+        DrawCube((Vector3){rx,1.35f,z+4.45f},0.12f,2.7f,0.12f,metal);
+        DrawCube((Vector3){rx,1.35f,z+5.15f},0.12f,2.7f,0.12f,metal);
     }
+    DrawCube((Vector3){x,1.35f,z+8.0f},7.9f,2.7f,0.14f,wall);
 
     // Полки вдоль стен торгового зала, на них позже появится отдельный лут.
     for(int side=-1;side<=1;side+=2)
     {
-        float sx=x+side*5.65f;
+        float sx=x+side*10.7f;
         for(int row=0;row<3;row++)
         {
-            float sz=z-1.65f+row*1.45f;
+            float sz=z-3.0f+row*2.0f;
             DrawCube((Vector3){sx,0.95f,sz},0.16f,1.85f,0.16f,shelf);
             DrawCube((Vector3){sx+side*0.62f,0.95f,sz},0.16f,1.85f,0.16f,shelf);
             for(int level=0;level<3;level++)
@@ -461,21 +460,21 @@ static void DrawMiniGasStation(float x,float z,int quality)
     // Стеллажи в подсобках.
     for(int side=-1;side<=1;side+=2)
     {
-        float sx=x+side*4.55f;
-        DrawCube((Vector3){sx,1.0f,z+2.55f},3.0f,0.12f,0.75f,shelf);
-        DrawCube((Vector3){sx,1.75f,z+2.55f},3.0f,0.12f,0.75f,shelf);
-        DrawCube((Vector3){sx-1.4f,1.0f,z+2.55f},0.12f,2.0f,0.8f,metal);
-        DrawCube((Vector3){sx+1.4f,1.0f,z+2.55f},0.12f,2.0f,0.8f,metal);
+        float sx=x+side*8.0f;
+        DrawCube((Vector3){sx,1.0f,z+6.5f},3.0f,0.12f,0.75f,shelf);
+        DrawCube((Vector3){sx,1.75f,z+6.5f},3.0f,0.12f,0.75f,shelf);
+        DrawCube((Vector3){sx-1.4f,1.0f,z+6.5f},0.12f,2.0f,0.8f,metal);
+        DrawCube((Vector3){sx+1.4f,1.0f,z+6.5f},0.12f,2.0f,0.8f,metal);
     }
 
     // Навес и топливные колонки.
-    DrawCube((Vector3){x,4.35f,z+9.0f},21.0f,0.38f,15.0f,C(89,86,76,255));
-    DrawCube((Vector3){x,4.58f,z+9.0f},20.7f,0.14f,14.7f,red);
+    DrawCube((Vector3){x,4.35f,z+15.0f},29.0f,0.38f,19.0f,C(89,86,76,255));
+    DrawCube((Vector3){x,4.58f,z+15.0f},28.7f,0.14f,18.7f,red);
     for(int side=-1;side<=1;side+=2)for(int row=0;row<2;row++)
-        DrawCube((Vector3){x+side*9.5f,2.15f,z+3.7f+row*9.5f},0.22f,4.1f,0.22f,metal);
+        DrawCube((Vector3){x+side*13.0f,2.15f,z+6.0f+row*9.5f},0.22f,4.1f,0.22f,metal);
     for(int pump=0;pump<2;pump++)
     {
-        float px=x+(pump==0?-4.2f:4.2f),pz=z+8.0f;
+        float px=x+(pump==0?-6.0f:6.0f),pz=z+13.0f;
         DrawCube((Vector3){px,1.05f,pz},0.95f,1.9f,0.82f,C(151,145,126,255));
         DrawCube((Vector3){px,1.63f,pz-0.43f},0.58f,0.42f,0.035f,C(29,43,42,255));
         DrawCube((Vector3){px,1.64f,pz-0.46f},0.42f,0.19f,0.025f,C(95,174,132,255));
@@ -484,10 +483,10 @@ static void DrawMiniGasStation(float x,float z,int quality)
 
     // Лестница на правой стене. Ступени развёрнуты поперёк стены.
     for(int rung=0;rung<9;rung++)
-        DrawCube((Vector3){x+7.08f,0.28f+rung*0.40f,z-2.0f},0.16f,0.10f,1.0f,C(105,108,101,255));
-    DrawCylinderEx((Vector3){x+7.08f,0.1f,z-2.5f},(Vector3){x+7.08f,3.85f,z-2.5f},0.075f,0.075f,6,metal);
-    DrawCylinderEx((Vector3){x+7.08f,0.1f,z-1.5f},(Vector3){x+7.08f,3.85f,z-1.5f},0.075f,0.075f,6,metal);
-    DrawCube((Vector3){x+6.55f,3.55f,z-2.0f},1.1f,0.14f,1.25f,metal);
+        DrawCube((Vector3){x+12.25f,0.28f+rung*0.40f,z-4.5f},0.16f,0.10f,1.0f,C(105,108,101,255));
+    DrawCylinderEx((Vector3){x+12.25f,0.1f,z-5.0f},(Vector3){x+12.25f,3.85f,z-5.0f},0.075f,0.075f,6,metal);
+    DrawCylinderEx((Vector3){x+12.25f,0.1f,z-4.0f},(Vector3){x+12.25f,3.85f,z-4.0f},0.075f,0.075f,6,metal);
+    DrawCube((Vector3){x+11.7f,3.55f,z-4.5f},1.1f,0.14f,1.25f,metal);
 
     // Старые три ящика пока оставлены в магазине; будущий лут будет на полках.
     DrawGasCrate((Vector3){x-3.8f,0.48f,z+1.2f},false);
@@ -517,7 +516,7 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawCube((Vector3){tx+1.8f,0.65f,tz-0.82f},0.65f,0.12f,0.18f,C(120,48,39,255));
     DrawCube((Vector3){tx+1.8f,0.65f,tz+0.82f},0.65f,0.12f,0.18f,C(120,48,39,255));
 
-    DrawCube((Vector3){x,0.015f,z+6.2f},27.0f,0.035f,27.0f,C(62,65,61,255));
+    DrawCube((Vector3){x,0.015f,z+8.0f},34.0f,0.035f,36.0f,C(62,65,61,255));
 }
 
 static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
@@ -525,12 +524,18 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
     // На крыше можно пройти за край и упасть. На земле стены здания блокируют проход.
     if(playerY<2.9f)
     {
-        if(fabsf(x)<6.85f+radius && fabsf(z+17.65f)<0.24f+radius) return true;
-        if(fabsf(x)<6.85f+radius && fabsf(z+26.35f)<0.24f+radius &&
-           fabsf(x)>2.65f) return true;
-        if(fabsf(z+22.0f)<4.45f+radius && fabsf(x)>6.6f-radius &&
-           fabsf(x)<7.05f+radius &&
-           !(fabsf(x-7.15f)<0.9f && z>-25.5f && z<-21.0f)) return true;
+        if(fabsf(x)<12.0f+radius && fabsf(z+13.0f)<0.24f+radius) return true;
+        if(fabsf(x)<12.0f+radius && fabsf(z+31.0f)<0.24f+radius && fabsf(x)>2.0f) return true;
+        if(fabsf(z+22.0f)<9.0f+radius && fabsf(fabsf(x)-12.0f)<0.24f+radius &&
+           !(fabsf(x-12.25f)<0.9f && z>-28.0f && z<-25.0f)) return true;
+        // Перегородки трёх задних комнат с дверными проёмами.
+        for(int side=-1;side<=1;side+=2)
+        {
+            float wallX=side*4.0f;
+            if(fabsf(x-wallX)<0.24f+radius && z>-18.9f && z<-19.0f) return true;
+            if(fabsf(x-wallX)<0.24f+radius && z>-19.0f && z<-14.7f) return true;
+        }
+        if(fabsf(z+14.0f)<0.24f+radius && fabsf(x)<4.0f+radius) return true;
     }
     // Коллизии трёх ящиков в торговом зале.
     if(playerY<1.35f)
