@@ -1346,7 +1346,7 @@ int main(void)
         menuBackButton = menuShopButton;
 
         menuReturnButton = (Rectangle){
-            18, 18, 135, 55
+            screenWidth/2.0f-67.5f, 18, 135, 55
         };
 
         moveButtonsButton = (Rectangle){
@@ -1729,9 +1729,10 @@ int main(void)
                 { itemCounts[4] -= 10; itemCounts[6]++; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
                 for (int item = 2; item <= 3; item++)
                 {
-                    float w = (invPanel.width-56.0f)/3.0f;
-                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
-                                   invPanel.y+72+(item/3)*42, w, 38};
+                    float gap = 8.0f;
+                    float w = (invPanel.width-40.0f-gap*3.0f)/4.0f;
+                    Rectangle r = {invPanel.x+16+(item%4)*(w+gap),
+                                   invPanel.y+72+(item/4)*58, w, 54};
                     if (CheckCollisionPointRec(pos, r) && itemCounts[item] > 0)
                     {
                         if (item == 2)
@@ -1825,6 +1826,8 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, highButton))
                 {
                     graphicsQuality = 2;
+                    detailLevel = 0;
+                    resolutionLevel = 0;
                 }
                 else if (CheckCollisionPointRec(pos, fpsButtons[0]))
                 {
@@ -3215,7 +3218,7 @@ int main(void)
                 bool canOpenCrate = targetedGasCrate >= 0;
                 Color hitColor = canOpenCrate ? C(35, 125, 82, hitAlpha) :
                     (attackCooldown <= 0.0f ? C(185, 75, 55, hitAlpha) : C(75, 83, 91, hitAlpha));
-                const char *actionLabel = canOpenCrate ? "ОТКРЫТЬ" : "HIT";
+                const char *actionLabel = canOpenCrate ? "OPEN" : "HIT";
                 int actionFont = canOpenCrate ? 16 : 20;
                 DrawRectangleRounded(interactButton, 0.25f, 14, hitColor);
                 DrawRectangleRoundedLinesEx(interactButton, 0.25f, 14, 2, C(230, 190, 160, hitAlpha));
@@ -3323,16 +3326,17 @@ int main(void)
                 DrawText("ITEMS / QUICK ACCESS", (int)invPanel.x+20, (int)invPanel.y+45, 11, C(145, 190, 220, 255));
                 for (int item = 0; item < 12; item++)
                 {
-                    float w = (invPanel.width-56.0f)/3.0f;
-                    Rectangle r = {invPanel.x+16+(item%3)*(w+12),
-                                   invPanel.y+72+(item/3)*42, w, 38};
-                    DrawRectangleRounded(r, 0.12f, 8,
-                        (item == 2 || item == 3) ? C(24, 61, 86, 255) : C(19, 42, 67, 255));
-                    DrawRectangleRoundedLinesEx(r, 0.12f, 8, 1.5f, C(100, 170, 215, 230));
-                    int labelSize = (item == 7) ? 9 : 11;
-                    DrawText(itemNames[item], (int)r.x+5, (int)r.y+6, labelSize, RAYWHITE);
+                    float gap = 8.0f;
+                    float w = (invPanel.width-40.0f-gap*3.0f)/4.0f;
+                    Rectangle r = {invPanel.x+16+(item%4)*(w+gap),
+                                   invPanel.y+72+(item/4)*58, w, 54};
+                    DrawRectangleRounded(r, 0.10f, 8,
+                        (item == 2 || item == 3) ? C(30, 66, 88, 255) : C(19, 42, 67, 255));
+                    DrawRectangleRoundedLinesEx(r, 0.10f, 8, 1.6f, C(100, 170, 215, 230));
+                    DrawText(itemNames[item], (int)r.x+5, (int)r.y+9,
+                        (item == 7) ? 8 : 10, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[item]),
-                        (int)r.x+5, (int)r.y+25, 10, C(160, 205, 235, 255));
+                        (int)r.x+5, (int)r.y+32, 11, C(160, 205, 235, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "BAG", 13, true);
                 DrawText("CRAFTING", (int)invPanel.x+18, (int)invPanel.y+242,
@@ -3615,26 +3619,16 @@ int main(void)
             DrawRectangleRounded(mediumButton, 0.22f, 12, medColor);
             DrawRectangleRounded(highButton, 0.22f, 12, highColor);
 
-            DrawText(
-                "LOW",
-                lowButton.x+lowButton.width/2-19,
-                lowButton.y+14,
-                16, RAYWHITE
-            );
-
-            DrawText(
-                "MEDIUM",
-                mediumButton.x+mediumButton.width/2-34,
-                mediumButton.y+14,
-                16, RAYWHITE
-            );
-
-            DrawText(
-                "HIGH",
-                highButton.x+highButton.width/2-19,
-                highButton.y+14,
-                16, RAYWHITE
-            );
+            const char *qualityLabels[3] = {"POTATO", "DETAILED", "REALISM"};
+            Rectangle qualityButtons[3] = {lowButton, mediumButton, highButton};
+            for (int qi = 0; qi < 3; qi++)
+            {
+                int fontSize = 12;
+                int textWidth = MeasureText(qualityLabels[qi], fontSize);
+                DrawText(qualityLabels[qi],
+                    (int)(qualityButtons[qi].x+qualityButtons[qi].width/2-textWidth/2),
+                    (int)(qualityButtons[qi].y+16), fontSize, RAYWHITE);
+            }
 
             DrawText(
                 "FPS LIMIT",
