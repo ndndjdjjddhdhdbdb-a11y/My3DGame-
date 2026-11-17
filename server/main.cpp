@@ -220,7 +220,7 @@ void clientLoop(int socket) {
             if(length>8192 || !masked){pending.clear();goto disconnected;}
             if(pending.size()<header+4+length)break;
             const std::uint8_t* mask=pending.data()+header;
-            std::string payload(static_cast<std::size_t>(length),'\\0');
+            std::string payload(static_cast<std::size_t>(length),'\0');
             for(std::size_t i=0;i<length;++i)payload[i]=static_cast<char>(pending[header+4+i]^mask[i%4]);
             pending.erase(pending.begin(),pending.begin()+static_cast<std::ptrdiff_t>(header+4+length));
             if(opcode==8) goto disconnected;
