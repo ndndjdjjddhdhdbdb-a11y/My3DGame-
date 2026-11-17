@@ -2335,32 +2335,37 @@ int main(void)
                     float nextX = player.x + worldMoveX*survivalSpeed;
                     float nextZ = player.z + worldMoveZ*survivalSpeed;
 
-                    // Подъём по лестнице: удерживай направление вперёд рядом с ней.
-                    bool ladderZone=fabsf(player.x-7.15f)<0.95f &&
-                                    player.z>-25.5f && player.z<-21.0f;
-                    if(ladderZone &&
-                       ((player.y<3.5f && moveForward>0.12f) ||
-                        (player.y>0.0f && moveForward< -0.12f)))
+                    // Лестница находится на правой стене заправки:
+                    // центр примерно X=12.25, Z=-26.5. Узкая зона не даёт
+                    // начинать подъём задолго до контакта с лестницей.
+                    bool ladderZone = fabsf(player.x-12.25f)<0.78f &&
+                                      player.z>-27.35f && player.z<-25.65f;
+                    if (ladderZone &&
+                        ((player.y<3.72f && moveForward>0.12f) ||
+                         (player.y>0.0f && moveForward< -0.12f)))
                     {
-                        player.y+=moveForward*survivalSpeed*1.15f;
-                        if(player.y<0.0f)player.y=0.0f;
-                        if(player.y>3.55f)player.y=3.55f;
-                        // Пока карабкаемся, персонаж остаётся на лестнице.
-                        nextX=player.x;
-                        nextZ=player.z;
+                        player.y += moveForward*survivalSpeed*1.15f;
+                        if (player.y<0.0f) player.y=0.0f;
+                        if (player.y>3.72f) player.y=3.72f;
+                        // На время подъёма удерживаем персонажа по центру лестницы.
+                        nextX=12.25f;
+                        nextZ=-26.5f;
                     }
-                    else if(player.y>0.0f)
+                    else if (player.y>0.0f)
                     {
-                        // На крыше высота сохраняется, за её краем персонаж падает.
-                        bool roofSurface = fabsf(player.x)<6.95f &&
-                                            player.z>-26.65f && player.z<-17.35f;
-                        bool ladderTop = fabsf(player.x-7.15f)<1.0f &&
-                                         player.z>-25.5f && player.z<-21.0f;
+                        // Крыша заправки — сплошная поверхность над всем корпусом.
+                        // На ней высота сохраняется; за внешним краем начинается падение.
+                        bool roofSurface = fabsf(player.x)<11.55f &&
+                                           player.z>-30.75f && player.z<-13.25f &&
+                                           player.y>=3.35f;
+                        bool ladderTop = fabsf(player.x-12.25f)<0.95f &&
+                                         player.z>-27.35f && player.z<-25.65f &&
+                                         player.y>=3.35f;
                         bool standingOnRoof = roofSurface || ladderTop;
-                        if(!standingOnRoof || player.y<2.8f)
+                        if (!standingOnRoof)
                         {
-                            player.y-=GetFrameTime()*4.0f;
-                            if(player.y<0.0f)player.y=0.0f;
+                            player.y -= GetFrameTime()*4.0f;
+                            if (player.y<0.0f) player.y=0.0f;
                         }
                     }
 
