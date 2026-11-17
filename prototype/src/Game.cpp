@@ -11,6 +11,7 @@ void Game::Run()
         return;
 
     SetTargetFPS(60);
+    DisableCursor();
 
     while (!WindowShouldClose())
     {
