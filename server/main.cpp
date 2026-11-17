@@ -185,7 +185,18 @@ bool processCommand(const std::shared_ptr<Player>& player,const std::string& mes
         float x,y,z,yaw;
         if(input>>x>>y>>z>>yaw && std::isfinite(x)&&std::isfinite(y)&&std::isfinite(z)&&std::isfinite(yaw)) {
             std::lock_guard<std::mutex> lock(playersMutex);
-            player->x=x;player->y=y;player->z=z;player->yaw=yaw;
+            /* Server-side player separation prevents clients from occupying the same spot. */
+            constexpr float minPlayerDistance = 1.05f;
+            bool collision = false;
+            for (const auto& entry : players)
+            {
+                const auto& other = *entry.second;
+                if (other.id == player->id) continue;
+                const float dx = x - other.x;
+                const float dz = z - other.z;
+                if (dx*dx + dz*dz < minPlayerDistance*minPlayerDistance) { collision = true; break; }
+            }
+            if (!collision) { player->x=x;player->y=y;player->z=z;player->yaw=yaw; }
         }
     } else if(command=="PING") sendText(player,"PONG");
     return true;
@@ -197,10 +208,16 @@ void clientLoop(int socket) {
     {
         std::lock_guard<std::mutex> lock(playersMutex);
         if(players.size()>=kMaxPlayers){sendFrame(socket,1,"FULL");close(socket);return;}
-        player->id=nextId++;players.emplace(player->id,player);
+        player->id=nextId++;
+        const float spawnAngle = static_cast<float>(player->id) * 2.39996323f;
+        const float spawnRadius = 8.0f + static_cast<float>((player->id - 1) % 4) * 1.5f;
+        player->x = std::cos(spawnAngle) * spawnRadius;
+        player->z = std::sin(spawnAngle) * spawnRadius;
+        players.emplace(player->id,player);
         std::cout<<"[JOIN] player-"<<player->id<<" ("<<players.size()<<"/"<<kMaxPlayers<<")\n";
     }
-    sendText(player,"WELCOME "+std::to_string(player->id)+" "+std::to_string(kMaxPlayers));
+    sendText(player,"WELCOME "+std::to_string(player->id)+" "+std::to_string(kMaxPlayers)+" "+
+             std::to_string(player->x)+" "+std::to_string(player->y)+" "+std::to_string(player->z));
 
     std::vector<std::uint8_t> pending;
     std::uint8_t buffer[2048];
