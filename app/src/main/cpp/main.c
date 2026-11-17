@@ -1060,8 +1060,14 @@ int main(void)
 
     SetTargetFPS(30);
 
-    int renderWidth = (int)(screenWidth * 1.0f);
-    int renderHeight = (int)(screenHeight * 1.0f);
+    // Сразу создаём буфер в выбранном разрешении, чтобы при первом
+    // входе в игру не было лишнего пересоздания текстуры и скачка памяти.
+    float initialRenderScale =
+        (resolutionLevel == 0) ? 1.0f :
+        ((resolutionLevel == 1) ? 0.85f : 0.70f);
+
+    int renderWidth = (int)(screenWidth * initialRenderScale);
+    int renderHeight = (int)(screenHeight * initialRenderScale);
 
     if (renderWidth < 320) renderWidth = 320;
     if (renderHeight < 240) renderHeight = 240;
