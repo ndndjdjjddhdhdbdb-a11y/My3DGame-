@@ -81,6 +81,20 @@ static int MeasureUiText(const char *text, int fontSize)
 #define MAX_WOOD_DROPS 64
 #define MAX_ORE_NODES 16
 #define MAX_ORE_DROPS 16
+#define MAX_WILD_ANIMALS 12
+
+// Центры биомов выбираются один раз при создании мира.
+static Vector2 gBiomeCenters[3] = {{-125.0f,-115.0f},{135.0f,105.0f},{-145.0f,125.0f}};
+
+static int GetWorldBiome(float x, float z)
+{
+    for (int i=0;i<3;i++)
+    {
+        float dx=x-gBiomeCenters[i].x, dz=z-gBiomeCenters[i].y;
+        if (dx*dx+dz*dz < 78.0f*78.0f) return i+1;
+    }
+    return 0;
+}
 
 // Текущие залежи руды также участвуют в коллизиях игрока.
 static Vector3 gOrePositions[MAX_ORE_NODES];
@@ -344,9 +358,9 @@ static void DrawTree(float x, float z, float scale, int quality, int biome)
     }
 
     Color bark = C(105, 69, 40, 255);
-    Color lower = (biome == 1) ? C(202, 218, 222, 255) : C(35, 105, 54, 255);
-    Color middle = (biome == 1) ? C(222, 233, 235, 255) : C(47, 128, 62, 255);
-    Color upper = (biome == 1) ? C(238, 244, 244, 255) : C(66, 145, 72, 255);
+    Color lower = (biome == 1) ? C(202, 218, 222, 255) : (biome == 3 ? C(24,82,43,255) : C(35, 105, 54, 255));
+    Color middle = (biome == 1) ? C(222, 233, 235, 255) : (biome == 3 ? C(34,105,49,255) : C(47, 128, 62, 255));
+    Color upper = (biome == 1) ? C(238, 244, 244, 255) : (biome == 3 ? C(49,126,57,255) : C(66, 145, 72, 255));
     DrawCylinder((Vector3){x, 1.12f*scale, z},
                  0.16f*scale, 0.23f*scale, 2.25f*scale, 7, bark);
     DrawCylinder((Vector3){x, 0.18f*scale, z},
@@ -560,11 +574,12 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawCylinderEx((Vector3){x+12.25f,0.1f,z-4.0f},(Vector3){x+12.25f,3.85f,z-4.0f},0.075f,0.075f,6,metal);
     DrawCube((Vector3){x+11.7f,3.55f,z-4.5f},1.1f,0.14f,1.25f,metal);
 
-    // Старые три ящика пока оставлены в магазине; будущий лут будет на полках.
-    DrawGasCrate((Vector3){x-3.8f,0.48f,z+1.2f},false);
-    DrawGasCrate((Vector3){x,0.48f,z+1.2f},false);
-    DrawGasCrate((Vector3){x+3.8f,0.48f,z+1.2f},false);
-    DrawGasCrate((Vector3){x,4.05f,z},true);
+    // Обычные ящики стоят вдоль боковой стены, не перекрывая центральный проход.
+    DrawGasCrate((Vector3){x-8.6f,0.48f,z+4.0f},false);
+    DrawGasCrate((Vector3){x-8.6f,0.48f,z+6.0f},false);
+    DrawGasCrate((Vector3){x+8.6f,0.48f,z+4.0f},false);
+    // Оружейный ящик — отдельно на верхнем уровне.
+    DrawGasCrate((Vector3){x,4.05f,z+0.5f},true);
 
     // Сломанный грузовик возле главного входа: кузов, кабина, капот и колёса.
     float tx=x-3.8f,tz=z-7.3f;
@@ -1084,10 +1099,12 @@ static void DrawPlayer(Vector3 player, float angle,
 
     Color skin = C(211, 164, 125, 255);
     Color skinLight = C(231, 190, 151, 255);
-    Color underwear = C(67, 79, 105, 255);
-    Color underwearDark = C(43, 53, 75, 255);
+    Color underwear = C(58, 64, 58, 255); // потёртые рабочие штаны
+    Color underwearDark = C(35, 39, 36, 255);
+    Color jacket = C(92, 83, 65, 255);
+    Color jacketDark = C(55, 57, 49, 255);
 
-    // Ноги и ступни — персонаж без обуви и верхней одежды.
+    // Рабочие штаны и грубые ботинки в слегка состаренном стиле выжившего.
     Vector3 hipL = PlayerPoint(player, angle, -0.17f, 0.73f, 0.0f);
     Vector3 hipR = PlayerPoint(player, angle,  0.17f, 0.73f, 0.0f);
     Vector3 kneeL = PlayerPoint(player, angle, -0.18f, 0.39f, swing*0.55f);
@@ -1096,36 +1113,38 @@ static void DrawPlayer(Vector3 player, float angle,
     Vector3 ankleR = PlayerPoint(player, angle,  0.18f, 0.13f, -swing);
 
     DrawCylinderEx(hipL, kneeL, 0.145f, 0.115f, 10, skin);
-    DrawCylinderEx(kneeL, ankleL, 0.115f, 0.09f, 10, skin);
+    DrawCylinderEx(kneeL, ankleL, 0.115f, 0.09f, 10, underwear);
     DrawCylinderEx(hipR, kneeR, 0.145f, 0.115f, 10, skin);
-    DrawCylinderEx(kneeR, ankleR, 0.115f, 0.09f, 10, skin);
-    DrawSphere(kneeL, 0.105f, skin);
-    DrawSphere(kneeR, 0.105f, skin);
+    DrawCylinderEx(kneeR, ankleR, 0.115f, 0.09f, 10, underwear);
+    DrawSphere(kneeL, 0.105f, underwear);
+    DrawSphere(kneeR, 0.105f, underwear);
 
     // Простые шорты-бельё без ремней и карманов.
     DrawCube(PlayerPoint(player, angle, 0, 0.73f, 0),
              0.53f, 0.31f, 0.37f, underwear);
     DrawCube(PlayerPoint(player, angle, 0, 0.565f, -0.012f),
              0.49f, 0.035f, 0.375f, underwearDark);
+    DrawCube(PlayerPoint(player, angle, -0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
+    DrawCube(PlayerPoint(player, angle, 0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
 
     // Торс от третьего лица: отдельная цельная геометрия от талии
     // до плеч, чтобы корпус не терялся из-за тонкого цилиндра.
     DrawCylinderEx(
         PlayerPoint(player, angle, 0, 0.82f+bob, 0),
         PlayerPoint(player, angle, 0, 1.48f+bob, 0),
-        0.245f,  0.315f, 12, skin
+        0.245f,  0.315f, 12, jacket
     );
     DrawSphere(PlayerPoint(player, angle, 0, 1.20f+bob, 0),
-               0.285f, skin);
+               0.285f, jacket);
     DrawSphere(PlayerPoint(player, angle, 0, 1.49f+bob, 0),
-               0.22f, skin);
+               0.22f, jacket);
     DrawCylinderEx(
         PlayerPoint(player, angle, 0, 1.45f+bob, 0),
         PlayerPoint(player, angle, 0, 1.66f+bob, 0),
         0.12f, 0.105f, 10, skin
     );
 
-    // Руки полностью без рукавов.
+    // Рукава куртки и открытые кисти.
     Vector3 shoulderL = PlayerPoint(player, angle, -0.36f, 1.42f+bob, 0);
     Vector3 elbowL = PlayerPoint(player, angle, -0.45f, 1.05f+bob, -swing*0.65f);
     Vector3 wristL = PlayerPoint(player, angle, -0.43f, 0.82f+bob, -swing*0.9f);
@@ -1135,14 +1154,14 @@ static void DrawPlayer(Vector3 player, float angle,
     Vector3 wristR = PlayerPoint(player, angle, 0.43f, 0.82f+bob,
                                  swing*0.9f-attackProgress*0.72f);
 
-    DrawSphere(shoulderL, 0.145f, skin);
-    DrawSphere(shoulderR, 0.145f, skin);
-    DrawCylinderEx(shoulderL, elbowL, 0.115f, 0.09f, 10, skin);
-    DrawCylinderEx(shoulderR, elbowR, 0.115f, 0.09f, 10, skin);
-    DrawSphere(elbowL, 0.09f, skin);
-    DrawSphere(elbowR, 0.09f, skin);
-    DrawCylinderEx(elbowL, wristL, 0.085f, 0.068f, 10, skin);
-    DrawCylinderEx(elbowR, wristR, 0.085f, 0.068f, 10, skin);
+    DrawSphere(shoulderL, 0.145f, jacket);
+    DrawSphere(shoulderR, 0.145f, jacket);
+    DrawCylinderEx(shoulderL, elbowL, 0.115f, 0.09f, 10, jacket);
+    DrawCylinderEx(shoulderR, elbowR, 0.115f, 0.09f, 10, jacket);
+    DrawSphere(elbowL, 0.09f, jacketDark);
+    DrawSphere(elbowR, 0.09f, jacketDark);
+    DrawCylinderEx(elbowL, wristL, 0.085f, 0.068f, 10, jacket);
+    DrawCylinderEx(elbowR, wristR, 0.085f, 0.068f, 10, jacket);
     DrawSphere(wristL, 0.075f, skinLight);
     DrawSphere(wristR, 0.075f, skinLight);
 
@@ -1155,6 +1174,10 @@ static void DrawPlayer(Vector3 player, float angle,
                0.065f, skin);
     DrawSphere(PlayerPoint(player, angle, 0, 2.045f+bob, 0.035f),
                0.205f, C(65, 48, 35, 255));
+    // Небольшие седые пряди и щетина — лицо выглядит немного старше.
+    DrawSphere(PlayerPoint(player, angle, -0.13f, 2.13f+bob, -0.015f),0.085f,C(142,139,126,255));
+    DrawSphere(PlayerPoint(player, angle, 0.13f, 2.13f+bob, -0.015f),0.085f,C(142,139,126,255));
+    DrawSphere(PlayerPoint(player, angle, 0, 1.735f+bob, -0.235f),0.105f,C(91,75,62,255));
 
     DrawSphere(PlayerPoint(player, angle, -0.092f, 1.88f+bob, -0.245f),
                0.027f, C(37, 42, 37, 255));
@@ -1162,7 +1185,65 @@ static void DrawPlayer(Vector3 player, float angle,
                0.027f, C(37, 42, 37, 255));
     DrawSphere(PlayerPoint(player, angle, 0, 1.81f+bob, -0.275f),
                0.045f, skinLight);
+    DrawSphere(PlayerPoint(player, angle, -0.105f, 1.91f+bob, -0.255f),0.018f,C(102,82,68,255));
+    DrawSphere(PlayerPoint(player, angle, 0.105f, 1.91f+bob, -0.255f),0.018f,C(102,82,68,255));
 }
+static void DrawRoadSegment(float x1, float z1, float x2, float z2)
+{
+    float cx=(x1+x2)*0.5f, cz=(z1+z2)*0.5f;
+    float len=fabsf(x2-x1)+fabsf(z2-z1);
+    bool horizontal=fabsf(x2-x1)>fabsf(z2-z1);
+    float w=8.5f;
+    DrawCube((Vector3){cx,-0.055f,cz},
+             horizontal?len+w:w,0.055f,horizontal?w:len+w,
+             C(111,99,78,255));
+    DrawCube((Vector3){cx,-0.023f,cz},
+             horizontal?len+w-1.2f: w-1.2f,0.035f,
+             horizontal?w-1.2f:len+w-1.2f,
+             C(151,132,99,255));
+    // Обочины из более тёмного грунта.
+    if (horizontal)
+    {
+        DrawCube((Vector3){cx,-0.012f,cz-w*0.53f},len+w,0.035f,0.42f,C(92,88,72,255));
+        DrawCube((Vector3){cx,-0.012f,cz+w*0.53f},len+w,0.035f,0.42f,C(92,88,72,255));
+    }
+    else
+    {
+        DrawCube((Vector3){cx-w*0.53f,-0.012f,cz},0.42f,0.035f,len+w,C(92,88,72,255));
+        DrawCube((Vector3){cx+w*0.53f,-0.012f,cz},0.42f,0.035f,len+w,C(92,88,72,255));
+    }
+}
+
+static void DrawWildAnimal(Vector3 p, int type, float phase)
+{
+    float bob=sinf(phase)*0.035f;
+    Color fur=type==0?C(128,91,57,255):C(91,77,62,255);
+    Color dark=type==0?C(76,55,39,255):C(54,48,41,255);
+    DrawSphere((Vector3){p.x,0.82f+bob,p.z},0.43f,fur);
+    DrawSphere((Vector3){p.x,0.88f+bob,p.z-0.34f},0.29f,fur);
+    DrawSphere((Vector3){p.x,0.82f+bob,p.z-0.58f},0.19f,dark);
+    for(int side=-1;side<=1;side+=2)
+        for(int leg=0;leg<2;leg++)
+        {
+            float lx=p.x+side*0.24f;
+            float lz=p.z+(leg==0?-0.25f:0.25f);
+            DrawCylinderEx((Vector3){lx,0.62f+bob,lz},
+                           (Vector3){lx+side*0.025f,0.12f,lz},
+                           0.075f,0.055f,6,dark);
+        }
+    if(type==0)
+    {
+        for(int side=-1;side<=1;side+=2)
+        {
+            Vector3 antler={p.x+side*0.18f,1.38f+bob,p.z-0.48f};
+            DrawCylinderEx((Vector3){p.x+side*0.12f,1.05f+bob,p.z-0.43f},
+                           antler,0.045f,0.025f,5,C(190,174,139,255));
+            DrawCylinderEx(antler,(Vector3){antler.x+side*0.15f,1.52f+bob,p.z-0.47f},
+                           0.025f,0.012f,4,C(190,174,139,255));
+        }
+    }
+}
+
 static void DrawCloud(float x, float y, float z, float s)
 {
     Color cloud = C(245, 250, 255, 255);
@@ -1387,6 +1468,8 @@ int main(void)
     Rectangle buildFloorButton = {0}, buildWallButton = {0}, buildDoorButton = {0}, buildRoofButton = {0}, buildPlaceButton = {0};
     Rectangle takeButton = {0};
     Vector3 treePositions[MAX_TREES] = {{0}}, woodDrops[MAX_WOOD_DROPS] = {{0}};
+    Vector3 wildAnimals[MAX_WILD_ANIMALS] = {{0}};
+    int wildAnimalTypes[MAX_WILD_ANIMALS] = {0};
     int treeBiome[MAX_TREES] = {0};
     int treeHealth[MAX_TREES] = {0}, treeCount = 0;
     bool treeChopped[MAX_TREES] = {false}, woodDropActive[MAX_WOOD_DROPS] = {false};
@@ -1431,14 +1514,39 @@ int main(void)
     LoadBuildData(buildPieces, buildPieceTypes, buildDoorOpen,
                   &buildPieceCount, &itemCounts[4]);
     srand((unsigned int)(GetTime()*100000.0) ^ 0x51A7u);
+    // Три отдельных биома размещаются в случайных секторах карты один раз при старте мира.
+    for(int bi=0;bi<3;bi++)
+    {
+        float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
+        float radius=118.0f+((float)rand()/(float)RAND_MAX)*28.0f;
+        gBiomeCenters[bi]=(Vector2){cosf(a)*radius,sinf(a)*radius};
+    }
     for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=38)
         for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=38)
             if (tx*tx+tz*tz < 248*248 && IsVillageClear((float)tx,(float)tz))
             {
                 treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz};
-                treeBiome[treeCount] = (tz < -82) ? 1 : ((tz > 82) ? 2 : 0);
+                treeBiome[treeCount] = GetWorldBiome((float)tx,(float)tz);
                 treeHealth[treeCount++]=3;
             }
+
+    // Небольшие группы диких животных распределяются по свободным участкам карты.
+    for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
+    {
+        bool placed=false;
+        for(int attempt=0;attempt<120 && !placed;attempt++)
+        {
+            float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
+            float radius=55.0f+((float)rand()/(float)RAND_MAX)*165.0f;
+            float ax=cosf(a)*radius, az=sinf(a)*radius;
+            if(!IsVillageClear(ax,az)) continue;
+            float sx=ax, sz=az+22.0f;
+            if(sx*sx+sz*sz<42.0f*42.0f) continue;
+            wildAnimals[animal]=(Vector3){ax,0,az};
+            wildAnimalTypes[animal]=animal%2;
+            placed=true;
+        }
+    }
 
     // По четыре залежи каждого вида. Руды размещаются вне деревни и дорог.
     for (int ore = 0; ore < MAX_ORE_NODES; ore++)
@@ -3312,24 +3420,23 @@ int main(void)
                 float pz = iz*40.0f;
                 if (px*px+pz*pz > 270.0f*270.0f) continue;
                 bool coast = (px*px+pz*pz > 225.0f*225.0f);
-                Color biomeGround = (pz < -82.0f) ? C(205, 216, 216, 255) :
-                                    ((pz > 82.0f) ? C(194, 169, 112, 255) :
-                                                    C(73, 139, 76, 255));
-                if (coast) biomeGround = (pz < -82.0f) ? C(176, 190, 190, 255) : C(151, 137, 102, 255);
+                int groundBiome=GetWorldBiome(px,pz);
+                Color biomeGround = groundBiome==1?C(205,216,220,255):
+                                    groundBiome==2?C(207,177,116,255):
+                                    groundBiome==3?C(55,111,58,255):C(73,139,76,255);
+                if(coast) biomeGround=groundBiome==1?C(176,190,190,255):
+                                      groundBiome==2?C(166,145,105,255):C(151,137,102,255);
                 DrawPlane((Vector3){px, -0.08f, pz}, (Vector2){40.2f, 40.2f}, biomeGround);
             }
         }
 
-        // Дороги сделаны тонкими объёмными полосами вместо наложенных
-        // почти coplanar-плоскостей: это устраняет Z-fighting при вращении камеры.
-        DrawCube((Vector3){0, -0.055f, 0}, 12.5f, 0.05f, 380.0f,
-                 C(126, 111, 83, 255));
-        DrawCube((Vector3){0, -0.044f, 0}, 9.2f, 0.05f, 380.0f,
-                 C(157, 137, 101, 255));
-        DrawCube((Vector3){0, -0.055f, 0}, 380.0f, 0.05f, 12.5f,
-                 C(126, 111, 83, 255));
-        DrawCube((Vector3){0, -0.033f, 0}, 380.0f, 0.05f, 9.2f,
-                 C(157, 137, 101, 255));
+        // Две извилистые дороги с разными поворотами вместо крестообразной сетки.
+        const Vector3 routeA[]={{-205,0,-150},{-145,0,-150},{-145,0,-92},{-70,0,-92},{-70,0,-35},{5,0,-35},{5,0,35},{82,0,35},{82,0,112},{150,0,112},{150,0,178}};
+        const Vector3 routeB[]={{-205,0,118},{-145,0,118},{-145,0,55},{-88,0,55},{-88,0,5},{-25,0,5},{-25,0,-35}};
+        for(int ri=0;ri<(int)(sizeof(routeA)/sizeof(routeA[0]))-1;ri++)
+            DrawRoadSegment(routeA[ri].x,routeA[ri].z,routeA[ri+1].x,routeA[ri+1].z);
+        for(int ri=0;ri<(int)(sizeof(routeB)/sizeof(routeB[0]))-1;ri++)
+            DrawRoadSegment(routeB[ri].x,routeB[ri].z,routeB[ri+1].x,routeB[ri+1].z);
 
         // Небольшие естественные пятна травы вокруг игрока.
         if (graphicsQuality >= 1)
@@ -3466,6 +3573,13 @@ int main(void)
                                ((detailLevel == 1) ? 165.0f : 245.0f);
         float treeView = fminf(chunkView, detailTreeView);
         float treeView2 = treeView*treeView;
+
+        for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
+        {
+            float adx=wildAnimals[animal].x-player.x, adz=wildAnimals[animal].z-player.z;
+            if(adx*adx+adz*adz>chunkView2) continue;
+            DrawWildAnimal(wildAnimals[animal],wildAnimalTypes[animal],(float)GetTime()*2.0f+animal*1.7f);
+        }
 
         for (int t = 0; t < treeCount; t++)
         {
