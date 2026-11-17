@@ -3956,8 +3956,9 @@ int main(void)
         if(inventoryDragItem>=0)
         {
             int liveTouches=GetTouchPointCount();
-            if(liveTouches>0)
-                inventoryDragPosition=GetTouchPosition(0);
+            bool pointerHeld=(liveTouches>0)||IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+            if(pointerHeld)
+                inventoryDragPosition=(liveTouches>0)?GetTouchPosition(0):GetMousePosition();
             else
             {
                 int targetSlot=GetInventorySlotAt(inventoryDragPosition,screenWidth,screenHeight);
