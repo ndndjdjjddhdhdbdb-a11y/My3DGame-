@@ -1691,20 +1691,22 @@ int main(void)
             }
             else if (gasCrateOpen)
             {
-                Rectangle cp={screenWidth*0.03f,screenHeight*0.07f,screenWidth*0.94f,screenHeight*0.86f};
-                Rectangle close={cp.x+cp.width-66.0f,cp.y+9.0f,56.0f,28.0f};
-                float sideGap=10.0f, sideW=(cp.width-36.0f)*0.5f;
-                float contentY=cp.y+80.0f, contentH=cp.height-104.0f;
-                float leftX=cp.x+12.0f, rightX=leftX+sideW+12.0f;
+                float crateSize=fminf(screenHeight*0.62f,screenWidth*0.30f);
+                float invSize=fminf(screenHeight*0.48f,screenWidth*0.25f);
+                Rectangle cratePanel={screenWidth- crateSize-18.0f,screenHeight-crateSize-62.0f,crateSize,crateSize};
+                Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
+                Rectangle close={cratePanel.x+cratePanel.width-30.0f,cratePanel.y+5.0f,25.0f,23.0f};
+                float crateContentY=cratePanel.y+31.0f;
+                float crateContentH=cratePanel.height-39.0f;
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
                 else if(openedGasCrate>=0 && crateTakeCooldown<=0.0f){
-                    int cols=2, rows=4;
-                    float gap=5.0f;
-                    float cellW=(sideW-20.0f-gap*(cols-1))/(float)cols;
-                    float cellH=(contentH-gap*(rows-1))/(float)rows;
+                    int cols=4, rows=2;
+                    float gap=4.0f;
+                    float cellW=(cratePanel.width-16.0f-gap*(cols-1))/(float)cols;
+                    float cellH=(crateContentH-gap*(rows-1))/(float)rows;
                     for(int slot=0;slot<8;slot++){
                         int col=slot%cols, row=slot/cols;
-                        Rectangle cell={leftX+8.0f+col*(cellW+gap),contentY+row*(cellH+gap),cellW,cellH};
+                        Rectangle cell={cratePanel.x+8.0f+col*(cellW+gap),crateContentY+row*(cellH+gap),cellW,cellH};
                         if(CheckCollisionPointRec(pos,cell)&&gasCrateAmounts[openedGasCrate][slot]>0){
                             int item=gasCrateItems[openedGasCrate][slot],room=99-itemCounts[item];
                             int take=gasCrateAmounts[openedGasCrate][slot]<room?gasCrateAmounts[openedGasCrate][slot]:room;
@@ -3398,78 +3400,75 @@ int main(void)
         }
 
         if(gasCrateOpen&&openedGasCrate>=0){
-            DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,205));
-            Rectangle cp={screenWidth*0.03f,screenHeight*0.07f,screenWidth*0.94f,screenHeight*0.86f};
-            DrawRectangleRounded(cp,0.025f,8,C(25,28,27,252));
-            DrawRectangleRoundedLinesEx(cp,0.025f,8,1.8f,C(135,145,119,255));
-            DrawText("LOOT TRANSFER",(int)cp.x+13,(int)cp.y+13,17,RAYWHITE);
-            Rectangle close={cp.x+cp.width-66.0f,cp.y+9.0f,56.0f,28.0f};
-            DrawRectangleRounded(close,0.18f,8,C(78,48,43,255));
-            DrawText("X",(int)close.x+22,(int)close.y+7,13,RAYWHITE);
+            DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,155));
+            float crateSize=fminf(screenHeight*0.62f,screenWidth*0.30f);
+            float invSize=fminf(screenHeight*0.48f,screenWidth*0.25f);
+            Rectangle cratePanel={screenWidth-crateSize-18.0f,screenHeight-crateSize-62.0f,crateSize,crateSize};
+            Rectangle invPanel={(screenWidth-invSize)*0.5f,screenHeight-invSize-50.0f,invSize,invSize};
+            DrawRectangleRounded(cratePanel,0.035f,8,C(25,28,27,250));
+            DrawRectangleRoundedLinesEx(cratePanel,0.035f,8,1.8f,C(135,145,119,255));
+            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",
+                (int)cratePanel.x+7,(int)cratePanel.y+9,10,C(215,225,207,255));
+            Rectangle close={cratePanel.x+cratePanel.width-30.0f,cratePanel.y+5.0f,25.0f,23.0f};
+            DrawRectangleRounded(close,0.18f,6,C(78,48,43,255));
+            DrawText("X",(int)close.x+9,(int)close.y+5,11,RAYWHITE);
 
-            float sideW=(cp.width-36.0f)*0.5f;
-            float contentY=cp.y+80.0f, contentH=cp.height-104.0f;
-            float leftX=cp.x+12.0f, rightX=leftX+sideW+12.0f;
-            Rectangle cratePanel={leftX,cp.y+47.0f,sideW,cp.height-60.0f};
-            Rectangle invPanel={rightX,cp.y+47.0f,sideW,cp.height-60.0f};
-            DrawRectangleRounded(cratePanel,0.025f,6,C(34,39,34,255));
-            DrawRectangleRoundedLinesEx(cratePanel,0.025f,6,1.2f,C(112,137,94,230));
-            DrawRectangleRounded(invPanel,0.025f,6,C(31,39,43,255));
-            DrawRectangleRoundedLinesEx(invPanel,0.025f,6,1.2f,C(91,139,157,230));
-            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",(int)leftX+8,(int)cp.y+53,11,C(215,225,207,255));
-            DrawText("YOUR INVENTORY",(int)rightX+8,(int)cp.y+53,11,C(190,220,232,255));
+            DrawRectangleRounded(invPanel,0.035f,8,C(25,29,31,250));
+            DrawRectangleRoundedLinesEx(invPanel,0.035f,8,1.8f,C(91,139,157,255));
+            DrawText("INVENTORY",(int)invPanel.x+7,(int)invPanel.y+8,10,C(190,220,232,255));
 
-            int cols=2, rows=4;
-            float gap=5.0f;
-            float cellW=(sideW-20.0f-gap*(cols-1))/(float)cols;
+            // Почти квадратный ящик: 4 столбца на 2 ряда.
+            int cols=4, rows=2;
+            float gap=4.0f;
+            float contentY=cratePanel.y+31.0f, contentH=cratePanel.height-39.0f;
+            float cellW=(cratePanel.width-16.0f-gap*(cols-1))/(float)cols;
             float cellH=(contentH-gap*(rows-1))/(float)rows;
             for(int slot=0;slot<8;slot++){
                 int col=slot%cols,row=slot/cols;
-                Rectangle cell={leftX+8.0f+col*(cellW+gap),contentY+row*(cellH+gap),cellW,cellH};
+                Rectangle cell={cratePanel.x+8.0f+col*(cellW+gap),contentY+row*(cellH+gap),cellW,cellH};
                 int amount=gasCrateAmounts[openedGasCrate][slot];
                 int item=gasCrateItems[openedGasCrate][slot];
                 DrawRectangle((int)cell.x+2,(int)cell.y+3,(int)cell.width,(int)cell.height,C(0,0,0,100));
-                DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(43,47,43,255));
-                DrawRectangle((int)cell.x+2,(int)cell.y+2,(int)cell.width-4,(int)cell.height-4,C(51,55,49,255));
+                DrawRectangleRec(cell,C(43,47,43,255));
                 DrawRectangleLinesEx(cell,1.0f,C(105,116,99,235));
-                DrawRectangle(cell.x,cell.y,3,cell.height,C(112,145,76,255));
                 if(amount>0){
-                    int fs=cell.width<95?8:10;
-                    DrawText(itemNames[item],(int)cell.x+5,(int)(cell.y+cell.height*0.34f),fs,C(225,229,218,255));
-                    DrawText(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),10)-5),(int)(cell.y+cell.height-14),10,C(190,211,164,255));
-                } else DrawText("EMPTY",(int)cell.x+5,(int)(cell.y+cell.height*0.40f),9,C(116,128,115,255));
+                    int fs=cell.width<55?7:9;
+                    DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.30f),fs,C(225,229,218,255));
+                    DrawText(TextFormat("x%d",amount),(int)(cell.x+cell.width-MeasureText(TextFormat("x%d",amount),9)-3),(int)(cell.y+cell.height-12),9,C(190,211,164,255));
+                } else DrawText("EMPTY",(int)cell.x+3,(int)(cell.y+cell.height*0.38f),7,C(116,128,115,255));
                 if(crateGlowSlot==slot && crateTakeCooldown>0.0f){
                     float pulse=0.5f+0.5f*sinf((0.75f-crateTakeCooldown)*18.0f);
                     unsigned char alpha=(unsigned char)(115.0f+125.0f*pulse);
                     DrawRectangleRec(cell,C(105,225,112,(unsigned char)(alpha*0.16f)));
-                    DrawRectangleLinesEx(cell,2.6f,C(130,255,135,alpha));
+                    DrawRectangleLinesEx(cell,2.0f,C(130,255,135,alpha));
                 }
             }
 
-            // Справа отображаются все 12 ячеек рюкзака.
-            int invCols=2, invRows=6;
+            // Квадратное окно рюкзака: 3 столбца на 4 ряда.
+            int invCols=3, invRows=4;
             float invGap=4.0f;
-            float invCellW=(sideW-20.0f-invGap*(invCols-1))/(float)invCols;
-            float invCellH=(contentH-invGap*(invRows-1))/(float)invRows;
+            float invContentY=invPanel.y+27.0f, invContentH=invPanel.height-34.0f;
+            float invCellW=(invPanel.width-14.0f-invGap*(invCols-1))/(float)invCols;
+            float invCellH=(invContentH-invGap*(invRows-1))/(float)invRows;
             for(int item=0;item<12;item++){
                 int col=item%invCols,row=item/invCols;
-                Rectangle cell={rightX+8.0f+col*(invCellW+invGap),contentY+row*(invCellH+invGap),invCellW,invCellH};
+                Rectangle cell={invPanel.x+7.0f+col*(invCellW+invGap),invContentY+row*(invCellH+invGap),invCellW,invCellH};
                 DrawRectangle((int)cell.x+2,(int)cell.y+2,(int)cell.width,(int)cell.height,C(0,0,0,90));
-                DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(43,49,51,255));
+                DrawRectangleRec(cell,C(43,49,51,255));
                 DrawRectangleLinesEx(cell,1.0f,C(91,119,123,235));
-                DrawRectangle(cell.x,cell.y,3,cell.height,(item==2||item==3)?C(142,169,91,255):C(85,126,132,255));
-                int fs=cell.width<95?8:10;
-                DrawText(itemNames[item],(int)cell.x+5,(int)(cell.y+cell.height*0.28f),fs,C(218,228,225,255));
+                DrawRectangle(cell.x,cell.y,2,cell.height,(item==2||item==3)?C(142,169,91,255):C(85,126,132,255));
+                int fs=cell.width<48?6:8;
+                DrawText(itemNames[item],(int)cell.x+3,(int)(cell.y+cell.height*0.28f),fs,C(218,228,225,255));
                 DrawText(TextFormat("x%d",itemCounts[item]),
-                    (int)(cell.x+cell.width-MeasureText(TextFormat("x%d",itemCounts[item]),10)-5),
-                    (int)(cell.y+cell.height-14),10,C(190,211,164,255));
+                    (int)(cell.x+cell.width-MeasureText(TextFormat("x%d",itemCounts[item]),8)-3),
+                    (int)(cell.y+cell.height-11),8,C(190,211,164,255));
             }
             if(crateTakeCooldown>0.0f){
-                DrawText("TAKE COOLDOWN",(int)cp.x+14,(int)(cp.y+cp.height-17),9,C(155,235,155,255));
-                DrawRectangleRounded((Rectangle){cp.x+112,cp.y+cp.height-15,cp.width-126,5},0.5f,6,C(55,67,55,255));
-                DrawRectangleRounded((Rectangle){cp.x+112,cp.y+cp.height-15,(cp.width-126)*(crateTakeCooldown/0.75f),5},0.5f,6,C(125,225,125,255));
+                DrawText("TAKING",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(155,235,155,255));
+                DrawRectangleRounded((Rectangle){cratePanel.x+48,cratePanel.y+cratePanel.height-11,cratePanel.width-56,4},0.5f,6,C(55,67,55,255));
+                DrawRectangleRounded((Rectangle){cratePanel.x+48,cratePanel.y+cratePanel.height-11,(cratePanel.width-56)*(crateTakeCooldown/0.75f),4},0.5f,6,C(125,225,125,255));
             } else {
-                DrawText("TAP AN ITEM TO TAKE IT",(int)cp.x+14,(int)(cp.y+cp.height-17),9,C(160,180,160,255));
+                DrawText("TAP TO TAKE",(int)cratePanel.x+7,(int)(cratePanel.y+cratePanel.height-13),8,C(160,180,160,255));
             }
         }
 
