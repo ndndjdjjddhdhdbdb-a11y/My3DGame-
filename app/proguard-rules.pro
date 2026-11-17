@@ -24,3 +24,6 @@
 -keep class com.raylib.raymob.NativeLoader {
     public <methods>;
 }
+
+# Native C code calls NetClient methods through JNI.
+-keep class com.raylib.raymob.NetClient { *; }
