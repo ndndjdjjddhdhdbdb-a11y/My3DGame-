@@ -1244,6 +1244,23 @@ static void DrawWildAnimal(Vector3 p, int type, float phase)
     }
 }
 
+static void DrawBiomeAtmosphere(Vector3 player, int biome, float time, int quality)
+{
+    if(quality<1 || (biome!=1 && biome!=2)) return;
+    // Лёгкие локальные частицы: снег в зимней зоне, песчаная пыль в пустыне.
+    for(int i=0;i<14;i++)
+    {
+        float seed=(float)i*1.731f;
+        float x=player.x+sinf(time*0.22f+seed)*7.0f+cosf(seed*2.0f)*3.0f;
+        float z=player.z+cosf(time*0.18f+seed*1.3f)*7.0f+sinf(seed)*3.0f;
+        float y=0.65f+fmodf((float)i*0.71f+time*(biome==1?0.75f:0.28f),4.5f);
+        if(biome==1)
+            DrawSphere((Vector3){x,y,z},0.035f,C(238,247,255,190));
+        else
+            DrawSphere((Vector3){x,y,z},0.045f,C(207,174,116,125));
+    }
+}
+
 static void DrawCloud(float x, float y, float z, float s)
 {
     Color cloud = C(245, 250, 255, 255);
@@ -1517,9 +1534,21 @@ int main(void)
     // Три отдельных биома размещаются в случайных секторах карты один раз при старте мира.
     for(int bi=0;bi<3;bi++)
     {
-        float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
-        float radius=118.0f+((float)rand()/(float)RAND_MAX)*28.0f;
-        gBiomeCenters[bi]=(Vector2){cosf(a)*radius,sinf(a)*radius};
+        bool separated=false;
+        for(int attempt=0;attempt<80 && !separated;attempt++)
+        {
+            float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
+            float radius=112.0f+((float)rand()/(float)RAND_MAX)*42.0f;
+            Vector2 candidate={cosf(a)*radius,sinf(a)*radius};
+            separated=true;
+            for(int prev=0;prev<bi;prev++)
+            {
+                float dx=candidate.x-gBiomeCenters[prev].x;
+                float dz=candidate.y-gBiomeCenters[prev].y;
+                if(dx*dx+dz*dz<145.0f*145.0f) separated=false;
+            }
+            if(separated) gBiomeCenters[bi]=candidate;
+        }
     }
     for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=38)
         for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=38)
@@ -3430,6 +3459,8 @@ int main(void)
             }
         }
 
+        DrawBiomeAtmosphere(player,GetWorldBiome(player.x,player.z),(float)GetTime(),graphicsQuality);
+
         // Две извилистые дороги с разными поворотами вместо крестообразной сетки.
         const Vector3 routeA[]={{-205,0,-150},{-145,0,-150},{-145,0,-92},{-70,0,-92},{-70,0,-35},{5,0,-35},{5,0,35},{82,0,35},{82,0,112},{150,0,112},{150,0,178}};
         const Vector3 routeB[]={{-205,0,118},{-145,0,118},{-145,0,55},{-88,0,55},{-88,0,5},{-25,0,5},{-25,0,-35}};
@@ -3441,7 +3472,7 @@ int main(void)
         // Небольшие естественные пятна травы вокруг игрока.
         if (graphicsQuality >= 1)
         {
-            int grassStep = (detailLevel == 0) ? 7 : 11;
+            int grassStep = (detailLevel == 0) ? 9 : 13;
             int centerX = (int)(player.x/grassStep)*grassStep;
             int centerZ = (int)(player.z/grassStep)*grassStep;
             for (int gx = -5; gx <= 5; gx++)
