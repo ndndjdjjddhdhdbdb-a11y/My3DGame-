@@ -4477,22 +4477,44 @@ int main(void)
                 C(220, 239, 255, 205)
             );
 
-            // Панель быстрого доступа: четыре выбираемых слота.
+            // Компактный HUD выживания в верхнем левом углу.
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
+                Rectangle statusPanel = {14, 62, 154, 62};
+                DrawRectangleRounded(statusPanel, 0.16f, 8, C(8, 15, 20, 205));
+                DrawRectangleRoundedLinesEx(statusPanel, 0.16f, 8, 1.2f, C(115, 145, 151, 190));
+                DrawText("ЕДА", 23, 70, 10, C(230, 220, 190, 255));
+                DrawText("ВОДА", 23, 96, 10, C(170, 215, 245, 255));
+                DrawRectangleRounded((Rectangle){60, 72, 96, 7}, 0.5f, 5, C(55, 62, 61, 255));
+                DrawRectangleRounded((Rectangle){60, 72, 96*fmaxf(0.0f,fminf(1.0f,foodLevel/100.0f)), 7}, 0.5f, 5, C(190, 157, 83, 255));
+                DrawRectangleRounded((Rectangle){60, 98, 96, 7}, 0.5f, 5, C(55, 62, 61, 255));
+                DrawRectangleRounded((Rectangle){60, 98, 96*fmaxf(0.0f,fminf(1.0f,waterLevel/100.0f)), 7}, 0.5f, 5, C(74, 157, 207, 255));
+
+                // Нижняя панель быстрого доступа.
+                Rectangle hotbarPanel = {hotbarSlots[0].x-9, hotbarSlots[0].y-7,
+                    hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 72};
+                DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(7, 13, 18, 190));
+                DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.2f, C(100, 126, 137, 180));
                 for (int slot = 0; slot < 4; slot++)
                 {
                     Rectangle r = hotbarSlots[slot];
-                    DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.16f, 8, C(0, 0, 0, 110));
-                    DrawRectangleRounded(r, 0.16f, 8, slot == selectedHotbarSlot ? C(36, 91, 139, 245) : C(13, 28, 49, 235));
-                    DrawRectangleRoundedLinesEx(r, 0.16f, 8, slot == selectedHotbarSlot ? 2.5f : 1.4f,
-                        slot == selectedHotbarSlot ? C(117, 210, 255, 255) : C(91, 145, 184, 220));
-                    DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 11, C(160, 205, 235, 255));
+                    bool activeSlot = slot == selectedHotbarSlot;
+                    DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.13f, 8, C(0,0,0,125));
+                    DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(74, 78, 57, 250) : C(25, 32, 34, 240));
+                    DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.0f,
+                        activeSlot ? C(222, 190, 105, 255) : C(112, 133, 137, 220));
+                    DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10,
+                        activeSlot ? C(255, 224, 151, 255) : C(165, 184, 185, 255));
                     const char *slotName = itemNames[hotbarItemIds[slot]];
-                    int nw = MeasureText(slotName, 10);
-                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+22, 10, RAYWHITE);
-                    DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]), (int)(r.x+r.width-22), (int)(r.y+r.height-14), 10, C(175, 215, 245, 255));
+                    int nw = MeasureText(slotName, 9);
+                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+23, 9, RAYWHITE);
+                    DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
+                        (int)(r.x+r.width-23), (int)(r.y+r.height-14), 10, C(220, 220, 202, 255));
                 }
+                const char *selectedName = itemNames[hotbarItemIds[selectedHotbarSlot]];
+                int selectedNameWidth = MeasureText(selectedName, 12);
+                DrawText(selectedName, (int)(screenWidth/2.0f-selectedNameWidth/2.0f),
+                    (int)hotbarPanel.y-16, 12, C(235, 220, 175, 245));
                 DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
                 DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
             }
