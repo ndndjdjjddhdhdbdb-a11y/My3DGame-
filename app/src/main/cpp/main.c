@@ -1694,7 +1694,7 @@ int main(void)
                 Rectangle cp={screenWidth*0.03f,screenHeight*0.07f,screenWidth*0.94f,screenHeight*0.86f};
                 Rectangle close={cp.x+cp.width-66.0f,cp.y+9.0f,56.0f,28.0f};
                 float sideGap=10.0f, sideW=(cp.width-36.0f)*0.5f;
-                float contentY=cp.y+58.0f, contentH=cp.height-72.0f;
+                float contentY=cp.y+80.0f, contentH=cp.height-104.0f;
                 float leftX=cp.x+12.0f, rightX=leftX+sideW+12.0f;
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;crateGlowSlot=-1;crateTakeCooldown=0.0f;}
                 else if(openedGasCrate>=0 && crateTakeCooldown<=0.0f){
@@ -3408,7 +3408,7 @@ int main(void)
             DrawText("X",(int)close.x+22,(int)close.y+7,13,RAYWHITE);
 
             float sideW=(cp.width-36.0f)*0.5f;
-            float contentY=cp.y+58.0f, contentH=cp.height-72.0f;
+            float contentY=cp.y+80.0f, contentH=cp.height-104.0f;
             float leftX=cp.x+12.0f, rightX=leftX+sideW+12.0f;
             Rectangle cratePanel={leftX,cp.y+47.0f,sideW,cp.height-60.0f};
             Rectangle invPanel={rightX,cp.y+47.0f,sideW,cp.height-60.0f};
