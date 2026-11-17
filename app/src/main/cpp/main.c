@@ -1219,9 +1219,10 @@ static void DrawWildAnimal(Vector3 p, int type, float phase)
     float bob=sinf(phase)*0.035f;
     Color fur=type==0?C(128,91,57,255):C(91,77,62,255);
     Color dark=type==0?C(76,55,39,255):C(54,48,41,255);
-    DrawSphere((Vector3){p.x,0.82f+bob,p.z},0.43f,fur);
-    DrawSphere((Vector3){p.x,0.88f+bob,p.z-0.34f},0.29f,fur);
-    DrawSphere((Vector3){p.x,0.82f+bob,p.z-0.58f},0.19f,dark);
+    DrawCylinder((Vector3){p.x,0.025f,p.z},0.52f,0.52f,0.035f,10,(Color){20,25,20,65});
+    DrawSphere((Vector3){p.x,0.88f+bob,p.z},0.48f,fur);
+    DrawSphere((Vector3){p.x,0.94f+bob,p.z-0.39f},0.32f,fur);
+    DrawSphere((Vector3){p.x,0.86f+bob,p.z-0.65f},0.21f,dark);
     for(int side=-1;side<=1;side+=2)
         for(int leg=0;leg<2;leg++)
         {
@@ -1566,7 +1567,7 @@ int main(void)
         for(int attempt=0;attempt<120 && !placed;attempt++)
         {
             float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
-            float radius=55.0f+((float)rand()/(float)RAND_MAX)*165.0f;
+            float radius=animal<4?32.0f+((float)rand()/(float)RAND_MAX)*18.0f:65.0f+((float)rand()/(float)RAND_MAX)*145.0f;
             float ax=cosf(a)*radius, az=sinf(a)*radius;
             if(!IsVillageClear(ax,az)) continue;
             float sx=ax, sz=az+22.0f;
@@ -2281,7 +2282,7 @@ int main(void)
                             joystickTouchId = id;
                         }
                     }
-                    else if (pos.x >= screenWidth*0.48f && pos.y > screenHeight*0.12f)
+                    else if (joystickTouchId != id && pos.x >= screenWidth*0.52f && pos.y > screenHeight*0.12f)
                     {
                         lookTouchId = id;
                         previousLookPosition = pos;
@@ -2433,7 +2434,7 @@ int main(void)
                         joystickTouchId = id;
                     }
                 }
-                else if (pos.x > screenWidth*0.48f && pos.y > screenHeight*0.12f)
+                else if (joystickTouchId != id && pos.x > screenWidth*0.52f && pos.y > screenHeight*0.12f)
                 {
                     lookTouchId = id;
                     previousLookPosition = pos;
@@ -3066,7 +3067,7 @@ int main(void)
         }
 
         if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen && !mapOpen &&
-            lookTouchId != -1)
+            lookTouchId != -1 && lookTouchId != joystickTouchId)
         {
             bool found = false;
 
@@ -3158,7 +3159,7 @@ int main(void)
             resourcePanelOpen) ShowCursor();
         else HideCursor();
 
-        if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+        if (touchCount==0 && !mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
             !mapOpen && !commandChatOpen && !commandConsoleOpen &&
             !showBuildCursor)
         {
@@ -3287,13 +3288,14 @@ int main(void)
 
         // Ящики заправки выбираются наведением с близкого расстояния.
         float closestCrateDistance=9999.0f;
-        const Vector3 gasCratePositions[4]={{-3.8f,0.48f,-20.8f},{0.0f,0.48f,-20.8f},{3.8f,0.48f,-20.8f},{0.0f,4.05f,-22.0f}};
+        const Vector3 gasCratePositions[4]={{-8.6f,0.48f,-18.0f},{-8.6f,0.48f,-16.0f},{8.6f,0.48f,-18.0f},{0.0f,4.05f,-21.5f}};
         for(int c=0;c<4;c++){
             Vector3 center=gasCratePositions[c];
             float dx=center.x-aimOrigin.x,dy=center.y-aimOrigin.y,dz=center.z-aimOrigin.z;
             float distance=sqrtf(dx*dx+dy*dy+dz*dz);
-            if(distance>3.0f||distance<0.1f)continue;
-            RayCollision hit=GetRayCollisionSphere(centerAimRay,center,0.82f);
+            if(distance>2.8f||distance<0.1f)continue;
+            // Попадание луча проверяется по небольшому объёму именно самого ящика.
+            RayCollision hit=GetRayCollisionSphere(centerAimRay,center,0.58f);
             if(hit.hit&&hit.distance<closestCrateDistance){closestCrateDistance=hit.distance;targetedGasCrate=c;}
         }
 
@@ -4251,13 +4253,29 @@ int main(void)
             DrawRectangleRoundedLinesEx((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,2,C(115,165,150,230));
             DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,18,RAYWHITE);
             float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
-            DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255)); DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
-            DrawCircle((int)cx,(int)cy,rr*0.78f,C(75,111,75,255));
-            DrawCircleSector((Vector2){cx+rr*0.55f,cy-rr*0.48f},rr*0.52f,210,350,24,C(184,195,190,230));
-            DrawCircleSector((Vector2){cx-rr*0.55f,cy+rr*0.08f},rr*0.48f,70,260,24,C(139,126,91,220));
+            float sc=rr/260.0f;
+            DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255));
+            // Цвета карты повторяют реальные координаты игровых биомов.
+            DrawCircle((int)cx,(int)cy,rr*0.91f,C(75,111,75,255));
+            float biomeMapRadius=78.0f*sc;
+            const Color biomeMapColors[3]={ {205,220,229,255},{211,177,116,255},{42,103,53,255} };
+            const char *biomeMapNames[3]={"ЗИМА","ПЕСОК","ЛЕС"};
+            for(int bi=0;bi<3;bi++)
+            {
+                float bx=cx+gBiomeCenters[bi].x*sc, by=cy+gBiomeCenters[bi].y*sc;
+                DrawCircle((int)bx,(int)by,biomeMapRadius,biomeMapColors[bi]);
+                DrawCircleLines((int)bx,(int)by,biomeMapRadius,C(225,225,210,220));
+                DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],9)/2,(int)by-5,9,C(25,35,30,255));
+            }
+            DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
             for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
-            float sc=rr/260.0f,px=cx+player.x*sc,py=cy+player.z*sc;
+            float px=cx+player.x*sc,py=cy+player.z*sc;
+            // Заправка отмечена на карте в точке (0, -22), как и в игровом мире.
+            float gasX=cx,gasY=cy-22.0f*sc;
+            DrawRectangle((int)gasX-7,(int)gasY-6,14,12,C(185,65,48,255));
+            DrawRectangleLines((int)gasX-7,(int)gasY-6,14,12,RAYWHITE);
+            DrawText("ЗАПРАВКА",(int)gasX+10,(int)gasY-7,10,RAYWHITE);
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("ВЫ",(int)px+12,(int)py-8,12,RAYWHITE);
             DrawText("Нажмите «КАРТА», чтобы закрыть",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
