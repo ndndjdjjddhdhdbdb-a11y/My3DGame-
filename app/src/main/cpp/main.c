@@ -5400,25 +5400,22 @@ int main(void)
             DrawCircleLines((int)px,(int)py,(int)(11*markerScale),RAYWHITE);
             DrawText("ВЫ",(int)(px+12*markerScale),(int)(py-8*markerScale),
                      (int)fmaxf(8.0f,12.0f*mapZoom),RAYWHITE);
-            // Маскируем всё, что выходит за круг острова:
-            // сначала верх и низ панели, затем левую и правую стороны круга.
-            float panelBottom=mapPanel.y+mapPanel.height;
-            float circleTop=cy-rr;
-            float circleBottom=cy+rr;
-            if(circleTop>mapPanel.y)
-                DrawRectangle((int)mapPanel.x,(int)mapPanel.y,
-                              (int)mapPanel.width,(int)(circleTop-mapPanel.y+1),C(10,20,32,255));
-            if(circleBottom<panelBottom)
-                DrawRectangle((int)mapPanel.x,(int)circleBottom,
-                              (int)mapPanel.width,(int)(panelBottom-circleBottom+1),C(10,20,32,255));
-            for(int row=(int)(cy-rr);row<=(int)(cy+rr);row+=2)
+            // Обрезаем все биомы строго по окружности острова.
+            for(int row=(int)mapPanel.y;row<(int)(mapPanel.y+mapPanel.height);row+=2)
             {
                 float dy=(float)row-cy;
+                float panelRight=mapPanel.x+mapPanel.width;
+                if(fabsf(dy)>=rr)
+                {
+                    DrawRectangle((int)mapPanel.x,row,(int)mapPanel.width,2,C(10,20,32,255));
+                    continue;
+                }
                 float halfWidth=sqrtf(fmaxf(0.0f,rr*rr-dy*dy));
                 float left=cx-halfWidth, right=cx+halfWidth;
-                if(left>mapPanel.x) DrawRectangle((int)mapPanel.x,row,(int)(left-mapPanel.x+1),2,C(10,20,32,255));
-                float panelRight=mapPanel.x+mapPanel.width;
-                if(right<panelRight) DrawRectangle((int)right,row,(int)(panelRight-right+1),2,C(10,20,32,255));
+                if(left>mapPanel.x)
+                    DrawRectangle((int)mapPanel.x,row,(int)(left-mapPanel.x+1),2,C(10,20,32,255));
+                if(right<panelRight)
+                    DrawRectangle((int)right,row,(int)(panelRight-right+1),2,C(10,20,32,255));
             }
             DrawCircleLines((int)cx,(int)cy,(int)rr,C(185,190,157,255));
             EndScissorMode();
