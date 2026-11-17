@@ -86,7 +86,7 @@ static int MeasureUiText(const char *text, int fontSize)
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
 #define MAX_BUILD_PIECES 64
-#define MAX_TREES 800
+#define MAX_TREES 420
 #define MAX_WOOD_DROPS 64
 #define MAX_ORE_NODES 32
 #define MAX_ORE_DROPS 16
@@ -351,55 +351,123 @@ static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
     return CheckCollisionPointRec(point, hitArea);
 }
 
+static int GetTreeHits(int biome)
+{
+    if (biome == 1) return 20; // снежное
+    if (biome == 2) return 5;  // песочное
+    return 15;                 // лесное
+}
+
+static int GetTreeWoodYield(int biome)
+{
+    if (biome == 1) return 55;
+    if (biome == 2) return 15;
+    return 40;
+}
+
+static const char *GetTreeTypeName(int biome)
+{
+    if (biome == 1) return "СНЕЖНОЕ";
+    if (biome == 2) return "ПЕСОЧНОЕ";
+    return "ЛЕСНОЕ";
+}
+
 static void DrawTree(float x, float z, float scale, int quality, int biome)
 {
-    // 0 — лесная ель, 1 — заснеженная ель, 2 — песочная пальма.
+    // Биомы карты: 1 — снежный, 2 — песчаный, 3 и 0 — лесной.
     if (biome == 2)
     {
-        Color trunk = C(133, 101, 61, 255);
-        Color leaf = C(83, 132, 65, 255);
-        DrawCylinderEx((Vector3){x, 0.08f, z},
-                       (Vector3){x+0.20f*scale, 2.75f*scale, z},
-                       0.22f*scale, 0.13f*scale, 7, trunk);
-        for (int arm=0; arm<5; arm++)
+        // Пальма: изогнутый сегментированный ствол и длинные веерные листья.
+        Color trunk = C(126, 87, 49, 255);
+        Color leaf = C(49, 119, 57, 255);
+        Color leafLight = C(91, 151, 64, 255);
+        Vector3 base = {x, 0.08f*scale, z};
+        Vector3 crown = {x+0.16f*scale, 3.05f*scale, z};
+        DrawCylinderEx(base, crown, 0.25f*scale, 0.16f*scale, 8, trunk);
+        for (int seg=0; seg<7; seg++)
         {
-            float a = arm*1.2566f;
-            Vector3 start = {x+0.20f*scale, 2.55f*scale, z};
-            Vector3 end = {x+0.20f*scale+cosf(a)*1.35f*scale,
-                           2.75f*scale+sinf(a)*0.20f*scale,
-                           z+sinf(a)*1.35f*scale};
-            DrawCylinderEx(start, end, 0.10f*scale, 0.025f*scale, 5, leaf);
-            if (quality >= 1)
-                DrawSphere((Vector3){end.x, end.y+0.06f*scale, end.z},
-                           0.20f*scale, C(111, 151, 73, 255));
+            float t=(seg+0.5f)/7.0f;
+            Vector3 p={x+0.16f*t*scale, (0.35f+t*2.45f)*scale, z};
+            DrawCylinderEx((Vector3){p.x-0.02f*scale,p.y-0.10f*scale,p.z},
+                           (Vector3){p.x+0.02f*scale,p.y+0.10f*scale,p.z},
+                           0.205f*(1.0f-t*0.48f)*scale,
+                           0.19f*(1.0f-t*0.48f)*scale, 7, trunk);
         }
+        for (int arm=0; arm<7; arm++)
+        {
+            float a=arm*0.8976f;
+            Vector3 root=crown;
+            Vector3 tip={crown.x+cosf(a)*1.65f*scale,
+                         crown.y-0.28f*scale,
+                         crown.z+sinf(a)*1.65f*scale};
+            DrawCylinderEx(root,tip,0.075f*scale,0.025f*scale,5,leaf);
+            for (int blade=0; blade<5; blade++)
+            {
+                float t=0.25f+blade*0.14f;
+                Vector3 p={root.x+(tip.x-root.x)*t,
+                           root.y+(tip.y-root.y)*t,
+                           root.z+(tip.z-root.z)*t};
+                float side=(blade%2==0)?1.0f:-1.0f;
+                Vector3 q={p.x-cosf(a)*0.18f*scale-sinf(a)*side*0.48f*scale,
+                           p.y-0.10f*scale,
+                           p.z-sinf(a)*0.18f*scale+cosf(a)*side*0.48f*scale};
+                DrawCylinderEx(p,q,0.045f*scale,0.008f*scale,4,
+                               (blade%2)?leaf:leafLight);
+            }
+        }
+        if (quality >= 1)
+            for (int nut=0; nut<3; nut++)
+            {
+                float a=nut*2.094f;
+                DrawSphere((Vector3){crown.x+cosf(a)*0.16f*scale,
+                                     crown.y-0.18f*scale,
+                                     crown.z+sinf(a)*0.16f*scale},
+                           0.11f*scale,C(107,76,39,255));
+            }
         return;
     }
 
-    Color bark = C(105, 69, 40, 255);
-    Color lower = (biome == 1) ? C(202, 218, 222, 255) : (biome == 3 ? C(24,82,43,255) : C(35, 105, 54, 255));
-    Color middle = (biome == 1) ? C(222, 233, 235, 255) : (biome == 3 ? C(34,105,49,255) : C(47, 128, 62, 255));
-    Color upper = (biome == 1) ? C(238, 244, 244, 255) : (biome == 3 ? C(49,126,57,255) : C(66, 145, 72, 255));
-    DrawCylinder((Vector3){x, 1.12f*scale, z},
-                 0.16f*scale, 0.23f*scale, 2.25f*scale, 7, bark);
-    DrawCylinder((Vector3){x, 0.18f*scale, z},
-                 0.28f*scale, 0.18f*scale, 0.36f*scale, 7, C(91, 59, 36, 255));
-    DrawCylinder((Vector3){x, 1.75f*scale, z},
-                 0.0f, 1.05f*scale, 1.85f*scale, 7, lower);
-    DrawCylinder((Vector3){x, 2.30f*scale, z},
-                 0.0f, 0.82f*scale, 1.55f*scale, 7, middle);
-    if (quality >= 1)
-        DrawCylinder((Vector3){x, 2.82f*scale, z},
-                     0.0f, 0.58f*scale, 1.15f*scale, 7, upper);
-    if (quality >= 2)
+    Color bark=C(101,68,43,255);
+    DrawCylinder((Vector3){x,1.22f*scale,z},
+                 0.18f*scale,0.24f*scale,2.44f*scale,7,bark);
+    DrawCylinder((Vector3){x,0.16f*scale,z},
+                 0.28f*scale,0.18f*scale,0.32f*scale,7,C(83,55,36,255));
+
+    bool snowy=(biome==1);
+    Color deep=snowy?C(38,91,66,255):C(24,91,42,255);
+    Color mid=snowy?C(52,119,78,255):C(35,119,48,255);
+    Color top=snowy?C(70,139,91,255):C(53,143,59,255);
+    Color snow=C(238,246,249,255);
+
+    // Ярусные ветви делают лесную и снежную ели узнаваемыми.
+    for (int tier=0;tier<5;tier++)
     {
-        DrawSphere((Vector3){x-0.28f*scale, 1.75f*scale, z+0.18f*scale},
-                   0.34f*scale, lower);
-        DrawSphere((Vector3){x+0.25f*scale, 2.25f*scale, z-0.16f*scale},
-                   0.29f*scale, middle);
+        float y=(0.95f+tier*0.48f)*scale;
+        float radius=(1.12f-tier*0.16f)*scale;
+        float height=(1.18f-tier*0.08f)*scale;
+        Color foliage=(tier<2)?deep:((tier<4)?mid:top);
+        DrawCylinder((Vector3){x,y+height*0.30f,z},
+                     0.04f*scale,radius,height,8,foliage);
+        if (snowy)
+        {
+            // Светлые снежные шапки на каждом ярусе.
+            DrawCylinder((Vector3){x,y+height*0.48f,z},
+                         0.0f,radius*0.88f,height*0.62f,8,snow);
+            DrawCylinder((Vector3){x,y+height*0.62f,z},
+                         0.0f,radius*0.72f,height*0.40f,8,C(250,252,253,255));
+        }
+    }
+    if (quality >= 1)
+    {
+        for (int b=0;b<5;b++)
+        {
+            float a=b*1.2566f;
+            Vector3 p={x+cosf(a)*0.62f*scale,1.55f*scale,
+                       z+sinf(a)*0.62f*scale};
+            DrawSphere(p,0.22f*scale,snowy?snow:mid);
+        }
     }
 }
-
 static void DrawRustHouse(float x, float z, float scale, int variant)
 {
     float w = 5.2f*scale;
@@ -1945,7 +2013,7 @@ int main(void)
         if (!clear) continue;
         treePositions[treeCount]=(Vector3){tx,0,tz};
         treeBiome[treeCount]=GetWorldBiome(tx,tz);
-        treeHealth[treeCount++]=3;
+        treeHealth[treeCount]=GetTreeHits(treeBiome[treeCount]);\n        treeCount++;
     }
 
     // Небольшие группы диких животных распределяются по свободным участкам карты.
@@ -4129,10 +4197,15 @@ int main(void)
             }
             else if (targetedTree >= 0 && !treeChopped[targetedTree] && hotbarItemIds[selectedHotbarSlot] == 0)
             {
-                itemCounts[4] = (itemCounts[4] + 15 > 99) ? 99 : itemCounts[4] + 15;
                 treeHealth[targetedTree]--;
-                if(treeHealth[targetedTree]<=0){treeChopped[targetedTree]=true;}
-                SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen, buildPieceCount, itemCounts[4]);
+                if (treeHealth[targetedTree] <= 0)
+                {
+                    treeHealth[targetedTree] = 0;
+                    treeChopped[targetedTree] = true;
+                    int woodYield = GetTreeWoodYield(treeBiome[targetedTree]);
+                    itemCounts[4] = (itemCounts[4] + woodYield > 99) ? 99 : itemCounts[4] + woodYield;
+                    SaveBuildData(buildPieces, buildPieceTypes, buildDoorOpen, buildPieceCount, itemCounts[4]);
+                }
             }
             else if (targetedOre >= 0 && gOreActive[targetedOre])
             {
@@ -4859,8 +4932,12 @@ int main(void)
             {
                 DrawRectangleRounded((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, C(18, 31, 44, 225));
                 DrawRectangleRoundedLinesEx((Rectangle){screenWidth/2.0f-130.0f, 105, 260, 48}, 0.18f, 10, 2, C(90, 165, 105, 240));
-                DrawText(TextFormat("ДЕРЕВО — %d/3", treeHealth[targetedTree]), (int)(screenWidth/2.0f-105.0f), 119, 19, RAYWHITE);
-                DrawText("УДАРЬТЕ, ЧТОБЫ СРУБИТЬ", (int)(screenWidth/2.0f+15.0f), 122, 13, C(175, 220, 175, 255));
+                int totalHits = GetTreeHits(treeBiome[targetedTree]);
+                DrawText(TextFormat("%s — %d/%d", GetTreeTypeName(treeBiome[targetedTree]),
+                                    treeHealth[targetedTree], totalHits),
+                         (int)(screenWidth/2.0f-119.0f), 112, 16, RAYWHITE);
+                DrawText(TextFormat("ДЕРЕВА: %d", GetTreeWoodYield(treeBiome[targetedTree])),
+                         (int)(screenWidth/2.0f-119.0f), 135, 13, C(175, 220, 175, 255));
             }
 
             if(targetedAnimal>=0 && wildAnimalHealth[targetedAnimal]>0)
