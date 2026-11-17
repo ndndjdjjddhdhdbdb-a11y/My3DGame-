@@ -1118,14 +1118,14 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     }
 
     // Предмет в правой руке следует за направлением камеры.
-    Vector3 toolBase = {eye.x+right.x*0.34f+forward.x*0.88f,
-                        eye.y-0.48f, eye.z+right.z*0.34f+forward.z*0.88f};
-    Vector3 toolTip = {eye.x+right.x*0.43f+forward.x*1.20f,
-                       eye.y-0.12f, eye.z+right.z*0.43f+forward.z*1.20f};
+    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*0.88f,
+                        eye.y-0.45f, eye.z+right.z*0.30f+forward.z*0.88f};
+    Vector3 toolTip = {eye.x+right.x*0.40f+forward.x*1.10f,
+                       eye.y-0.16f, eye.z+right.z*0.40f+forward.z*1.10f};
     DrawCylinderEx(toolBase, toolTip, 0.045f, 0.035f, 7, C(111, 75, 45, 255));
     if (heldItemId == 0)
     {
-        Vector3 head = {toolTip.x+right.x*0.035f, toolTip.y+0.06f,
+        Vector3 head = {toolTip.x+right.x*0.035f, toolTip.y+0.04f,
                         toolTip.z+right.z*0.035f};
         DrawCube(head, 0.34f, 0.17f, 0.15f, C(112, 119, 124, 255));
         DrawCube((Vector3){head.x+forward.x*0.08f,head.y,head.z+forward.z*0.08f},
@@ -2154,13 +2154,13 @@ int main(void)
 
         editSizeSlider = (Rectangle){screenWidth*0.18f, 68.0f, screenWidth*0.64f, 16.0f};
         editAlphaSlider = (Rectangle){screenWidth*0.18f, 126.0f, screenWidth*0.64f, 16.0f};
-        float slotSize = fminf(54.0f, (screenWidth-165.0f)/4.0f);
+        float slotSize = fminf(66.0f, (screenWidth-125.0f)/4.0f);
         float slotGap = 6.0f;
         float hotbarWidth = slotSize*4.0f + slotGap*3.0f;
         float hotbarX = (screenWidth-hotbarWidth)/2.0f;
         for (int slot = 0; slot < 4; slot++)
             hotbarSlots[slot] = (Rectangle){hotbarX+slot*(slotSize+slotGap),
-                                           screenHeight-78.0f, slotSize, 58.0f};
+                                           screenHeight-88.0f, slotSize, 66.0f};
         buildButton = (Rectangle){14, 170, 142, 42};
         float buildChoiceW = fminf(82.0f, (screenWidth-50.0f)/4.0f);
         buildFloorButton = (Rectangle){10, 220, buildChoiceW, 38};
@@ -4580,11 +4580,11 @@ int main(void)
             );
 
             // Компактный HUD выживания в верхнем левом углу.
-            if (!settingsOpen && !editControls && !inventoryOpen)
+            if (!settingsOpen && !editControls)
             {
-                // Нижняя панель быстрого доступа.
+                // Нижняя панель быстрого доступа — остаётся видимой поверх инвентаря.
                 Rectangle hotbarPanel = {hotbarSlots[0].x-9, hotbarSlots[0].y-7,
-                    hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 72};
+                    hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 80};
                 DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(6, 14, 28, 218));
                 DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.2f, C(100, 165, 211, 215));
                 for (int slot = 0; slot < 4; slot++)
@@ -4598,8 +4598,8 @@ int main(void)
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10,
                         activeSlot ? C(210, 240, 255, 255) : C(150, 184, 210, 255));
                     const char *slotName = itemNames[hotbarItemIds[slot]];
-                    int nw = MeasureText(slotName, 9);
-                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+23, 9, RAYWHITE);
+                    int nw = MeasureText(slotName, 10);
+                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+26, 10, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
                         (int)(r.x+r.width-23), (int)(r.y+r.height-14), 10, C(195, 220, 238, 255));
                 }
@@ -4607,8 +4607,11 @@ int main(void)
                 int selectedNameWidth = MeasureText(selectedName, 12);
                 DrawText(selectedName, (int)(screenWidth/2.0f-selectedNameWidth/2.0f),
                     (int)hotbarPanel.y-16, 12, C(160, 220, 255, 250));
-                DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
-                DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
+                if (!inventoryOpen)
+                {
+                    DrawSurvivalButtonAlpha(inventoryButton, "СУМКА", 13, false, (unsigned char)actionButtonAlpha[2]);
+                    DrawSurvivalButtonAlpha(sprintButton, sprintEnabled ? "БЕГ: ВКЛ." : "БЕГ", 18, sprintEnabled, (unsigned char)actionButtonAlpha[1]);
+                }
             }
 
             // Кнопка действия меняет подпись, когда прицел наведён на ящик.
@@ -4777,7 +4780,7 @@ int main(void)
             }
             if (inventoryOpen)
             {
-                DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 175));
+                DrawRectangle(0, 0, screenWidth, screenHeight, C(0, 5, 16, 125));
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f, screenWidth*0.80f, screenHeight*0.76f};
                 DrawRectangleRounded(invPanel, 0.025f, 8, C(10, 23, 41, 250));
                 DrawRectangleRoundedLinesEx(invPanel, 0.025f, 8, 1.6f, C(105, 177, 220, 245));
@@ -5183,7 +5186,7 @@ int main(void)
         {
             DrawRectangle(
                 0, 0, screenWidth, screenHeight,
-                C(0, 0, 0, 155)
+                C(0, 0, 0, 85)
             );
 
             DrawRectangleRounded(
