@@ -515,7 +515,21 @@ static void DrawMiniGasStation(float x,float z,int quality)
     DrawCube((Vector3){x-2.0f,1.55f,z-9.12f},0.12f,3.05f,0.12f,metal);
     DrawCube((Vector3){x+2.0f,1.55f,z-9.12f},0.12f,3.05f,0.12f,metal);
     DrawCube((Vector3){x,3.08f,z-9.12f},4.1f,0.12f,0.12f,metal);
-    DrawCube((Vector3){x+1.85f,1.45f,z-9.18f},0.055f,0.85f,0.045f,C(190,198,190,255));
+    // Узкая боковая стеклянная секция рядом с центральным входом.
+    DrawCube((Vector3){x-3.18f,1.72f,z-9.16f},1.25f,2.65f,0.055f,C(78,151,169,185));
+    DrawCube((Vector3){x-3.82f,1.72f,z-9.20f},0.08f,2.85f,0.10f,metal);
+    DrawCube((Vector3){x-2.54f,1.72f,z-9.20f},0.08f,2.85f,0.10f,metal);
+    DrawCube((Vector3){x-3.18f,3.15f,z-9.20f},1.35f,0.08f,0.10f,metal);
+    DrawCube((Vector3){x-3.18f,0.29f,z-9.20f},1.35f,0.08f,0.10f,metal);
+
+    // Две стеклянные створки центральной двери: левая почти закрыта,
+    // правая полностью распахнута внутрь вдоль стены.
+    DrawCube((Vector3){x-1.55f,1.55f,z-9.22f},1.05f,2.85f,0.075f,C(91,164,178,185));
+    DrawCube((Vector3){x-2.08f,1.55f,z-9.27f},0.07f,2.95f,0.10f,metal);
+    DrawCube((Vector3){x-1.02f,1.55f,z-9.27f},0.07f,2.95f,0.10f,metal);
+    DrawCube((Vector3){x+2.18f,1.55f,z-8.50f},0.10f,2.85f,1.35f,C(91,164,178,185));
+    DrawCube((Vector3){x+2.18f,1.55f,z-7.82f},0.12f,2.95f,0.08f,metal);
+    DrawCube((Vector3){x+2.18f,1.55f,z-9.18f},0.12f,2.95f,0.08f,metal);
 
     // Внутренние перегородки: торговый зал и две небольшие подсобки.
     // Три отдельные комнаты в задней части большой заправки, с дверными проёмами.
@@ -612,7 +626,7 @@ static bool IsGasStationBlocked(float x,float z,float radius,float playerY)
     if(playerY<2.9f)
     {
         if(fabsf(x)<12.0f+radius && fabsf(z+13.0f)<0.24f+radius) return true;
-        if(fabsf(x)<12.0f+radius && fabsf(z+31.0f)<0.24f+radius && fabsf(x)>2.0f) return true;
+        if(fabsf(x)<12.0f+radius && fabsf(z+31.0f)<0.24f+radius && fabsf(x)>4.0f) return true;
         if(fabsf(z+22.0f)<9.0f+radius && fabsf(fabsf(x)-12.0f)<0.24f+radius &&
            !(fabsf(x-12.25f)<0.9f && z>-28.0f && z<-25.0f)) return true;
         // Перегородки трёх задних комнат с дверными проёмами.
@@ -1327,7 +1341,8 @@ int main(void)
     int cpIndex = 0;
     for (int cp = 32; cp <= 126; cp++) cyrillicCodepoints[cpIndex++] = cp;
     for (int cp = 0x0400; cp <= 0x045F; cp++) cyrillicCodepoints[cpIndex++] = cp;
-    cyrillicFont = LoadAndroidCyrillicFont(32, cyrillicCodepoints, cpIndex);
+    cyrillicFont = LoadAndroidCyrillicFont(64, cyrillicCodepoints, cpIndex);
+    if (cyrillicFont.texture.id != 0) SetTextureFilter(cyrillicFont.texture, TEXTURE_FILTER_BILINEAR);
     SetTargetFPS(60);
 
     int screenWidth = GetScreenWidth();
@@ -1359,6 +1374,12 @@ int main(void)
     bool sprintEnabled = false;
     bool inventoryOpen = false;
     bool mapOpen = false;
+    Vector2 mapPanOffset = {0.0f, 0.0f};
+    float mapZoom = 1.0f;
+    int mapPanTouchId = -1;
+    Vector2 mapPanPrevious = {0.0f, 0.0f};
+    float mapPinchPreviousDistance = 0.0f;
+    Vector2 mapPinchPreviousCenter = {0.0f, 0.0f};
     bool commandChatOpen = false, commandConsoleOpen = false, resourcePanelOpen = false;
     char commandInput[80] = {0};
     char commandOutput[180] = "Введите /console";
@@ -4252,9 +4273,48 @@ int main(void)
             float ms=fminf(fminf(screenWidth*0.78f,screenHeight*0.70f),430.0f), mx=(screenWidth-ms)*0.5f, my=(screenHeight-ms)*0.5f;
             DrawRectangleRounded((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,C(15,29,34,250));
             DrawRectangleRoundedLinesEx((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,2,C(115,165,150,230));
-            DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,18,RAYWHITE);
+            DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,22,RAYWHITE);
             float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
-            float sc=rr/260.0f;
+            float sc=(rr/260.0f)*mapZoom;
+            cx += mapPanOffset.x; cy += mapPanOffset.y;
+            // Перетаскивание одним пальцем и масштабирование двумя.
+            Rectangle mapTouchArea={mx,my,ms,ms};
+            if(touchCount>=2)
+            {
+                Vector2 a=GetTouchPosition(0), b=GetTouchPosition(1);
+                Vector2 center={(a.x+b.x)*0.5f,(a.y+b.y)*0.5f};
+                float dx=a.x-b.x,dy=a.y-b.y;
+                float distance=sqrtf(dx*dx+dy*dy);
+                if(mapPinchPreviousDistance>1.0f)
+                {
+                    mapZoom*=distance/mapPinchPreviousDistance;
+                    mapZoom=fmaxf(0.65f,fminf(2.8f,mapZoom));
+                    mapPanOffset.x+=(center.x-mapPinchPreviousCenter.x)*1.15f;
+                    mapPanOffset.y+=(center.y-mapPinchPreviousCenter.y)*1.15f;
+                }
+                mapPinchPreviousDistance=distance;
+                mapPinchPreviousCenter=center;
+                mapPanTouchId=-1;
+            }
+            else if(touchCount==1)
+            {
+                int id=GetTouchPointId(0);
+                Vector2 p=GetTouchPosition(0);
+                if(CheckCollisionPointRec(p,mapTouchArea) &&
+                   (p.x-cx)*(p.x-cx)+(p.y-cy)*(p.y-cy)<rr*rr)
+                {
+                    if(mapPanTouchId==id)
+                    {
+                        mapPanOffset.x+=(p.x-mapPanPrevious.x)*1.15f;
+                        mapPanOffset.y+=(p.y-mapPanPrevious.y)*1.15f;
+                    }
+                    mapPanPrevious=p;
+                    mapPanTouchId=id;
+                }
+                else mapPanTouchId=-1;
+                mapPinchPreviousDistance=0.0f;
+            }
+            else { mapPanTouchId=-1; mapPinchPreviousDistance=0.0f; }
             DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255));
             // Цвета карты повторяют реальные координаты игровых биомов.
             DrawCircle((int)cx,(int)cy,rr*0.91f,C(75,111,75,255));
@@ -4266,7 +4326,7 @@ int main(void)
                 float bx=cx+gBiomeCenters[bi].x*sc, by=cy+gBiomeCenters[bi].y*sc;
                 DrawCircle((int)bx,(int)by,biomeMapRadius,biomeMapColors[bi]);
                 DrawCircleLines((int)bx,(int)by,biomeMapRadius,C(225,225,210,220));
-                DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],9)/2,(int)by-5,9,C(25,35,30,255));
+                DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],13)/2,(int)by-7,13,C(25,35,30,255));
             }
             DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
@@ -4276,9 +4336,9 @@ int main(void)
             float gasX=cx,gasY=cy-22.0f*sc;
             DrawRectangle((int)gasX-7,(int)gasY-6,14,12,C(185,65,48,255));
             DrawRectangleLines((int)gasX-7,(int)gasY-6,14,12,RAYWHITE);
-            DrawText("ЗАПРАВКА",(int)gasX+10,(int)gasY-7,10,RAYWHITE);
+            DrawText("ЗАПРАВКА",(int)gasX+10,(int)gasY-8,13,RAYWHITE);
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("ВЫ",(int)px+12,(int)py-8,12,RAYWHITE);
-            DrawText("Нажмите «КАРТА», чтобы закрыть",(int)(mx+ms-130),(int)(my+ms+12),10,C(170,190,195,255));
+            DrawText("ПЕРЕМЕЩЕНИЕ: 1 ПАЛЕЦ  |  МАСШТАБ: 2 ПАЛЬЦА",(int)mx,(int)(my+ms+12),12,C(205,220,225,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
             DrawRectangleRoundedLinesEx(mapButton,0.30f,16,2,C(130,205,255,255));
             DrawText("ЗАКРЫТЬ КАРТУ",mapButton.x+mapButton.width/2-MeasureText("ЗАКРЫТЬ КАРТУ",16)/2,mapButton.y+23,16,RAYWHITE);
