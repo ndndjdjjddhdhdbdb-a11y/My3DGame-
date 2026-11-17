@@ -86,14 +86,14 @@ static int MeasureUiText(const char *text, int fontSize)
 #define MAX_TOUCHES 10
 #define MAX_BARRELS 14
 #define MAX_BUILD_PIECES 64
-#define MAX_TREES 256
+#define MAX_TREES 800
 #define MAX_WOOD_DROPS 64
-#define MAX_ORE_NODES 16
+#define MAX_ORE_NODES 32
 #define MAX_ORE_DROPS 16
 #define MAX_WILD_ANIMALS 12
 
 // Центры биомов выбираются один раз при создании мира.
-static Vector2 gBiomeCenters[3] = {{-125.0f,-115.0f},{135.0f,105.0f},{-145.0f,125.0f}};
+static Vector2 gBiomeCenters[3] = {{-270.0f,-230.0f},{285.0f,235.0f},{-290.0f,260.0f}};
 
 static int GetWorldBiome(float x, float z)
 {
@@ -1066,7 +1066,7 @@ static Vector3 PlayerPoint(Vector3 player, float angle,
 
 static void DrawFirstPersonArms(Vector3 eye, float yaw,
                                 float walkPhase, bool moving, float time,
-                                float attackProgress)
+                                float attackProgress, int heldItemId)
 {
     Vector3 forward = {sinf(yaw), 0.0f, -cosf(yaw)};
     Vector3 right = {cosf(yaw), 0.0f, sinf(yaw)};
@@ -1115,6 +1115,32 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
         DrawSphere(elbow, 0.13f, shirt);
         DrawCylinderEx(elbow, wrist, 0.105f, 0.085f, 8, skin);
         DrawSphere(hand, 0.105f, skin);
+    }
+
+    // Предмет в правой руке следует за направлением камеры.
+    Vector3 toolBase = {eye.x+right.x*0.34f+forward.x*0.88f,
+                        eye.y-0.48f, eye.z+right.z*0.34f+forward.z*0.88f};
+    Vector3 toolTip = {eye.x+right.x*0.43f+forward.x*1.20f,
+                       eye.y-0.12f, eye.z+right.z*0.43f+forward.z*1.20f};
+    DrawCylinderEx(toolBase, toolTip, 0.045f, 0.035f, 7, C(111, 75, 45, 255));
+    if (heldItemId == 0)
+    {
+        Vector3 head = {toolTip.x+right.x*0.035f, toolTip.y+0.06f,
+                        toolTip.z+right.z*0.035f};
+        DrawCube(head, 0.34f, 0.17f, 0.15f, C(112, 119, 124, 255));
+        DrawCube((Vector3){head.x+forward.x*0.08f,head.y,head.z+forward.z*0.08f},
+                 0.10f,0.19f,0.19f,C(151,158,162,255));
+    }
+    else if (heldItemId == 7)
+    {
+        DrawCylinderEx(toolTip,(Vector3){toolTip.x+forward.x*0.22f,
+            toolTip.y+0.02f,toolTip.z+forward.z*0.22f},0.075f,0.055f,8,C(65,72,78,255));
+    }
+    else
+    {
+        DrawCube(toolTip,0.17f,0.16f,0.17f,
+                 heldItemId==2?C(178,116,55,255):
+                 heldItemId==3?C(70,150,215,255):C(139,112,77,255));
     }
 }
 
@@ -1521,6 +1547,10 @@ int main(void)
     int buildMessageType = 0; // 1 — запрет зоны, 2 — мешают объекты
     int selectedBuildType = 0; // 0 FOUNDATION, 1 WALL, 2 DOOR, 3 ROOF.
     int selectedHotbarSlot = 0;
+    int inventoryOrder[12] = {0,1,2,3,4,5,6,7,8,9,10,11};
+    int inventoryDragItem = -1;
+    int inventoryDragSourceSlot = -1;
+    Vector2 inventoryDragPosition = {0,0};
     // 0 AXE, 1 MED, 2 FOOD, 3 WATER, 4 WOOD, 5 STONE, 6 DOOR, 7 ORF PIXCADE,
     // 8 IRON, 9 LAPIS, 10 SULFUR, 11 SILICON.
     const char *itemNames[12] = {"ТОПОР", "АПТЕЧКА", "ЕДА", "ВОДА", "ДЕРЕВО", "КАМЕНЬ", "ДВЕРЬ", "ОРУЖИЕ",
@@ -1532,8 +1562,9 @@ int main(void)
 
     // Главное меню.
     bool mainMenuOpen = true;
-    bool loadingScreen = true;
+    bool loadingScreen = false;
     float loadingProgress = 0.0f;
+    float menuIntroProgress = 0.0f;
     int menuPage = 0;
 
     Rectangle menuPlayButton;
@@ -1703,26 +1734,36 @@ int main(void)
         for(int attempt=0;attempt<80 && !separated;attempt++)
         {
             float a=((float)rand()/(float)RAND_MAX)*6.2831853f;
-            float radius=112.0f+((float)rand()/(float)RAND_MAX)*42.0f;
+            float radius=230.0f+((float)rand()/(float)RAND_MAX)*125.0f;
             Vector2 candidate={cosf(a)*radius,sinf(a)*radius};
             separated=true;
             for(int prev=0;prev<bi;prev++)
             {
                 float dx=candidate.x-gBiomeCenters[prev].x;
                 float dz=candidate.y-gBiomeCenters[prev].y;
-                if(dx*dx+dz*dz<145.0f*145.0f) separated=false;
+                if(dx*dx+dz*dz<250.0f*250.0f) separated=false;
             }
             if(separated) gBiomeCenters[bi]=candidate;
         }
     }
-    for (int tx=-238; tx<=238 && treeCount<MAX_TREES; tx+=38)
-        for (int tz=-238; tz<=238 && treeCount<MAX_TREES; tz+=38)
-            if (tx*tx+tz*tz < 248*248 && IsVillageClear((float)tx,(float)tz))
-            {
-                treePositions[treeCount]=(Vector3){(float)tx,0,(float)tz};
-                treeBiome[treeCount] = GetWorldBiome((float)tx,(float)tz);
-                treeHealth[treeCount++]=3;
-            }
+    // Равномерно распределяем лес по большой карте с расстоянием между деревьями.
+    for (int attempt=0; attempt<18000 && treeCount<MAX_TREES; attempt++)
+    {
+        float angle=((float)rand()/(float)RAND_MAX)*6.2831853f;
+        float radius=28.0f+((float)rand()/(float)RAND_MAX)*500.0f;
+        float tx=cosf(angle)*radius, tz=sinf(angle)*radius;
+        if (!IsVillageClear(tx,tz)) continue;
+        bool clear=true;
+        for (int t=0;t<treeCount;t++)
+        {
+            float dx=tx-treePositions[t].x, dz=tz-treePositions[t].z;
+            if (dx*dx+dz*dz<100.0f) { clear=false; break; }
+        }
+        if (!clear) continue;
+        treePositions[treeCount]=(Vector3){tx,0,tz};
+        treeBiome[treeCount]=GetWorldBiome(tx,tz);
+        treeHealth[treeCount++]=3;
+    }
 
     // Небольшие группы диких животных распределяются по свободным участкам карты.
     for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
@@ -1759,19 +1800,19 @@ int main(void)
     // По четыре залежи каждого вида. Руды размещаются вне деревни и дорог.
     for (int ore = 0; ore < MAX_ORE_NODES; ore++)
     {
-        int type = ore/4;
+        int type = ore/8;
         bool placed = false;
         for (int attempt = 0; attempt < 250 && !placed; attempt++)
         {
             float angle = ((float)rand()/(float)RAND_MAX)*6.2831853f;
-            float radius = 24.0f + ((float)rand()/(float)RAND_MAX)*205.0f;
+            float radius = 35.0f + ((float)rand()/(float)RAND_MAX)*470.0f;
             float x = cosf(angle)*radius, z = sinf(angle)*radius;
             if (!IsVillageClear(x,z)) continue;
             bool clear = true;
             for (int t=0; t<treeCount; t++)
             {
                 float dx=x-treePositions[t].x, dz=z-treePositions[t].z;
-                if (dx*dx+dz*dz < 16.0f) { clear=false; break; }
+                if (dx*dx+dz*dz < 25.0f) { clear=false; break; }
             }
             for (int b=0; b<MAX_BARRELS && clear; b++)
             {
@@ -1782,7 +1823,7 @@ int main(void)
             {
                 if (!gOreActive[other]) continue;
                 float dx=x-gOrePositions[other].x, dz=z-gOrePositions[other].z;
-                if (dx*dx+dz*dz < 64.0f) clear=false;
+                if (dx*dx+dz*dz < 100.0f) clear=false;
             }
             if (!clear) continue;
             gOrePositions[ore]=(Vector3){x,0,z};
@@ -2244,6 +2285,8 @@ int main(void)
                     if (CheckCollisionPointRec(pos, menuPlayButton))
                     {
                         mainMenuOpen = false;
+                        loadingScreen = true;
+                        loadingProgress = 0.0f;
                     }
                     else if (CheckCollisionPointRec(pos, menuServersButton))
                     {
@@ -2646,7 +2689,11 @@ int main(void)
                 if (menuPage == 0)
                 {
                     if (CheckCollisionPointRec(pos, menuPlayButton))
+                    {
                         mainMenuOpen = false;
+                        loadingScreen = true;
+                        loadingProgress = 0.0f;
+                    }
                     else if (CheckCollisionPointRec(pos, menuServersButton))
                         menuPage = 1;
                     else if (CheckCollisionPointRec(pos, menuShopButton))
@@ -3947,15 +3994,15 @@ int main(void)
         BeginMode3D(camera);
 
         // Большой остров с тремя климатическими поясами: снег, лес и песок.
-        DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){760, 760}, C(43, 112, 143, 255));
-        for (int ix=-6; ix<=6; ix++)
+        DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){1200, 1200}, C(43, 112, 143, 255));
+        for (int ix=-14; ix<=14; ix++)
         {
-            for (int iz=-6; iz<=6; iz++)
+            for (int iz=-14; iz<=14; iz++)
             {
                 float px = ix*40.0f;
                 float pz = iz*40.0f;
-                if (px*px+pz*pz > 270.0f*270.0f) continue;
-                bool coast = (px*px+pz*pz > 225.0f*225.0f);
+                if (px*px+pz*pz > 540.0f*540.0f) continue;
+                bool coast = (px*px+pz*pz > 490.0f*490.0f);
                 int groundBiome=GetWorldBiome(px,pz);
                 Color biomeGround = groundBiome==1?C(205,216,220,255):
                                     groundBiome==2?C(207,177,116,255):
@@ -4088,7 +4135,7 @@ int main(void)
             if(!gOreActive[ore])continue;
             float dx=gOrePositions[ore].x-player.x, dz=gOrePositions[ore].z-player.z;
             if(dx*dx+dz*dz<chunkView2)
-                DrawOreNode(gOrePositions[ore].x,gOrePositions[ore].z,ore/4);
+                DrawOreNode(gOrePositions[ore].x,gOrePositions[ore].z,ore/8);
         }
 
         DrawSphere(
@@ -4231,7 +4278,8 @@ int main(void)
                 walkPhase,
                 playerMoving,
                 (float)GetTime(),
-                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f
+                attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f,
+                hotbarItemIds[selectedHotbarSlot]
             );
         }
 
@@ -4353,10 +4401,6 @@ int main(void)
             );
             DrawText(TextFormat("%d%%", (int)waterLevel),
                      203, 123, 12, C(170, 220, 250, 255));
-
-            if (foodLevel < 20.0f || waterLevel < 20.0f)
-                DrawText("МАЛО РЕСУРСОВ — ИЩИТЕ БОЧКИ", 28, 145, 10,
-                         C(255, 190, 105, 255));
 
             DrawRectangleRounded(
                 (Rectangle){14, 14, 210, 46},
@@ -4480,7 +4524,7 @@ int main(void)
             // Компактный HUD выживания в верхнем левом углу.
             if (!settingsOpen && !editControls && !inventoryOpen)
             {
-                Rectangle statusPanel = {14, 62, 154, 62};
+                Rectangle statusPanel = {screenWidth*0.5f-77.0f, 14, 154, 62};
                 DrawRectangleRounded(statusPanel, 0.16f, 8, C(8, 15, 20, 205));
                 DrawRectangleRoundedLinesEx(statusPanel, 0.16f, 8, 1.2f, C(115, 145, 151, 190));
                 DrawText("ЕДА", 23, 70, 10, C(230, 220, 190, 255));
@@ -4595,7 +4639,7 @@ int main(void)
 
             if (targetedOre >= 0 && gOreActive[targetedOre])
             {
-                int oreType = targetedOre/4;
+                int oreType = targetedOre/8;
                 int maxOreHp = (oreType == 2) ? 10 : ((oreType == 3) ? 30 : 15);
                 const char *oreLabel = TextFormat("%s: РУДА", GetOreName(oreType));
                 float hudX = screenWidth/2.0f-145.0f;
@@ -4831,7 +4875,7 @@ int main(void)
             float rr=baseRadius*mapZoom;
             float cx=mx+ms*0.5f+mapPanOffset.x;
             float cy=my+ms*0.5f+mapPanOffset.y;
-            float sc=rr/260.0f;
+            float sc=rr/540.0f;
 
             // Перетаскивание перемещает весь круг; жест двумя пальцами
             // одновременно перемещает и масштабирует весь слой карты.
@@ -4943,6 +4987,7 @@ int main(void)
         // Главное меню boltSurvival.
         if (mainMenuOpen)
         {
+            menuIntroProgress=fminf(1.0f,menuIntroProgress+frameTime*0.75f);
             // Холодный сине-графитовый фон с техническими линиями.
             DrawRectangleGradientV(0, 0, screenWidth, screenHeight,
                                    C(13, 24, 48, 255), C(29, 43, 72, 255));
@@ -5071,6 +5116,9 @@ int main(void)
                 14,
                 C(130, 160, 180, 255)
             );
+            float fadeT=menuIntroProgress*menuIntroProgress*(3.0f-2.0f*menuIntroProgress);
+            unsigned char introShade=(unsigned char)(255.0f*(1.0f-fadeT));
+            if(introShade>0) DrawRectangle(0,0,screenWidth,screenHeight,C(0,0,0,introShade));
         }
 
         // Меню настроек.
@@ -5487,7 +5535,7 @@ int main(void)
             int loadTitleSize = (int)fminf(48.0f, screenWidth*0.10f);
             DrawText(loadTitle, screenWidth/2-MeasureText(loadTitle, loadTitleSize)/2,
                      screenHeight/2-90, loadTitleSize, RAYWHITE);
-            const char *loadLabel = "ЗАГРУЗКА РЕСУРСОВ";
+            const char *loadLabel = "ЗАГРУЗКА МИРА";
             DrawText(loadLabel, screenWidth/2-MeasureText(loadLabel, 20)/2,
                      screenHeight/2-20, 20, C(190, 220, 245, 255));
             Rectangle loadBar = {screenWidth*0.20f, screenHeight/2+25,
