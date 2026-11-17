@@ -4329,9 +4329,10 @@ int main(void)
             DrawRectangleRounded((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,C(15,29,34,250));
             DrawRectangleRoundedLinesEx((Rectangle){mx-12,my-36,ms+24,ms+82},0.06f,12,2,C(115,165,150,230));
             DrawText("КАРТА ОСТРОВА",(int)mx,(int)my-27,22,RAYWHITE);
+            // Окно карты (круг) всегда остаётся неподвижным внутри квадратной области.
             float cx=mx+ms*0.5f,cy=my+ms*0.5f,rr=ms*0.46f;
+            float mapCx=cx+mapPanOffset.x,mapCy=cy+mapPanOffset.y;
             float sc=(rr/260.0f)*mapZoom;
-            cx += mapPanOffset.x; cy += mapPanOffset.y;
             // Перетаскивание одним пальцем и масштабирование двумя.
             Rectangle mapTouchArea={mx,my,ms,ms};
             if(touchCount>=2)
@@ -4342,10 +4343,11 @@ int main(void)
                 float distance=sqrtf(dx*dx+dy*dy);
                 if(mapPinchPreviousDistance>1.0f)
                 {
-                    mapZoom*=mapPinchPreviousDistance/distance;
+                    // Раздвигаем пальцы — приближаем карту, сводим — отдаляем.
+                    mapZoom*=distance/mapPinchPreviousDistance;
                     mapZoom=fmaxf(0.65f,fminf(2.8f,mapZoom));
-                    mapPanOffset.x+=(center.x-mapPinchPreviousCenter.x)*1.15f;
-                    mapPanOffset.y+=(center.y-mapPinchPreviousCenter.y)*1.15f;
+                    mapPanOffset.x+=(center.x-mapPinchPreviousCenter.x);
+                    mapPanOffset.y+=(center.y-mapPinchPreviousCenter.y);
                 }
                 mapPinchPreviousDistance=distance;
                 mapPinchPreviousCenter=center;
@@ -4360,8 +4362,8 @@ int main(void)
                 {
                     if(mapPanTouchId==id)
                     {
-                        mapPanOffset.x+=(p.x-mapPanPrevious.x)*1.15f;
-                        mapPanOffset.y+=(p.y-mapPanPrevious.y)*1.15f;
+                        mapPanOffset.x+=(p.x-mapPanPrevious.x);
+                        mapPanOffset.y+=(p.y-mapPanPrevious.y);
                     }
                     mapPanPrevious=p;
                     mapPanTouchId=id;
@@ -4371,27 +4373,32 @@ int main(void)
             }
             else { mapPanTouchId=-1; mapPinchPreviousDistance=0.0f; }
             DrawCircle((int)cx,(int)cy,rr,C(48,91,83,255));
+            // Содержимое карты двигается внутри неподвижного окна карты.
+            // Ограничиваем отрисовку квадратом, чтобы объекты не вылезали за его границы.
+            BeginScissorMode((int)mx,(int)my,(int)ms,(int)ms);
             // Цвета карты повторяют реальные координаты игровых биомов.
-            DrawCircle((int)cx,(int)cy,rr*0.91f,C(75,111,75,255));
+            DrawCircle((int)mapCx,(int)mapCy,rr*0.91f,C(75,111,75,255));
             float biomeMapRadius=78.0f*sc;
             const Color biomeMapColors[3]={ {205,220,229,255},{211,177,116,255},{42,103,53,255} };
             const char *biomeMapNames[3]={"ЗИМА","ПЕСОК","ЛЕС"};
             for(int bi=0;bi<3;bi++)
             {
-                float bx=cx+gBiomeCenters[bi].x*sc, by=cy+gBiomeCenters[bi].y*sc;
+                float bx=mapCx+gBiomeCenters[bi].x*sc, by=mapCy+gBiomeCenters[bi].y*sc;
                 DrawCircle((int)bx,(int)by,biomeMapRadius,biomeMapColors[bi]);
                 DrawCircleLines((int)bx,(int)by,biomeMapRadius,C(225,225,210,220));
                 DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],13)/2,(int)by-7,13,C(25,35,30,255));
             }
-            DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
-            for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=cx+cosf(a)*rr*0.57f,ay=cy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
-            for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(cx+cosf(a)*r),(int)(cy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
-            float px=cx+player.x*sc,py=cy+player.z*sc;
+            for(int m=0;m<6;m++){float a=m*1.05f+0.4f,ax=mapCx+cosf(a)*rr*0.57f,ay=mapCy+sinf(a)*rr*0.57f;DrawCircle((int)ax,(int)ay,(int)(ms*0.035f),C(104,111,105,255));DrawCircle((int)(ax-3),(int)(ay-4),(int)(ms*0.018f),C(170,179,170,255));}
+            for(int t=0;t<18;t++){float a=t*2.399f,r=rr*(0.18f+(float)(t%5)*0.105f);DrawCircle((int)(mapCx+cosf(a)*r),(int)(mapCy+sinf(a)*r),(int)(ms*0.012f),C(34,91,53,255));}
+            EndScissorMode();
+            // Контур круга остаётся неподвижным и не может уехать за квадрат.
+            float px=mapCx+player.x*sc,py=mapCy+player.z*sc;
             // Заправка отмечена на карте в точке (0, -22), как и в игровом мире.
-            float gasX=cx,gasY=cy-22.0f*sc;
+            float gasX=mapCx,gasY=mapCy-22.0f*sc;
             DrawRectangle((int)gasX-7,(int)gasY-6,14,12,C(185,65,48,255));
             DrawRectangleLines((int)gasX-7,(int)gasY-6,14,12,RAYWHITE);
             DrawText("ЗАПРАВКА",(int)gasX+10,(int)gasY-8,13,RAYWHITE);
+            DrawCircleLines((int)cx,(int)cy,rr,C(185,190,157,255));
             DrawCircle((int)px,(int)py,8,C(245,245,230,255));DrawCircle((int)px,(int)py,4,C(55,145,255,255));DrawCircleLines((int)px,(int)py,11,RAYWHITE);DrawText("ВЫ",(int)px+12,(int)py-8,12,RAYWHITE);
             DrawText("ПЕРЕМЕЩЕНИЕ: 1 ПАЛЕЦ  |  МАСШТАБ: 2 ПАЛЬЦА",(int)mx,(int)(my+ms+12),12,C(205,220,225,255));
             DrawRectangleRounded(mapButton,0.30f,16,C(20,34,52,250));
