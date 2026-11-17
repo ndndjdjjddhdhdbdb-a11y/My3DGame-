@@ -13,12 +13,13 @@
 
 /* Bolt multiplayer bridge: WebSocket is managed by Android/OkHttp. */
 #define NET_MAX_PLAYERS 20
-typedef struct NetPlayer { int id; char name[20]; Vector3 position; float yaw; } NetPlayer;
+typedef struct NetPlayer { int id; char name[20]; Vector3 position; Vector3 targetPosition; float yaw; } NetPlayer;
 static JavaVM *gNetVm = NULL;
 static jclass gNetClientClass = NULL;
 static pthread_mutex_t gNetMutex = PTHREAD_MUTEX_INITIALIZER;
 static NetPlayer gNetPlayers[NET_MAX_PLAYERS];
 static int gNetPlayerCount = 0;
+static int gNetLocalPlayerId = -1;
 static char gNetStatus[48] = "ПОДКЛЮЧЕНИЕ...";
 static double gNetLastSend = 0.0;
 
@@ -74,18 +75,33 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
             if (!id || !name || !x || !y || !z || !yaw) break;
             parsed[parsedCount].id = atoi(id);
             snprintf(parsed[parsedCount].name, sizeof(parsed[parsedCount].name), "%s", name);
-            parsed[parsedCount].position = (Vector3){(float)atof(x), (float)atof(y), (float)atof(z)};
+            parsed[parsedCount].targetPosition = (Vector3){(float)atof(x), (float)atof(y), (float)atof(z)};
+            parsed[parsedCount].position = parsed[parsedCount].targetPosition;
             parsed[parsedCount].yaw = (float)atof(yaw);
             parsedCount++;
         }
         pthread_mutex_lock(&gNetMutex);
+        /* Keep each known player's rendered position and smoothly approach the latest server snapshot. */
+        for (int i = 0; i < parsedCount; ++i)
+        {
+            for (int old = 0; old < gNetPlayerCount; ++old)
+            {
+                if (gNetPlayers[old].id == parsed[i].id)
+                {
+                    parsed[i].position = gNetPlayers[old].position;
+                    break;
+                }
+            }
+        }
         memcpy(gNetPlayers, parsed, sizeof(NetPlayer)*(size_t)parsedCount);
         gNetPlayerCount = parsedCount;
         pthread_mutex_unlock(&gNetMutex);
     }
     else if (strncmp(value, "WELCOME ", 8) == 0)
     {
+        int localId = atoi(value + 8);
         pthread_mutex_lock(&gNetMutex);
+        gNetLocalPlayerId = localId;
         snprintf(gNetStatus, sizeof(gNetStatus), "ONLINE");
         pthread_mutex_unlock(&gNetMutex);
     }
@@ -4776,16 +4792,34 @@ int main(void)
             }
         }
 
+        NetPlayer remotePlayers[NET_MAX_PLAYERS];
+        int remoteCount = 0;
         pthread_mutex_lock(&gNetMutex);
         for (int netIndex = 0; netIndex < gNetPlayerCount; ++netIndex)
         {
-            if (gNetPlayers[netIndex].position.x == player.x &&
-                gNetPlayers[netIndex].position.z == player.z) continue;
-            DrawPlayerShadow(gNetPlayers[netIndex].position);
-            DrawPlayer(gNetPlayers[netIndex].position, gNetPlayers[netIndex].yaw,
-                       0.0f, false, 0.0f, 0, 0.0f, 0);
+            if (gNetPlayers[netIndex].id == gNetLocalPlayerId) continue;
+            Vector3 *current = &gNetPlayers[netIndex].position;
+            Vector3 target = gNetPlayers[netIndex].targetPosition;
+            float blend = 1.0f - expf(-12.0f * fminf(frameTime, 0.05f));
+            current->x += (target.x - current->x) * blend;
+            current->y += (target.y - current->y) * blend;
+            current->z += (target.z - current->z) * blend;
+            remotePlayers[remoteCount++] = gNetPlayers[netIndex];
         }
         pthread_mutex_unlock(&gNetMutex);
+
+        /* Render network characters outside the mutex so socket callbacks never wait on 3D drawing. */
+        for (int netIndex = 0; netIndex < remoteCount; ++netIndex)
+        {
+            NetPlayer *remote = &remotePlayers[netIndex];
+            float dx = remote->targetPosition.x - remote->position.x;
+            float dz = remote->targetPosition.z - remote->position.z;
+            bool remoteMoving = (dx*dx + dz*dz) > 0.0004f;
+            float remoteWalk = (float)GetTime() * 8.0f;
+            DrawPlayerShadow(remote->position);
+            DrawPlayer(remote->position, remote->yaw,
+                       remoteWalk, remoteMoving, 0.0f, 0, 0.0f, 0);
+        }
 
         if (!firstPerson)
         {
@@ -4821,13 +4855,6 @@ int main(void)
         BeginDrawing();
 
         ClearBackground(BLACK);
-        pthread_mutex_lock(&gNetMutex);
-        char netStatusCopy[48]; snprintf(netStatusCopy, sizeof(netStatusCopy), "%s", gNetStatus);
-        int netPlayersCopy = gNetPlayerCount;
-        pthread_mutex_unlock(&gNetMutex);
-        DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
-                 strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
-
         DrawTexturePro(
             sceneTexture.texture,
             (Rectangle){
@@ -4844,6 +4871,14 @@ int main(void)
             0.0f,
             WHITE
         );
+
+        /* Draw network HUD after the 3D scene so it remains visible and does not flicker behind it. */
+        pthread_mutex_lock(&gNetMutex);
+        char netStatusCopy[48]; snprintf(netStatusCopy, sizeof(netStatusCopy), "%s", gNetStatus);
+        int netPlayersCopy = gNetPlayerCount;
+        pthread_mutex_unlock(&gNetMutex);
+        DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
+                 strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
 
         // Дублируем предпросмотр в HUD: он остаётся заметным даже от первого лица,
         // когда руки персонажа могут закрывать 3D-модель на земле.
