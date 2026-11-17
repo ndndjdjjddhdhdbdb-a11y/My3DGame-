@@ -1241,7 +1241,7 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
     }
 }
 
-enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5, ANIMAL_STARTLE=6 };
+enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5, ANIMAL_STARTLE=6, ANIMAL_SNORT=7, ANIMAL_COOLDOWN=8 };
 
 static Sound gBoarAlertSound = {0};
 static bool gAnimalAudioReady = false;
@@ -3291,12 +3291,39 @@ int main(void)
                 {
                     if(distance>29.0f || animalNow-wildAnimalChaseStarted[animal]>12.0)
                     {
-                        wildAnimalState[animal]=ANIMAL_WANDER;
+                        // Кабан прекращает погоню: замирает, фыркает,
+                        // затем отходит от игрока и 30 секунд не нападает.
+                        wildAnimalState[animal]=ANIMAL_SNORT;
+                        wildAnimalTimer[animal]=0.9f;
                         wildAnimalTargetHeading[animal]=atan2f(a->x-player.x,player.z-a->z);
                         if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
                         wildAnimalLastChase[animal]=animalNow;
                         wildAnimalGrazeTimer[animal]=60.0f+((float)rand()/(float)RAND_MAX)*60.0f;
                         wildAnimalLookTimer[animal]=4.0f+((float)rand()/(float)RAND_MAX)*7.0f;
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_SNORT)
+                {
+                    // Во время фырканья кабан полностью стоит на месте.
+                    if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_COOLDOWN;
+                        wildAnimalTimer[animal]=30.0f;
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_COOLDOWN)
+                {
+                    // Если игрок подошёл ближе 3 метров, кабан снова атакует.
+                    if(distance<=3.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_CHASE;
+                        wildAnimalChaseStarted[animal]=animalNow;
+                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
+                        if(gAnimalAudioReady)PlaySound(gBoarAlertSound);
+                    }
+                    else if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_WANDER;
                         wildAnimalTimer[animal]=2.0f;
                     }
                 }
@@ -3380,6 +3407,12 @@ int main(void)
                     if(dx*dx+dz*dz>0.001f)
                         wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
                 }
+                else if(wildAnimalState[animal]==ANIMAL_COOLDOWN)
+                {
+                    dx=player.x-a->x; dz=player.z-a->z;
+                    if(dx*dx+dz*dz>0.001f)
+                        wildAnimalTargetHeading[animal]=atan2f(-dx,dz);
+                }
 
                 // Животные стараются не идти прямо друг в друга.
                 // Олень обходит соседа дугой, кабан при тесном сближении
@@ -3426,7 +3459,8 @@ int main(void)
 
                 float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
                                   (wildAnimalState[animal]==ANIMAL_FLEE?8.5f:
-                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
+                                  (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:
+                                  (wildAnimalState[animal]==ANIMAL_COOLDOWN && wildAnimalTimer[animal]>27.0f?0.9f:0.0f)));
                 if(!isDeer && nearestAnimalDist2<1.30f*1.30f)
                     animalSpeed=0.0f;
                 if(animalSpeed>0.0f)
