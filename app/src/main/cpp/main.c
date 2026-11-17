@@ -2747,7 +2747,7 @@ int main(void)
                 drinkRequested = true;
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
-                     CheckCollisionPointRec(pos, interactButton)
+                     CheckCollisionPointRec(pos, interactButton))
             {
                 attackRequested = true;
             }
