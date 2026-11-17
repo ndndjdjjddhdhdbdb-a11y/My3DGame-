@@ -95,12 +95,22 @@ static int MeasureUiText(const char *text, int fontSize)
 // Центры биомов выбираются один раз при создании мира.
 static Vector2 gBiomeCenters[3] = {{-270.0f,-230.0f},{285.0f,235.0f},{-290.0f,260.0f}};
 
+static float BiomeBoundaryRadius(int biome, float angle)
+{
+    float phase=(float)biome*1.73f;
+    return 78.0f + 10.0f*sinf(angle*2.0f+phase)
+                  + 7.0f*sinf(angle*3.0f-phase*1.4f)
+                  + 4.0f*cosf(angle*5.0f+phase*0.7f);
+}
+
 static int GetWorldBiome(float x, float z)
 {
     for (int i=0;i<3;i++)
     {
         float dx=x-gBiomeCenters[i].x, dz=z-gBiomeCenters[i].y;
-        if (dx*dx+dz*dz < 78.0f*78.0f) return i+1;
+        float angle=atan2f(dz,dx);
+        float radius=BiomeBoundaryRadius(i+1,angle);
+        if (dx*dx+dz*dz < radius*radius) return i+1;
     }
     return 0;
 }
@@ -406,12 +416,12 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
     DrawCube((Vector3){x, h*0.5f, z}, w, h, d, wall);
 
     DrawCube((Vector3){x, h+0.18f*scale, z},
-             w+0.55f*scale, 0.38f*scale,
-             d+0.55f*scale, roof);
+             w+0.22f*scale, 0.28f*scale,
+             d+0.22f*scale, roof);
 
     DrawCube((Vector3){x, h+0.48f*scale, z},
-             w*0.72f, 0.28f*scale,
-             d+0.25f*scale, C(76, 72, 66, 255));
+             w*0.58f, 0.18f*scale,
+             d+0.12f*scale, C(76, 72, 66, 255));
 
     DrawCube((Vector3){x, 1.05f*scale, z-d*0.505f},
              0.85f*scale, 2.1f*scale, 0.10f*scale,
@@ -1118,30 +1128,39 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     }
 
     // Предмет в правой руке следует за направлением камеры.
-    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*0.88f,
-                        eye.y-0.45f, eye.z+right.z*0.30f+forward.z*0.88f};
-    Vector3 toolTip = {eye.x+right.x*0.40f+forward.x*1.10f,
-                       eye.y-0.16f, eye.z+right.z*0.40f+forward.z*1.10f};
-    DrawCylinderEx(toolBase, toolTip, 0.045f, 0.035f, 7, C(111, 75, 45, 255));
-    if (heldItemId == 0)
+    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*0.78f,
+                        eye.y-0.43f, eye.z+right.z*0.30f+forward.z*0.78f};
+    Vector3 toolTip = {eye.x+right.x*0.36f+forward.x*0.99f,
+                       eye.y-0.18f, eye.z+right.z*0.36f+forward.z*0.99f};
+    if(heldItemId==0 || heldItemId==5 || heldItemId==8 || heldItemId==9 ||
+       heldItemId==10 || heldItemId==11 || heldItemId==4 || heldItemId==6 || heldItemId==7)
+        DrawCylinderEx(toolBase,toolTip,0.045f,0.035f,7,C(111,75,45,255));
+    if(heldItemId==0 || heldItemId==5 || heldItemId==8 || heldItemId==9 ||
+       heldItemId==10 || heldItemId==11)
     {
-        Vector3 head = {toolTip.x+right.x*0.035f, toolTip.y+0.04f,
-                        toolTip.z+right.z*0.035f};
-        DrawCube(head, 0.34f, 0.17f, 0.15f, C(112, 119, 124, 255));
-        DrawCube((Vector3){head.x+forward.x*0.08f,head.y,head.z+forward.z*0.08f},
-                 0.10f,0.19f,0.19f,C(151,158,162,255));
+        Vector3 head={toolTip.x+right.x*0.035f,toolTip.y+0.04f,toolTip.z+right.z*0.035f};
+        Color metal=heldItemId==9?C(48,91,205,255):
+                    heldItemId==10?C(224,194,49,255):
+                    heldItemId==11?C(205,211,218,255):C(132,139,145,255);
+        DrawCube(head,0.30f,0.15f,0.14f,metal);
+        if(heldItemId==5) DrawCube((Vector3){head.x,head.y+0.10f,head.z},0.20f,0.18f,0.18f,C(105,105,105,255));
     }
-    else if (heldItemId == 7)
+    else if(heldItemId==7)
     {
-        DrawCylinderEx(toolTip,(Vector3){toolTip.x+forward.x*0.22f,
-            toolTip.y+0.02f,toolTip.z+forward.z*0.22f},0.075f,0.055f,8,C(65,72,78,255));
+        DrawCylinderEx(toolTip,(Vector3){toolTip.x+forward.x*0.22f,toolTip.y+0.02f,toolTip.z+forward.z*0.22f},0.075f,0.055f,8,C(65,72,78,255));
     }
+    else if(heldItemId==1)
+    {
+        DrawCube(toolTip,0.27f,0.19f,0.14f,C(190,55,55,255));
+        DrawCube((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.07f,0.17f,0.025f,RAYWHITE);
+        DrawCube((Vector3){toolTip.x,toolTip.y+0.01f,toolTip.z-0.08f},0.17f,0.07f,0.025f,RAYWHITE);
+    }
+    else if(heldItemId==2)
+        DrawSphere(toolTip,0.13f,C(178,116,55,255));
+    else if(heldItemId==3)
+        DrawCylinder(toolTip,0.10f,0.10f,0.28f,8,C(70,150,215,255));
     else
-    {
-        DrawCube(toolTip,0.17f,0.16f,0.17f,
-                 heldItemId==2?C(178,116,55,255):
-                 heldItemId==3?C(70,150,215,255):C(139,112,77,255));
-    }
+        DrawCube(toolTip,0.18f,0.16f,0.17f,heldItemId==4?C(126,82,47,255):C(139,112,77,255));
 }
 
 static void DrawPlayer(Vector3 player, float angle,
@@ -1393,6 +1412,7 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
 
     rlPushMatrix();
     rlTranslatef(p.x,0.0f,p.z);
+    rlScalef(0.78f,0.78f,0.78f);
     rlRotatef(-heading*57.2957795f,0.0f,1.0f,0.0f);
 
     DrawCylinder((Vector3){0,0.025f,0},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
@@ -1539,14 +1559,21 @@ static int GetInventorySlotAt(Vector2 pos, int screenWidth, int screenHeight)
 {
     Rectangle panel={screenWidth*0.10f,screenHeight*0.12f,screenWidth*0.80f,screenHeight*0.76f};
     float gap=8.0f;
-    float cell=fminf(54.0f,(panel.width-32.0f-gap*3.0f)/4.0f);
+    float cell=fminf(68.0f,(panel.width-32.0f-gap*3.0f)/4.0f);
     float gridWidth=cell*4.0f+gap*3.0f;
     float gridX=panel.x+(panel.width-gridWidth)*0.5f;
     for(int slot=0;slot<12;slot++)
     {
-        Rectangle r={gridX+(slot%4)*(cell+gap),panel.y+72+(slot/4)*58,cell,cell};
+        Rectangle r={gridX+(slot%4)*(cell+gap),panel.y+72+(slot/4)*74,cell,cell};
         if(CheckCollisionPointRec(pos,r)) return slot;
     }
+    return -1;
+}
+
+static int GetHotbarSlotAt(Vector2 pos, Rectangle hotbarSlots[4])
+{
+    for(int slot=0;slot<4;slot++)
+        if(CheckCollisionPointRec(pos,hotbarSlots[slot])) return slot;
     return -1;
 }
 
@@ -1624,7 +1651,7 @@ int main(void)
     int itemCounts[12] = {1, 1, 3, 3, 0, 0, 0, 1, 0, 0, 0, 0};
     int giveSelectedItem = 0;
     int giveSelectedAmount = 1;
-    const int hotbarItemIds[4] = {0, 7, 2, 3}; // AXE, ORF PIXCADE, FOOD, WATER.
+    int hotbarItemIds[4] = {0, 7, 2, 3}; // Предметы быстрого доступа можно менять перетаскиванием.
 
     // Главное меню.
     bool mainMenuOpen = true;
@@ -2496,9 +2523,9 @@ int main(void)
                 // Еду и воду можно использовать касанием карточки в рюкзаке.
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f,
                                       screenWidth*0.80f, screenHeight*0.76f};
-                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
-                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
-                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+320, invPanel.width-32, 32};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+356, invPanel.width-32, 32};
+                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+392, invPanel.width-32, 32};
                 if (CheckCollisionPointRec(pos, craftAxeButton) &&
                     itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99)
                 {
@@ -2516,10 +2543,17 @@ int main(void)
                 else if (CheckCollisionPointRec(pos, craftDoorButton) && itemCounts[4] >= 10 && itemCounts[6] < 99)
                 { itemCounts[4] -= 10; itemCounts[6]++; SaveBuildData(buildPieces,buildPieceTypes,buildDoorOpen,buildPieceCount,itemCounts[4]); }
                 int dragSlot=GetInventorySlotAt(pos,screenWidth,screenHeight);
+                int hotbarDragSlot=GetHotbarSlotAt(pos,hotbarSlots);
                 if(dragSlot>=0 && inventoryDragItem<0)
                 {
                     inventoryDragItem=inventoryOrder[dragSlot];
                     inventoryDragSourceSlot=dragSlot;
+                    inventoryDragPosition=pos;
+                }
+                else if(hotbarDragSlot>=0 && inventoryDragItem<0)
+                {
+                    inventoryDragItem=hotbarItemIds[hotbarDragSlot];
+                    inventoryDragSourceSlot=12+hotbarDragSlot;
                     inventoryDragPosition=pos;
                 }
             }
@@ -2869,10 +2903,17 @@ int main(void)
                 Rectangle invPanel = {screenWidth*0.10f, screenHeight*0.12f,
                                       screenWidth*0.80f, screenHeight*0.76f};
                 int dragSlot=GetInventorySlotAt(pos,screenWidth,screenHeight);
+                int hotbarDragSlot=GetHotbarSlotAt(pos,hotbarSlots);
                 if(dragSlot>=0 && inventoryDragItem<0)
                 {
                     inventoryDragItem=inventoryOrder[dragSlot];
                     inventoryDragSourceSlot=dragSlot;
+                    inventoryDragPosition=pos;
+                }
+                else if(hotbarDragSlot>=0 && inventoryDragItem<0)
+                {
+                    inventoryDragItem=hotbarItemIds[hotbarDragSlot];
+                    inventoryDragSourceSlot=12+hotbarDragSlot;
                     inventoryDragPosition=pos;
                 }
             }
@@ -3546,7 +3587,7 @@ int main(void)
                 // Плавный поворот с ограничением угловой скорости.
                 float turnDiff=atan2f(sinf(wildAnimalTargetHeading[animal]-wildAnimalHeading[animal]),
                                       cosf(wildAnimalTargetHeading[animal]-wildAnimalHeading[animal]));
-                float maxTurn=(wildAnimalTypes[animal]==0?2.8f:2.1f)*frameTime;
+                float maxTurn=(wildAnimalTypes[animal]==0?1.65f:1.35f)*frameTime;
                 if(turnDiff>maxTurn)turnDiff=maxTurn;
                 if(turnDiff< -maxTurn)turnDiff=-maxTurn;
                 wildAnimalHeading[animal]+=turnDiff;
@@ -3578,9 +3619,15 @@ int main(void)
                         a->x=nextX;
                         a->z=nextZ;
                     }
-                    else if(wildAnimalState[animal]==ANIMAL_WANDER)
+                    else
                     {
-                        wildAnimalHeading[animal]+=1.25f;
+                        // Если животное упёрлось в препятствие, выбирает
+                        // обходную траекторию вместо попытки идти в стену.
+                        float escapeTurn=(animal%2==0)?1.35f:-1.35f;
+                        wildAnimalTargetHeading[animal]=wildAnimalHeading[animal]+escapeTurn;
+                        if(wildAnimalState[animal]==ANIMAL_CHASE &&
+                           wildAnimalTypes[animal]!=0 && distance>2.2f)
+                            wildAnimalState[animal]=ANIMAL_WANDER;
                     }
                 }
             }
@@ -4003,23 +4050,53 @@ int main(void)
             else
             {
                 int targetSlot=GetInventorySlotAt(inventoryDragPosition,screenWidth,screenHeight);
-                if(targetSlot>=0 && inventoryDragSourceSlot>=0)
+                int targetHotbar=GetHotbarSlotAt(inventoryDragPosition,hotbarSlots);
+                if(inventoryDragSourceSlot>=0)
                 {
-                    if(targetSlot!=inventoryDragSourceSlot)
+                    if(targetSlot>=0)
                     {
-                        int tmp=inventoryOrder[targetSlot];
-                        inventoryOrder[targetSlot]=inventoryOrder[inventoryDragSourceSlot];
-                        inventoryOrder[inventoryDragSourceSlot]=tmp;
+                        if(inventoryDragSourceSlot<12)
+                        {
+                            if(targetSlot!=inventoryDragSourceSlot)
+                            {
+                                int tmp=inventoryOrder[targetSlot];
+                                inventoryOrder[targetSlot]=inventoryOrder[inventoryDragSourceSlot];
+                                inventoryOrder[inventoryDragSourceSlot]=tmp;
+                            }
+                            else if(inventoryDragItem==2 && itemCounts[2]>0)
+                            {
+                                foodLevel=fminf(100.0f,foodLevel+25.0f);
+                                itemCounts[2]--;
+                            }
+                            else if(inventoryDragItem==3 && itemCounts[3]>0)
+                            {
+                                waterLevel=fminf(100.0f,waterLevel+25.0f);
+                                itemCounts[3]--;
+                            }
+                        }
+                        else
+                        {
+                            int sourceHotbar=inventoryDragSourceSlot-12;
+                            int tmp=inventoryOrder[targetSlot];
+                            inventoryOrder[targetSlot]=hotbarItemIds[sourceHotbar];
+                            hotbarItemIds[sourceHotbar]=tmp;
+                        }
                     }
-                    else if(inventoryDragItem==2 && itemCounts[2]>0)
+                    else if(targetHotbar>=0)
                     {
-                        foodLevel=fminf(100.0f,foodLevel+25.0f);
-                        itemCounts[2]--;
-                    }
-                    else if(inventoryDragItem==3 && itemCounts[3]>0)
-                    {
-                        waterLevel=fminf(100.0f,waterLevel+25.0f);
-                        itemCounts[3]--;
+                        if(inventoryDragSourceSlot<12)
+                        {
+                            int tmp=hotbarItemIds[targetHotbar];
+                            hotbarItemIds[targetHotbar]=inventoryOrder[inventoryDragSourceSlot];
+                            inventoryOrder[inventoryDragSourceSlot]=tmp;
+                        }
+                        else
+                        {
+                            int sourceHotbar=inventoryDragSourceSlot-12;
+                            int tmp=hotbarItemIds[targetHotbar];
+                            hotbarItemIds[targetHotbar]=hotbarItemIds[sourceHotbar];
+                            hotbarItemIds[sourceHotbar]=tmp;
+                        }
                     }
                 }
                 inventoryDragItem=-1;
@@ -4790,11 +4867,11 @@ int main(void)
                 {
                     int item=inventoryOrder[slot];
                     float gap = 8.0f;
-                    float cellSize = fminf(54.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
+                    float cellSize = fminf(68.0f, (invPanel.width-32.0f-gap*3.0f)/4.0f);
                     float gridWidth = cellSize*4.0f+gap*3.0f;
                     float gridX = invPanel.x+(invPanel.width-gridWidth)*0.5f;
                     Rectangle r = {gridX+(slot%4)*(cellSize+gap),
-                                   invPanel.y+72+(slot/4)*58, cellSize, cellSize};
+                                   invPanel.y+72+(slot/4)*74, cellSize, cellSize};
                     DrawRectangle((int)r.x+2,(int)r.y+3,(int)r.width,(int)r.height,C(0,0,0,105));
                     DrawRectangle(r.x,r.y,r.width,r.height,C(18, 37, 57, 255));
                     DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(27, 50, 74, 255));
@@ -4815,11 +4892,11 @@ int main(void)
                     DrawUiTextBold(TextFormat("x%d",itemCounts[inventoryDragItem]),(int)dragCard.x+5,(int)dragCard.y+27,10,C(190, 225, 245, 255));
                 }
                 DrawSurvivalButton(inventoryButton, "СУМКА", 13, true);
-                DrawUiTextBold("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+240,
+                DrawUiTextBold("СОЗДАНИЕ", (int)invPanel.x+18, (int)invPanel.y+300,
                     16, C(165, 215, 245, 255));
-                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+260, invPanel.width-32, 32};
-                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+296, invPanel.width-32, 32};
-                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+332, invPanel.width-32, 32};
+                Rectangle craftAxeButton = {invPanel.x+16, invPanel.y+320, invPanel.width-32, 32};
+                Rectangle craftMedButton = {invPanel.x+16, invPanel.y+356, invPanel.width-32, 32};
+                Rectangle craftDoorButton = {invPanel.x+16, invPanel.y+392, invPanel.width-32, 32};
                 bool canCraftAxe = itemCounts[4] >= 3 && itemCounts[5] >= 2 && itemCounts[0] < 99;
                 bool canCraftMed = itemCounts[4] >= 2 && itemCounts[5] >= 1 && itemCounts[1] < 99;
                 DrawRectangleRounded(craftAxeButton, 0.16f, 8,
@@ -5015,15 +5092,24 @@ int main(void)
             DrawCircle((int)cx,(int)cy,(int)rr,C(48,91,83,255));
             DrawCircle((int)cx,(int)cy,(int)(rr*0.91f),C(75,111,75,255));
 
-            float biomeMapRadius=78.0f*sc;
             const Color biomeMapColors[3]={ {205,220,229,255},{211,177,116,255},{42,103,53,255} };
             const char *biomeMapNames[3]={"ЗИМА","ПЕСОК","ЛЕС"};
             int biomeFont=(int)fmaxf(8.0f,13.0f*mapZoom);
             for(int bi=0;bi<3;bi++)
             {
                 float bx=cx+gBiomeCenters[bi].x*sc, by=cy+gBiomeCenters[bi].y*sc;
-                DrawCircle((int)bx,(int)by,(int)biomeMapRadius,biomeMapColors[bi]);
-                DrawCircleLines((int)bx,(int)by,(int)biomeMapRadius,C(225,225,210,220));
+                Vector2 boundary[65];
+                boundary[0]=(Vector2){bx,by};
+                for(int edge=0;edge<=63;edge++)
+                {
+                    float angle=(float)edge*6.2831853f/64.0f;
+                    float radius=BiomeBoundaryRadius(bi+1,angle)*sc;
+                    boundary[edge+1]=(Vector2){bx+cosf(angle)*radius,by+sinf(angle)*radius};
+                }
+                for(int edge=0;edge<64;edge++)
+                    DrawTriangle(boundary[0],boundary[edge+1],boundary[edge+2],biomeMapColors[bi]);
+                for(int edge=0;edge<64;edge++)
+                    DrawLineEx(boundary[edge+1],boundary[edge+2],1.2f,C(225,225,210,190));
                 DrawText(biomeMapNames[bi],(int)bx-MeasureText(biomeMapNames[bi],biomeFont)/2,
                          (int)by-biomeFont/2,biomeFont,C(25,35,30,255));
             }
@@ -5209,7 +5295,7 @@ int main(void)
         {
             DrawRectangle(
                 0, 0, screenWidth, screenHeight,
-                C(0, 0, 0, 85)
+                C(0, 0, 0, 42)
             );
 
             DrawRectangleRounded(
