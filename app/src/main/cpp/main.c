@@ -1479,6 +1479,7 @@ int main(void)
     while (!WindowShouldClose())
     {
         float frameTime = GetFrameTime();
+        attackRequested = false;
         if (loadingScreen)
         {
             loadingProgress += frameTime/2.4f;
@@ -1489,6 +1490,33 @@ int main(void)
             // Android передаёт одно событие после отпускания клавиши;
             // ReadSoftKeyboardUtf8 сразу очищает его, поэтому символ не дублируется.
             ReadSoftKeyboardUtf8(commandInput,sizeof(commandInput));
+            if (IsKeyPressed(KEY_ENTER))
+            {
+                HideSoftKeyboard();
+                if (commandChatOpen)
+                {
+                    if(strcmp(commandInput,"/console")==0)
+                    {
+                        commandChatOpen=false;
+                        commandConsoleOpen=true;
+                        strcpy(commandOutput,"Консоль открыта: /give или /update");
+                    }
+                    else strcpy(commandOutput,"Введите /console");
+                }
+                else if (commandConsoleOpen)
+                {
+                    if(strcmp(commandInput,"/give")==0)
+                    {
+                        commandConsoleOpen=false;
+                        resourcePanelOpen=true;
+                        strcpy(commandOutput,"Панель ресурсов открыта");
+                    }
+                    else if(strcmp(commandInput,"/update")==0)
+                        strcpy(commandOutput,"git pull --ff-only origin master &&\\n./gradlew assembleDebug");
+                    else strcpy(commandOutput,"Команды: /give или /update");
+                }
+                commandInput[0]='\\0';
+            }
         }
         else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                  !mapOpen && !gasCrateOpen && !resourcePanelOpen)
@@ -1512,7 +1540,6 @@ int main(void)
             if (foodLevel < 0.0f) foodLevel = 0.0f;
             if (waterLevel < 0.0f) waterLevel = 0.0f;
         }
-        attackRequested = false;
         // Возрождение каждой залежи через 60 секунд в новой случайной точке.
         for (int ore=0; ore<MAX_ORE_NODES; ore++)
         {
@@ -2302,6 +2329,56 @@ int main(void)
                 settingsOpen = !settingsOpen;
                 joystickActive = false;
                 lookTouchId = -1;
+            }
+            else if (commandChatOpen || commandConsoleOpen)
+            {
+                Rectangle cp={screenWidth*0.08f,screenHeight*0.10f,screenWidth*0.84f,190};
+                Rectangle inputBox={cp.x+14,cp.y+58,cp.width-28,42};
+                Rectangle sendButton={cp.x+cp.width-128,cp.y+116,114,42};
+                Rectangle closeCmd={cp.x+14,cp.y+116,100,42};
+                if(CheckCollisionPointRec(pos,closeCmd))
+                {
+                    commandChatOpen=false;
+                    commandConsoleOpen=false;
+                    HideSoftKeyboard();
+                }
+                else if(CheckCollisionPointRec(pos,inputBox)) ShowSoftKeyboard();
+                else if(CheckCollisionPointRec(pos,sendButton))
+                {
+                    HideSoftKeyboard();
+                    if(commandChatOpen)
+                    {
+                        if(strcmp(commandInput,"/console")==0)
+                        {
+                            commandChatOpen=false;
+                            commandConsoleOpen=true;
+                            strcpy(commandOutput,"Консоль открыта: /give или /update");
+                        }
+                        else strcpy(commandOutput,"Введите /console");
+                    }
+                    else if(commandConsoleOpen)
+                    {
+                        if(strcmp(commandInput,"/give")==0)
+                        {
+                            commandConsoleOpen=false;
+                            resourcePanelOpen=true;
+                            strcpy(commandOutput,"Панель ресурсов открыта");
+                        }
+                        else if(strcmp(commandInput,"/update")==0)
+                            strcpy(commandOutput,"git pull --ff-only origin master &&\\n./gradlew assembleDebug");
+                        else strcpy(commandOutput,"Команды: /give или /update");
+                    }
+                    commandInput[0]='\\0';
+                }
+            }
+            else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
+                     CheckCollisionPointRec(pos, chatButton))
+            {
+                commandChatOpen=true;
+                commandConsoleOpen=false;
+                commandInput[0]='\\0';
+                strcpy(commandOutput,"Введите /console");
+                ShowSoftKeyboard();
             }
             else if (!mainMenuOpen && !settingsOpen && !editControls && !inventoryOpen &&
                      CheckCollisionPointRec(pos, cameraButton))
