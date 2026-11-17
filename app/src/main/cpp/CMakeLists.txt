@@ -13,6 +13,11 @@ project("${APP_LIB_NAME}")
 
 # Include raylib and raymob as a subdirectories
 add_subdirectory(${CMAKE_SOURCE_DIR}/deps/raylib)
+
+# Patch Raylib's Android input backend so Bluetooth mice provide real
+# cursor movement and left/right/middle button states.
+include(${CMAKE_SOURCE_DIR}/patch_android_mouse.cmake)
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/deps/raymob)
 
 # Fetch all source files for your project (recursively), excluding 'deps' source files
