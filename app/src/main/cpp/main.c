@@ -1106,6 +1106,51 @@ static void DrawCloud(float x, float y, float z, float s)
     DrawSphere((Vector3){x-s*0.8f, y+0.05f*s, z}, s*0.65f, cloud);
 }
 
+/* Получаем символы Android-клавиатуры как UTF-8.
+   Стандартный GetLastSoftKeyChar() заменяет кириллицу на '?'. */
+static void ReadSoftKeyboardUtf8(char *text, unsigned int size)
+{
+    int keyCode = GetLastSoftKeyCode();
+    if (keyCode == 0 || size < 2) return;
+    unsigned int len = (unsigned int)strlen(text);
+    if (keyCode == 67) {
+        if (len > 0) {
+            len--;
+            while (len > 0 && (((unsigned char)text[len] & 0xC0) == 0x80)) len--;
+            text[len] = '\\0';
+        }
+        ClearLastSoftKey();
+        return;
+    }
+    if (keyCode == 66) { ClearLastSoftKey(); return; }
+    int cp = GetLastSoftKeyUnicode();
+    if (cp <= 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
+        ClearLastSoftKey();
+        return;
+    }
+    unsigned char bytes[4];
+    unsigned int count = 0;
+    if (cp <= 0x7F) bytes[count++] = (unsigned char)cp;
+    else if (cp <= 0x7FF) {
+        bytes[count++] = (unsigned char)(0xC0 | (cp >> 6));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    } else if (cp <= 0xFFFF) {
+        bytes[count++] = (unsigned char)(0xE0 | (cp >> 12));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    } else {
+        bytes[count++] = (unsigned char)(0xF0 | (cp >> 18));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+        bytes[count++] = (unsigned char)(0x80 | (cp & 0x3F));
+    }
+    if (len + count < size) {
+        memcpy(text + len, bytes, count);
+        text[len + count] = '\\0';
+    }
+    ClearLastSoftKey();
+}
+
 int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
