@@ -1688,13 +1688,25 @@ int main(void)
             }
             else if (gasCrateOpen)
             {
-                Rectangle cp={screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
+                bool weaponCrate = openedGasCrate == 3;
+                Rectangle cp = weaponCrate
+                    ? (Rectangle){screenWidth*0.22f,screenHeight*0.09f,screenWidth*0.56f,screenHeight*0.82f}
+                    : (Rectangle){screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
                 Rectangle close={cp.x+cp.width-76,cp.y+9,66,29};
                 if(CheckCollisionPointRec(pos,close)){gasCrateOpen=false;openedGasCrate=-1;}
                 else if(openedGasCrate>=0){
-                    float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-76.0f-gap)/2.0f),ch=cw; float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
+                    int cols = weaponCrate ? 2 : 4;
+                    int rows = 8 / cols;
+                    float gap=7.0f;
+                    float areaW=cp.width-28.0f, areaH=cp.height-78.0f;
+                    float cw=fminf((areaW-gap*(cols-1))/(float)cols,
+                                   (areaH-gap*(rows-1))/(float)rows);
+                    float ch=cw;
+                    float gridW=cw*cols+gap*(cols-1), gridH=ch*rows+gap*(rows-1);
+                    float gridX=cp.x+(cp.width-gridW)*0.5f;
+                    float gridY=cp.y+52.0f+(areaH-gridH)*0.5f;
                     for(int slot=0;slot<8;slot++){
-                        Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+52+(slot/4)*(ch+gap),cw,ch};
+                        Rectangle cell={gridX+(slot%cols)*(cw+gap),gridY+(slot/cols)*(ch+gap),cw,ch};
                         if(CheckCollisionPointRec(pos,cell)&&gasCrateAmounts[openedGasCrate][slot]>0){
                             int item=gasCrateItems[openedGasCrate][slot],room=99-itemCounts[item];
                             int take=gasCrateAmounts[openedGasCrate][slot]<room?gasCrateAmounts[openedGasCrate][slot]:room;
@@ -3383,18 +3395,27 @@ int main(void)
 
         if(gasCrateOpen&&openedGasCrate>=0){
             DrawRectangle(0,0,screenWidth,screenHeight,C(0,5,16,190));
-            Rectangle cp={screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
+            bool weaponCrate = openedGasCrate == 3;
+            Rectangle cp = weaponCrate
+                ? (Rectangle){screenWidth*0.22f,screenHeight*0.09f,screenWidth*0.56f,screenHeight*0.82f}
+                : (Rectangle){screenWidth*0.14f,screenHeight*0.30f,screenWidth*0.72f,screenHeight*0.40f};
             DrawRectangleRounded(cp,0.025f,8,C(25,28,27,250));
             DrawRectangleRoundedLinesEx(cp,0.025f,8,1.7f,C(135,145,119,255));
             DrawRectangle((int)cp.x+1,(int)cp.y+48,(int)cp.width-2,1,C(95,108,89,210));
-            DrawText(openedGasCrate==3?"WEAPON CRATE":"STORAGE CRATE",(int)cp.x+15,(int)cp.y+14,18,RAYWHITE);
+            DrawText(weaponCrate?"WEAPON CRATE":"STORAGE CRATE",(int)cp.x+15,(int)cp.y+14,18,RAYWHITE);
             Rectangle close={cp.x+cp.width-76,cp.y+9,66,29};
             DrawRectangleRounded(close,0.18f,8,C(78,48,43,255));
             DrawText("CLOSE",(int)close.x+11,(int)close.y+9,11,RAYWHITE);
-            float gap=7.0f,cw=fminf((cp.width-32.0f-gap*3.0f)/4.0f,(cp.height-76.0f-gap)/2.0f),ch=cw;
-            float gridX=cp.x+(cp.width-(cw*4.0f+gap*3.0f))*0.5f;
+            int cols = weaponCrate ? 2 : 4;
+            int rows = 8 / cols;
+            float gap=7.0f, areaW=cp.width-28.0f, areaH=cp.height-78.0f;
+            float cw=fminf((areaW-gap*(cols-1))/(float)cols,
+                           (areaH-gap*(rows-1))/(float)rows), ch=cw;
+            float gridW=cw*cols+gap*(cols-1), gridH=ch*rows+gap*(rows-1);
+            float gridX=cp.x+(cp.width-gridW)*0.5f;
+            float gridY=cp.y+52.0f+(areaH-gridH)*0.5f;
             for(int slot=0;slot<8;slot++){
-                Rectangle cell={gridX+(slot%4)*(cw+gap),cp.y+52+(slot/4)*(ch+gap),cw,ch};
+                Rectangle cell={gridX+(slot%cols)*(cw+gap),gridY+(slot/cols)*(ch+gap),cw,ch};
                 DrawRectangle((int)cell.x+2,(int)cell.y+3,(int)cell.width,(int)cell.height,C(0,0,0,100));
                 DrawRectangle(cell.x,cell.y,cell.width,cell.height,C(43,47,43,255));
                 DrawRectangle((int)cell.x+2,(int)cell.y+2,(int)cell.width-4,(int)cell.height-4,C(51,55,49,255));
