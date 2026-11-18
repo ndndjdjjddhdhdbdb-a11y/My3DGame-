@@ -26,6 +26,22 @@ static char gNetStatus[48] = "ПОДКЛЮЧЕНИЕ...";
 static char gNetNotice[96] = {0};
 static double gNetNoticeUntil = 0.0;
 static double gNetLastSend = 0.0;
+static bool gNetOnlineSession = false;
+
+static void NetClientCall(const char *methodName)
+{
+    if (gNetVm == NULL || gNetClientClass == NULL) return;
+    JNIEnv *env = NULL; int attached = 0;
+    if ((*gNetVm)->GetEnv(gNetVm, (void **)&env, JNI_VERSION_1_6) != JNI_OK &&
+        (*gNetVm)->AttachCurrentThread(gNetVm, &env, NULL) == JNI_OK) attached = 1;
+    if (env != NULL)
+    {
+        jmethodID method = (*env)->GetStaticMethodID(env, gNetClientClass, methodName, "()V");
+        if (method != NULL) (*env)->CallStaticVoidMethod(env, gNetClientClass, method);
+        if (attached) (*gNetVm)->DetachCurrentThread(gNetVm);
+    }
+}
+
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -1945,19 +1961,7 @@ static int GetHotbarSlotAt(Vector2 pos, Rectangle hotbarSlots[4])
 int main(void)
 {
     InitWindow(0, 0, "boltSurvival");
-    /* Android starts the secure WebSocket connection asynchronously. */
-    if (gNetVm != NULL && gNetClientClass != NULL)
-    {
-        JNIEnv *env = NULL; int attached = 0;
-        if ((*gNetVm)->GetEnv(gNetVm, (void **)&env, JNI_VERSION_1_6) != JNI_OK &&
-            (*gNetVm)->AttachCurrentThread(gNetVm, &env, NULL) == JNI_OK) attached = 1;
-        if (env != NULL)
-        {
-            jmethodID connectMethod = (*env)->GetStaticMethodID(env, gNetClientClass, "connect", "()V");
-            if (connectMethod != NULL) (*env)->CallStaticVoidMethod(env, gNetClientClass, connectMethod);
-            if (attached) (*gNetVm)->DetachCurrentThread(gNetVm);
-        }
-    }
+    /* Online connection starts only after the player selects a server. */
 
     // Стандартный шрифт Raylib не содержит кириллицу. Загружаем Roboto
     // Android с явным набором русских символов для сообщений интерфейса.
@@ -2820,6 +2824,16 @@ int main(void)
                 }
                 else if (menuPage == 1 && CheckCollisionPointRec(pos, menuServerCard))
                 {
+                    gNetOnlineSession = true;
+                    pthread_mutex_lock(&gNetMutex);
+                    snprintf(gNetStatus, sizeof(gNetStatus), "ПОДКЛЮЧЕНИЕ...");
+                    pthread_mutex_unlock(&gNetMutex);
+                    NetClientCall("connect");
+                    gNetOnlineSession = true;
+                    pthread_mutex_lock(&gNetMutex);
+                    snprintf(gNetStatus, sizeof(gNetStatus), "ПОДКЛЮЧЕНИЕ...");
+                    pthread_mutex_unlock(&gNetMutex);
+                    NetClientCall("connect");
                     mainMenuOpen = false;
                     loadingScreen = true;
                     loadingProgress = 0.0f;
@@ -2834,6 +2848,11 @@ int main(void)
             else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
                      CheckCollisionPointRec(pos, menuReturnButton))
             {
+                if (gNetOnlineSession)
+                {
+                    gNetOnlineSession = false;
+                    NetClientCall("disconnect");
+                }
                 mainMenuOpen = true;
                 menuPage = 0;
                 joystickActive = false;
@@ -4915,8 +4934,8 @@ int main(void)
         }
         pthread_mutex_unlock(&gNetMutex);
 
-        /* Render network characters outside the mutex so socket callbacks never wait on 3D drawing. */
-        for (int netIndex = 0; netIndex < remoteCount; ++netIndex)
+        /* Render remote characters only in the selected online world. */
+        for (int netIndex = 0; gNetOnlineSession && netIndex < remoteCount; ++netIndex)
         {
             NetPlayer *remote = &remotePlayers[netIndex];
             float dx = remote->targetPosition.x - remote->position.x;
@@ -4981,12 +5000,15 @@ int main(void)
         );
 
         /* Draw network HUD after the 3D scene so it remains visible and does not flicker behind it. */
-        pthread_mutex_lock(&gNetMutex);
-        char netStatusCopy[48]; snprintf(netStatusCopy, sizeof(netStatusCopy), "%s", gNetStatus);
-        int netPlayersCopy = gNetPlayerCount;
-        pthread_mutex_unlock(&gNetMutex);
-        DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
-                 strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
+        if (gNetOnlineSession)
+        {
+            pthread_mutex_lock(&gNetMutex);
+            char netStatusCopy[48]; snprintf(netStatusCopy, sizeof(netStatusCopy), "%s", gNetStatus);
+            int netPlayersCopy = gNetPlayerCount;
+            pthread_mutex_unlock(&gNetMutex);
+            DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
+                     strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
+        }
         pthread_mutex_lock(&gNetMutex);
         char noticeCopy[96]; snprintf(noticeCopy, sizeof(noticeCopy), "%s", gNetNotice);
         bool showNotice = GetTime() < gNetNoticeUntil && noticeCopy[0] != '\0';
