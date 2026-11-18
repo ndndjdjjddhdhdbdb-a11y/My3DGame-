@@ -183,6 +183,12 @@ bool processCommand(const std::shared_ptr<Player>& player,const std::string& mes
             for(char& c:name) if(!std::isalnum(static_cast<unsigned char>(c)) && c!='_' && c!='-') c='_';
             player->name=name.substr(0,16);
             std::cout<<"[NAME] player-"<<player->id<<" is "<<player->name<<"\n";
+            std::vector<std::shared_ptr<Player>> clients;
+            {
+                std::lock_guard<std::mutex> lock(playersMutex);
+                for (const auto& entry : players) clients.push_back(entry.second);
+            }
+            for (const auto& client : clients) sendText(client, "NOTICE " + player->name);
         }
     } else if(command=="MOVE") {
         float x,y,z,yaw;
@@ -228,7 +234,6 @@ void clientLoop(int socket) {
         player->z = std::sin(spawnAngle) * spawnRadius;
         players.emplace(player->id,player);
         std::cout<<"[JOIN] player-"<<player->id<<" ("<<players.size()<<"/"<<kMaxPlayers<<")\n";
-        for (const auto& entry : players) sendText(entry.second, "NOTICE " + player->name);
     }
     sendText(player,"WELCOME "+std::to_string(player->id)+" "+std::to_string(kMaxPlayers)+" 
              std::to_string(player->x)+" "+std::to_string(player->y)+" "+std::to_string(player->z));
