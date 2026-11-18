@@ -2838,11 +2838,6 @@ int main(void)
                     snprintf(gNetStatus, sizeof(gNetStatus), "ПОДКЛЮЧЕНИЕ...");
                     pthread_mutex_unlock(&gNetMutex);
                     NetClientCall("connect");
-                    gNetOnlineSession = true;
-                    pthread_mutex_lock(&gNetMutex);
-                    snprintf(gNetStatus, sizeof(gNetStatus), "ПОДКЛЮЧЕНИЕ...");
-                    pthread_mutex_unlock(&gNetMutex);
-                    NetClientCall("connect");
                     mainMenuOpen = false;
                     loadingScreen = true;
                     loadingProgress = 0.0f;
@@ -2857,6 +2852,11 @@ int main(void)
             else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
                      CheckCollisionPointRec(pos, menuReturnButton))
             {
+                if (gNetOnlineSession)
+                {
+                    gNetOnlineSession = false;
+                    NetClientCall("disconnect");
+                }
                 if (gNetOnlineSession)
                 {
                     gNetOnlineSession = false;
@@ -3260,6 +3260,11 @@ int main(void)
                 }
                 else if (menuPage == 1 && CheckCollisionPointRec(pos, menuServerCard))
                 {
+                    gNetOnlineSession = true;
+                    pthread_mutex_lock(&gNetMutex);
+                    snprintf(gNetStatus, sizeof(gNetStatus), "ПОДКЛЮЧЕНИЕ...");
+                    pthread_mutex_unlock(&gNetMutex);
+                    NetClientCall("connect");
                     mainMenuOpen = false;
                     loadingScreen = true;
                     loadingProgress = 0.0f;
