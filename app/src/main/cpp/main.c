@@ -157,6 +157,15 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
         snprintf(gNetStatus, sizeof(gNetStatus), "СЕРВЕР ЗАПОЛНЕН");
         pthread_mutex_unlock(&gNetMutex);
     }
+    else if (strcmp(value, "RESET") == 0)
+    {
+        pthread_mutex_lock(&gNetMutex);
+        gNetPlayerCount = 0;
+        gNetLocalPlayerId = -1;
+        gNetSpawnPending = false;
+        memset(gNetPlayers, 0, sizeof(gNetPlayers));
+        pthread_mutex_unlock(&gNetMutex);
+    }
     (*env)->ReleaseStringUTFChars(env, message, value);
 }
 
