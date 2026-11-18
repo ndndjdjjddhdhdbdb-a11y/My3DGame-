@@ -1846,7 +1846,7 @@ static void DrawRoadSegment(float x1, float z1, float x2, float z2)
     }
 }
 
-enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5, ANIMAL_STARTLE=6, ANIMAL_SNORT=7, ANIMAL_COOLDOWN=8 };
+enum { ANIMAL_WANDER=0, ANIMAL_LOOK=1, ANIMAL_INSPECT=2, ANIMAL_CHASE=3, ANIMAL_GRAZE=4, ANIMAL_FLEE=5, ANIMAL_STARTLE=6, ANIMAL_SNORT=7, ANIMAL_COOLDOWN=8, ANIMAL_ATTACK=9 };
 
 static Sound gBoarAlertSound = {0};
 static bool gAnimalAudioReady = false;
@@ -1912,7 +1912,8 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
     bool deer=(type==0);
     bool moving=(state==ANIMAL_WANDER || state==ANIMAL_CHASE || state==ANIMAL_FLEE);
     float gait= moving ? sinf(phase)*((state==ANIMAL_CHASE || state==ANIMAL_FLEE)?0.34f:0.15f) : 0.0f;
-    float bob=(deer && state==ANIMAL_STARTLE)?0.16f:(moving?fabsf(sinf(phase*2.0f))*0.045f:sinf(phase*0.45f)*0.012f);
+    float attackLunge=(!deer && state==ANIMAL_ATTACK)?fmaxf(0.0f,sinf(phase*2.4f))*0.22f:0.0f;
+    float bob=(deer && state==ANIMAL_STARTLE)?0.16f:(moving?fabsf(sinf(phase*2.0f))*0.045f:(state==ANIMAL_ATTACK?sinf(phase*2.4f)*0.045f:sinf(phase*0.45f)*0.012f));
     float headDown=(state==ANIMAL_GRAZE)?0.30f:0.0f;
     float headShift=sinf(headYaw)*0.20f;
     Color fur=deer?C(145,101,59,255):C(82,65,50,255);
@@ -1923,6 +1924,7 @@ static void DrawWildAnimal(Vector3 p, int type, float phase, float heading,
     rlTranslatef(p.x,0.0f,p.z);
     rlScalef(0.78f,0.78f,0.78f);
     rlRotatef(-heading*57.2957795f,0.0f,1.0f,0.0f);
+    if(attackLunge>0.0f) rlTranslatef(0.0f,0.0f,-attackLunge);
 
     DrawCylinder((Vector3){0,0.025f,0},0.72f,0.72f,0.035f,12,(Color){20,25,20,65});
     if(deer){
@@ -4049,6 +4051,24 @@ int main(void)
                         wildAnimalGrazeTimer[animal]=60.0f+((float)rand()/(float)RAND_MAX)*60.0f;
                         wildAnimalLookTimer[animal]=4.0f+((float)rand()/(float)RAND_MAX)*7.0f;
                     }
+                    else if(wildAnimalTypes[animal]!=0 && distance<=2.20f && wildAnimalTimer[animal]<=0.0f)
+                    {
+                        // Кабан останавливается рядом с игроком и атакует на месте.
+                        wildAnimalState[animal]=ANIMAL_ATTACK;
+                        wildAnimalTimer[animal]=0.72f;
+                        wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
+                    }
+                }
+                else if(wildAnimalState[animal]==ANIMAL_ATTACK)
+                {
+                    // Во время удара кабан не кружится и не смещается вокруг игрока.
+                    dx=player.x-a->x; dz=player.z-a->z;
+                    wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
+                    if(wildAnimalTimer[animal]<=0.0f)
+                    {
+                        wildAnimalState[animal]=ANIMAL_CHASE;
+                        wildAnimalTimer[animal]=0.42f;
+                    }
                 }
                 else if(wildAnimalState[animal]==ANIMAL_SNORT)
                 {
@@ -4138,12 +4158,8 @@ int main(void)
                     {
                         if(wildAnimalTypes[animal]!=0)
                         {
-                            // Кабан слегка меняет линию атаки, стараясь обойти игрока.
-                            float side=(animal%2==0)?1.0f:-1.0f;
-                            float sway=sinf((float)animalNow*1.7f+animal*2.1f)*0.48f;
-                            float steerX=dx-side*dz*sway;
-                            float steerZ=dz+side*dx*sway;
-                            wildAnimalTargetHeading[animal]=atan2f(steerX,-steerZ);
+                            // Кабан идёт прямо к игроку без бокового раскачивания.
+                            wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                         }
                         else wildAnimalTargetHeading[animal]=atan2f(dx,-dz);
                     }
@@ -4198,7 +4214,8 @@ int main(void)
                 if(turnDiff< -maxTurn)turnDiff=-maxTurn;
                 wildAnimalHeading[animal]+=turnDiff;
 
-                float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?3.5f:
+                float animalSpeed=(wildAnimalState[animal]==ANIMAL_CHASE)?
+                                  (wildAnimalTypes[animal]!=0?7.2f:3.5f):
                                   (wildAnimalState[animal]==ANIMAL_FLEE?8.5f:
                                   (wildAnimalState[animal]==ANIMAL_WANDER?0.72f:0.0f));
                 if(!isDeer && nearestAnimalDist2<1.30f*1.30f)
