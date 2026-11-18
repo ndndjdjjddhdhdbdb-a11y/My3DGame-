@@ -546,6 +546,86 @@ static void DrawSurvivalButtonAlpha(Rectangle r, const char *label, int fontSize
     DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, alpha));
 }
 
+static void DrawItemIcon(int itemId, Rectangle slot)
+{
+    float size = fminf(slot.width, slot.height);
+    float cx = slot.x + slot.width*0.5f;
+    float cy = slot.y + slot.height*0.47f;
+    float r = size*0.16f;
+
+    switch (itemId)
+    {
+        case 0: // Топор
+            DrawLineEx((Vector2){cx-r*0.65f,cy+r*1.05f},
+                       (Vector2){cx+r*0.35f,cy-r*0.85f},3.2f,C(132,87,48,255));
+            DrawTriangle((Vector2){cx+r*0.12f,cy-r*0.72f},
+                         (Vector2){cx+r*1.25f,cy-r*0.95f},
+                         (Vector2){cx+r*0.72f,cy+r*0.22f},C(174,190,198,255));
+            break;
+        case 1: // Аптечка
+            DrawRectangleRounded((Rectangle){cx-r*1.25f,cy-r*0.82f,r*2.5f,r*1.64f},
+                                 0.18f,6,C(166,58,58,255));
+            DrawRectangle((int)(cx-r*0.20f),(int)(cy-r*0.58f),
+                          (int)(r*0.40f),(int)(r*1.16f),RAYWHITE);
+            DrawRectangle((int)(cx-r*0.58f),(int)(cy-r*0.20f),
+                          (int)(r*1.16f),(int)(r*0.40f),RAYWHITE);
+            break;
+        case 2: // Еда
+            DrawCircleV((Vector2){cx,cy},r*1.05f,C(157,76,61,255));
+            DrawCircleV((Vector2){cx-r*0.25f,cy-r*0.18f},r*0.28f,C(226,166,118,255));
+            DrawCircleV((Vector2){cx+r*0.30f,cy+r*0.18f},r*0.18f,C(226,166,118,255));
+            break;
+        case 3: // Вода
+            DrawTriangle((Vector2){cx,cy-r*1.45f},
+                         (Vector2){cx-r*0.92f,cy+r*0.18f},
+                         (Vector2){cx+r*0.92f,cy+r*0.18f},C(83,174,231,255));
+            DrawCircleV((Vector2){cx,cy+r*0.10f},r*0.82f,C(83,174,231,255));
+            DrawCircleV((Vector2){cx-r*0.28f,cy-r*0.02f},r*0.18f,C(205,239,255,235));
+            break;
+        case 4: // Дерево
+            DrawRectangleRounded((Rectangle){cx-r*1.25f,cy-r*0.55f,r*2.5f,r*1.1f},
+                                 0.30f,6,C(137,91,52,255));
+            DrawLineEx((Vector2){cx-r*0.55f,cy-r*0.38f},
+                       (Vector2){cx-r*0.55f,cy+r*0.38f},1.6f,C(78,53,34,255));
+            DrawLineEx((Vector2){cx+r*0.42f,cy-r*0.38f},
+                       (Vector2){cx+r*0.42f,cy+r*0.38f},1.6f,C(78,53,34,255));
+            break;
+        case 5: // Камень
+            DrawPoly((Vector2){cx,cy},6,r*1.18f,-12,C(137,149,158,255));
+            DrawLineEx((Vector2){cx-r*0.42f,cy+r*0.12f},
+                       (Vector2){cx+r*0.12f,cy-r*0.55f},1.5f,C(205,216,222,220));
+            break;
+        case 6: // Дверь
+            DrawRectangle((int)(cx-r*0.72f),(int)(cy-r*1.18f),
+                          (int)(r*1.44f),(int)(r*2.36f),C(116,78,49,255));
+            DrawRectangle((int)(cx-r*0.48f),(int)(cy-r*0.92f),
+                          (int)(r*0.96f),(int)(r*0.72f),C(145,105,68,255));
+            DrawCircleV((Vector2){cx+r*0.42f,cy+r*0.20f},r*0.10f,C(220,184,103,255));
+            break;
+        case 7: // Оружие
+            DrawLineEx((Vector2){cx-r*1.10f,cy+r*0.72f},
+                       (Vector2){cx+r*0.85f,cy-r*0.62f},4.0f,C(164,177,185,255));
+            DrawLineEx((Vector2){cx-r*0.48f,cy+r*0.38f},
+                       (Vector2){cx-r*0.88f,cy+r*1.05f},3.0f,C(113,79,51,255));
+            break;
+        case 8:
+            DrawPoly((Vector2){cx,cy},6,r*1.05f,0,C(151,164,174,255));
+            break;
+        case 9:
+            DrawPoly((Vector2){cx,cy},4,r*1.12f,45,C(61,116,213,255));
+            break;
+        case 10:
+            DrawPoly((Vector2){cx,cy},5,r*1.08f,18,C(220,184,57,255));
+            break;
+        case 11:
+            DrawPoly((Vector2){cx,cy},4,r*1.08f,45,C(190,211,218,255));
+            break;
+        default:
+            DrawCircleV((Vector2){cx,cy},r,C(150,165,178,255));
+            break;
+    }
+}
+
 static bool IsSettingsButtonHit(Vector2 point, Rectangle button)
 {
     Rectangle hitArea = {
@@ -1122,6 +1202,23 @@ static void DrawLootBarrel(Vector3 p)
                  0.415f, 0.415f, 0.075f, 12, C(85, 91, 98, 255));
     DrawCylinder((Vector3){p.x, 0.94f, p.z},
                  0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
+
+    // Тонкие швы между деревянными клёпками и заклёпки на металлических обручах.
+    for (int seam = 0; seam < 8; seam++)
+    {
+        float a = seam*0.78539816f;
+        float sx = cosf(a), sz = sinf(a);
+        DrawLine3D((Vector3){p.x+sx*0.394f,0.27f,p.z+sz*0.394f},
+                   (Vector3){p.x+sx*0.394f,0.70f,p.z+sz*0.394f},
+                   C(76, 45, 27, 190));
+        if ((seam & 1) == 0)
+        {
+            DrawSphere((Vector3){p.x+sx*0.416f,0.20f,p.z+sz*0.416f},
+                       0.022f,C(177, 184, 190, 245));
+            DrawSphere((Vector3){p.x+sx*0.416f,0.76f,p.z+sz*0.416f},
+                       0.022f,C(177, 184, 190, 245));
+        }
+    }
 }
 
 // Коллизия гор: внутри коридора можно пройти и строить, каменные боковины непроходимы.
@@ -1569,6 +1666,28 @@ static void DrawPlayer(Vector3 player, float angle,
              0.53f, 0.31f, 0.37f, underwear);
     DrawCube(PlayerPoint(player, angle, 0, 0.565f, -0.012f),
              0.49f, 0.035f, 0.375f, underwearDark);
+
+    // Кожаный пояс, металлическая пряжка и подсумок выжившего.
+    DrawRotatedCubeY(PlayerPoint(player, angle, 0, 0.765f, -0.005f),
+                     0.56f, 0.075f, 0.405f, angle, C(76, 52, 35, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, 0, 0.765f, -0.216f),
+                     0.105f, 0.078f, 0.025f, angle, C(194, 157, 91, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, 0, 0.765f, -0.232f),
+                     0.052f, 0.038f, 0.012f, angle, C(65, 54, 40, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.30f, 0.66f, -0.035f),
+                     0.16f, 0.20f, 0.15f, angle, C(73, 83, 60, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.30f, 0.70f, -0.118f),
+                     0.12f, 0.025f, 0.025f, angle, C(172, 145, 94, 255));
+
+    // Усиленные наколенники и толстая резиновая подошва ботинок.
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.18f, 0.40f, swing*0.55f-0.105f),
+                     0.22f, 0.15f, 0.055f, angle, C(72, 78, 67, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, 0.18f, 0.40f, -swing*0.55f-0.105f),
+                     0.22f, 0.15f, 0.055f, angle, C(72, 78, 67, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.17f, 0.035f, -0.02f),
+                     0.29f, 0.05f, 0.44f, angle, C(37, 40, 39, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, 0.17f, 0.035f, -0.02f),
+                     0.29f, 0.05f, 0.44f, angle, C(37, 40, 39, 255));
     DrawCube(PlayerPoint(player, angle, -0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
     DrawCube(PlayerPoint(player, angle, 0.17f, 0.10f, -0.02f),0.27f,0.16f,0.42f,jacketDark);
 
@@ -5105,6 +5224,10 @@ int main(void)
                 (Rectangle){14, 72, 244, 88},
                 0.16f, 14, 1.5f, C(105, 176, 220, 220)
             );
+            DrawRectangleRounded((Rectangle){20, 83, 3, 65},
+                                 0.5f, 4, C(105, 195, 235, 220));
+            DrawLineEx((Vector2){27, 94}, (Vector2){244, 94},
+                       1.0f, C(100, 155, 195, 105));
             DrawText("СОСТОЯНИЕ", 27, 78, 11,
                      C(155, 205, 238, 255));
             DrawText("ЕДА", 28, 98, 12, RAYWHITE);
@@ -5256,8 +5379,9 @@ int main(void)
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10,
                         activeSlot ? C(210, 240, 255, 255) : C(150, 184, 210, 255));
                     const char *slotName = itemNames[hotbarItemIds[slot]];
+                    DrawItemIcon(hotbarItemIds[slot], r);
                     int nw = MeasureText(slotName, 10);
-                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+26, 10, RAYWHITE);
+                    DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+40, 10, RAYWHITE);
                     DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
                         (int)(r.x+r.width-23), (int)(r.y+r.height-14), 10, C(195, 220, 238, 255));
                 }
@@ -5481,6 +5605,7 @@ int main(void)
                     DrawRectangle((int)r.x+2,(int)r.y+2,(int)r.width-4,(int)r.height-4,C(27, 50, 74, 255));
                     DrawRectangleLinesEx(r,1.2f,inventoryDragItem==item?C(145, 216, 250, 255):C(88, 145, 190, 240));
                     DrawRectangle(r.x,r.y,3,r.height,(item==2||item==3)?C(82, 178, 225, 255):C(76, 126, 166, 255));
+                    DrawItemIcon(item, r);
                     int labelSize = (item == 7) ? 9 : 10;
                     DrawUiTextBold(itemNames[item],(int)r.x+5,(int)r.y+7,labelSize,C(226, 240, 250, 255));
                     DrawUiTextBold(TextFormat("x%d",itemCounts[item]),
@@ -5539,8 +5664,9 @@ int main(void)
                     activeSlot ? C(155, 225, 255, 255) : C(100, 160, 200, 240));
                 DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10, RAYWHITE);
                 const char *slotName = itemNames[hotbarItemIds[slot]];
+                DrawItemIcon(hotbarItemIds[slot], r);
                 int nw = MeasureText(slotName, 10);
-                DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+26, 10, RAYWHITE);
+                DrawText(slotName, (int)(r.x+r.width/2-nw/2), (int)r.y+40, 10, RAYWHITE);
                 DrawText(TextFormat("x%d", itemCounts[hotbarItemIds[slot]]),
                     (int)(r.x+r.width-25), (int)(r.y+r.height-15), 10, C(195, 220, 238, 255));
             }
