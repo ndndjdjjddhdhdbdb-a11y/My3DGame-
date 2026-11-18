@@ -3274,6 +3274,11 @@ int main(void)
             else if (!mainMenuOpen && !settingsOpen && !inventoryOpen &&
                      CheckCollisionPointRec(pos, menuReturnButton))
             {
+                if (gNetOnlineSession)
+                {
+                    gNetOnlineSession = false;
+                    NetClientCall("disconnect");
+                }
                 mainMenuOpen = true;
                 menuPage = 0;
                 joystickActive = false;
