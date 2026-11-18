@@ -5858,9 +5858,11 @@ int main(void)
                     char serverStatus[48];
                     snprintf(serverStatus, sizeof(serverStatus), "%s", gNetStatus);
                     pthread_mutex_unlock(&gNetMutex);
-                    bool serverOnline = strcmp(serverStatus, "ONLINE") == 0;
+                    bool serverOnline = gNetOnlineSession && strcmp(serverStatus, "ONLINE") == 0;
+                    const char *serverLabel = !gNetOnlineSession ? "НАЖМИТЕ ДЛЯ ВХОДА" :
+                                              (serverOnline ? "В СЕТИ" : serverStatus);
                     DrawText(
-                        serverOnline ? "В СЕТИ" : serverStatus,
+                        serverLabel,
                         (int)serverCard.x+18,
                         (int)serverCard.y+49, 16,
                         serverOnline ? C(100, 225, 145, 255) : C(255, 180, 110, 255)
