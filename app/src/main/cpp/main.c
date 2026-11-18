@@ -4786,11 +4786,23 @@ int main(void)
 
         // Большой остров с тремя климатическими поясами: снег, лес и песок.
         DrawPlane((Vector3){0, -0.22f, 0}, (Vector2){1200, 1200}, C(43, 112, 143, 255));
-        float terrainView=fminf(500.0f,fmaxf(220.0f,chunkDistance*25.0f));
+        // Ограничиваем дальность земли по качеству и выбранной дальности мира.
+        // На слабых устройствах это уменьшает число draw calls и проверок каждый кадр.
+        float terrainQualityLimit = (graphicsQuality == 0) ? 175.0f :
+                                   ((graphicsQuality == 1) ? 270.0f : 390.0f);
+        float terrainView = fminf((float)chunkDistance*50.0f, terrainQualityLimit);
         float terrainView2=terrainView*terrainView;
-        for (int ix=-14; ix<=14; ix++)
+        int minTerrainX = (int)ceilf((player.x-terrainView)/40.0f);
+        int maxTerrainX = (int)floorf((player.x+terrainView)/40.0f);
+        int minTerrainZ = (int)ceilf((player.z-terrainView)/40.0f);
+        int maxTerrainZ = (int)floorf((player.z+terrainView)/40.0f);
+        if (minTerrainX < -14) minTerrainX = -14;
+        if (maxTerrainX > 14) maxTerrainX = 14;
+        if (minTerrainZ < -14) minTerrainZ = -14;
+        if (maxTerrainZ > 14) maxTerrainZ = 14;
+        for (int ix=minTerrainX; ix<=maxTerrainX; ix++)
         {
-            for (int iz=-14; iz<=14; iz++)
+            for (int iz=minTerrainZ; iz<=maxTerrainZ; iz++)
             {
                 float px = ix*40.0f;
                 float pz = iz*40.0f;
@@ -4949,9 +4961,13 @@ int main(void)
 
         // На низкой детализации ограничиваем лес ближней зоной.
         // Это заметно сокращает количество 3D-объектов на слабых телефонах.
-        float detailTreeView = (detailLevel >= 2) ? 155.0f :
-                               ((detailLevel == 1) ? 215.0f : 260.0f);
-        float treeView = fminf(chunkView, detailTreeView);
+        // Деревья — одна из самых дорогих частей сцены: каждая модель
+        // состоит из множества отдельных 3D-примитивов.
+        float qualityTreeView = (graphicsQuality == 0) ? 110.0f :
+                                ((graphicsQuality == 1) ? 190.0f : 270.0f);
+        float detailTreeView = (detailLevel >= 2) ? 110.0f :
+                               ((detailLevel == 1) ? 190.0f : 270.0f);
+        float treeView = fminf(chunkView, fminf(qualityTreeView, detailTreeView));
         float treeView2 = treeView*treeView;
 
         for(int animal=0;animal<MAX_WILD_ANIMALS;animal++)
