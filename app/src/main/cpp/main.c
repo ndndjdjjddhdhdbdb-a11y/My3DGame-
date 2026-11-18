@@ -13,7 +13,7 @@
 
 /* Bolt multiplayer bridge: WebSocket is managed by Android/OkHttp. */
 #define NET_MAX_PLAYERS 20
-typedef struct NetPlayer { int id; char name[20]; Vector3 position; Vector3 targetPosition; float yaw; } NetPlayer;
+typedef struct NetPlayer { int id; char name[20]; Vector3 position; Vector3 targetPosition; float yaw; bool moving; bool sprinting; bool jumping; float attackProgress; float walkPhase; } NetPlayer;
 static JavaVM *gNetVm = NULL;
 static jclass gNetClientClass = NULL;
 static pthread_mutex_t gNetMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -23,6 +23,8 @@ static int gNetLocalPlayerId = -1;
 static bool gNetSpawnPending = false;
 static Vector3 gNetSpawnPosition = {0};
 static char gNetStatus[48] = "ПОДКЛЮЧЕНИЕ...";
+static char gNetNotice[96] = {0};
+static double gNetNoticeUntil = 0.0;
 static double gNetLastSend = 0.0;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
@@ -74,6 +76,10 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
             char *y = strtok_r(NULL, " ", &save);
             char *z = strtok_r(NULL, " ", &save);
             char *yaw = strtok_r(NULL, " ", &save);
+            char *moving = strtok_r(NULL, " ", &save);
+            char *sprinting = strtok_r(NULL, " ", &save);
+            char *jumping = strtok_r(NULL, " ", &save);
+            char *attack = strtok_r(NULL, " ", &save);
             if (!id || !name || !x || !y || !z || !yaw) break;
             int parsedId = atoi(id);
             bool duplicateId = false;
@@ -85,6 +91,11 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
             parsed[parsedCount].targetPosition = (Vector3){(float)atof(x), (float)atof(y), (float)atof(z)};
             parsed[parsedCount].position = parsed[parsedCount].targetPosition;
             parsed[parsedCount].yaw = (float)atof(yaw);
+            parsed[parsedCount].moving = moving ? atoi(moving) != 0 : false;
+            parsed[parsedCount].sprinting = sprinting ? atoi(sprinting) != 0 : false;
+            parsed[parsedCount].jumping = jumping ? atoi(jumping) != 0 : false;
+            parsed[parsedCount].attackProgress = attack ? fmaxf(0.0f, fminf(1.0f, (float)atof(attack))) : 0.0f;
+            parsed[parsedCount].walkPhase = 0.0f;
             parsedCount++;
         }
         pthread_mutex_lock(&gNetMutex);
@@ -96,6 +107,7 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
                 if (gNetPlayers[old].id == parsed[i].id)
                 {
                     parsed[i].position = gNetPlayers[old].position;
+                    parsed[i].walkPhase = gNetPlayers[old].walkPhase;
                     break;
                 }
             }
@@ -114,6 +126,13 @@ JNIEXPORT void JNICALL Java_com_raylib_raymob_NetClient_nativeMessage(JNIEnv *en
         gNetSpawnPosition = (Vector3){spawnX, spawnY, spawnZ};
         gNetSpawnPending = true;
         snprintf(gNetStatus, sizeof(gNetStatus), "ONLINE");
+        pthread_mutex_unlock(&gNetMutex);
+    }
+    else if (strncmp(value, "NOTICE ", 7) == 0)
+    {
+        pthread_mutex_lock(&gNetMutex);
+        snprintf(gNetNotice, sizeof(gNetNotice), "%s зашёл на сервер", value + 7);
+        gNetNoticeUntil = GetTime() + 3.5;
         pthread_mutex_unlock(&gNetMutex);
     }
     else if (strcmp(value, "FULL") == 0)
@@ -142,7 +161,7 @@ static bool IsNetPlayerBlockedAt(float x, float z)
     return blocked;
 }
 
-static void NetSendPosition(Vector3 position, float yaw)
+static void NetSendPosition(Vector3 position, float yaw, bool moving, bool sprinting, bool jumping, float attackProgress)
 {
     if (gNetVm == NULL || gNetClientClass == NULL) return;
     JNIEnv *env = NULL;
@@ -156,7 +175,7 @@ static void NetSendPosition(Vector3 position, float yaw)
     if (sendMethod != NULL)
     {
         char message[160];
-        snprintf(message, sizeof(message), "MOVE %.3f %.3f %.3f %.3f", position.x, position.y, position.z, yaw);
+        snprintf(message, sizeof(message), "MOVE %.3f %.3f %.3f %.3f %d %d %d %.3f", position.x, position.y, position.z, yaw, moving ? 1 : 0, sprinting ? 1 : 0, jumping ? 1 : 0, attackProgress);
         jstring text = (*env)->NewStringUTF(env, message);
         if (text != NULL)
         {
@@ -2305,7 +2324,10 @@ int main(void)
 
         if (netReady && GetTime() - gNetLastSend >= 0.10)
         {
-            NetSendPosition(player, playerAngle);
+            float jumpGround = (fabsf(player.x)<11.55f && player.z>-30.75f && player.z<-13.25f) ? 3.72f : 0.0f;
+            bool netJumping = player.y > jumpGround + 0.08f || fabsf(playerVerticalVelocity) > 0.15f;
+            float netAttack = attackAnimation > 0.0f ? attackAnimation/0.24f : 0.0f;
+            NetSendPosition(player, playerAngle, playerMoving, sprintEnabled, netJumping, netAttack);
             gNetLastSend = GetTime();
         }
         attackRequested = false;
@@ -4900,10 +4922,11 @@ int main(void)
             float dx = remote->targetPosition.x - remote->position.x;
             float dz = remote->targetPosition.z - remote->position.z;
             bool remoteMoving = (dx*dx + dz*dz) > 0.0004f;
-            float remoteWalk = (float)GetTime() * 8.0f;
+            remote->walkPhase += frameTime * (remote->sprinting ? 13.5f : 8.0f);
             DrawPlayerShadow(remote->position);
             DrawPlayer(remote->position, remote->yaw,
-                       remoteWalk, remoteMoving, 0.0f, 0, 0.0f, 0);
+                       remote->walkPhase, remote->moving || remoteMoving,
+                       remote->attackProgress, 0, 0.0f, 0);
         }
 
         if (!firstPerson)
@@ -4964,6 +4987,18 @@ int main(void)
         pthread_mutex_unlock(&gNetMutex);
         DrawText(TextFormat("ONLINE: %s  PLAYERS: %d/20", netStatusCopy, netPlayersCopy), 18, 18, 18,
                  strcmp(netStatusCopy, "ONLINE") == 0 ? GREEN : ORANGE);
+        pthread_mutex_lock(&gNetMutex);
+        char noticeCopy[96]; snprintf(noticeCopy, sizeof(noticeCopy), "%s", gNetNotice);
+        bool showNotice = GetTime() < gNetNoticeUntil && noticeCopy[0] != '\0';
+        pthread_mutex_unlock(&gNetMutex);
+        if (showNotice)
+        {
+            int noticeWidth = MeasureText(noticeCopy, 20);
+            Rectangle noticeBox = {(screenWidth-noticeWidth-36)/2.0f, 48, noticeWidth+36.0f, 38};
+            DrawRectangleRounded(noticeBox, 0.25f, 8, C(10, 24, 38, 225));
+            DrawRectangleRoundedLinesEx(noticeBox, 0.25f, 8, 1.5f, C(100, 205, 255, 230));
+            DrawText(noticeCopy, (screenWidth-noticeWidth)/2, 57, 20, RAYWHITE);
+        }
 
         // Дублируем предпросмотр в HUD: он остаётся заметным даже от первого лица,
         // когда руки персонажа могут закрывать 3D-модель на земле.
