@@ -2263,6 +2263,14 @@ int main(void)
         }
         bool netReady = (strcmp(gNetStatus, "ONLINE") == 0);
         pthread_mutex_unlock(&gNetMutex);
+
+        // Поворот камеры задаёт направление корпуса даже когда игрок стоит.
+        // Сглаживаем угол с учётом перехода через границу -PI/PI.
+        float bodyAngleDiff = cameraYaw - playerAngle;
+        while (bodyAngleDiff > 3.14159265f) bodyAngleDiff -= 6.28318530f;
+        while (bodyAngleDiff < -3.14159265f) bodyAngleDiff += 6.28318530f;
+        playerAngle += bodyAngleDiff * fminf(1.0f, frameTime * 12.0f);
+
         if (netReady && GetTime() - gNetLastSend >= 0.10)
         {
             NetSendPosition(player, playerAngle);
