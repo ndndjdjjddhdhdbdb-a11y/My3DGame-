@@ -4772,9 +4772,15 @@ int main(void)
             );
         }
 
+        // Start the frame before switching to the off-screen 3D target.
+        // This keeps Raylib's framebuffer lifecycle in the correct order.
+        BeginDrawing();
+
         BeginTextureMode(sceneTexture);
 
         ClearBackground(C(135, 194, 235, 255));
+        // Clear both color and depth on the render texture every frame.
+        rlClearScreenBuffers();
 
         BeginMode3D(camera);
 
@@ -5111,8 +5117,6 @@ int main(void)
 
         EndMode3D();
         EndTextureMode();
-
-        BeginDrawing();
 
         ClearBackground(BLACK);
         DrawTexturePro(
