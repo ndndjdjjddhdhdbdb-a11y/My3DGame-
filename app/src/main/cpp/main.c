@@ -2857,11 +2857,6 @@ int main(void)
                     gNetOnlineSession = false;
                     NetClientCall("disconnect");
                 }
-                if (gNetOnlineSession)
-                {
-                    gNetOnlineSession = false;
-                    NetClientCall("disconnect");
-                }
                 mainMenuOpen = true;
                 menuPage = 0;
                 joystickActive = false;
