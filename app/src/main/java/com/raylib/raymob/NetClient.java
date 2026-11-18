@@ -44,6 +44,14 @@ public final class NetClient {
         });
     }
 
+    public static void disconnect() {
+        WebSocket current = socket;
+        socket = null;
+        if (current != null) current.close(1000, "leave server");
+        nativeMessage("RESET");
+        nativeStatus("OFFLINE");
+    }
+
     public static void send(String message) {
         WebSocket current = socket;
         if (current != null) current.send(message);
