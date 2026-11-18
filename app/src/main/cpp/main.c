@@ -550,7 +550,7 @@ static void DrawItemIcon(int itemId, Rectangle slot)
 {
     float size = fminf(slot.width, slot.height);
     float cx = slot.x + slot.width*0.5f;
-    float cy = slot.y + slot.height*0.47f;
+    float cy = slot.y + slot.height*0.42f;
     float r = size*0.16f;
 
     switch (itemId)
