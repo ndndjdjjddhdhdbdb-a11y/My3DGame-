@@ -33,6 +33,8 @@ struct Player {
     int socket = -1;
     std::string name = "Player";
     float x = 0.0f, y = 0.0f, z = 0.0f, yaw = 0.0f;
+    bool moving = false, sprinting = false, jumping = false;
+    float attackProgress = 0.0f;
     std::mutex sendMutex;
 };
 
@@ -144,7 +146,8 @@ std::string makeSnapshot() {
     out << "STATE " << players.size();
     for (const auto& entry : players) {
         const auto& p = *entry.second;
-        out << " " << p.id << " " << p.name << " " << p.x << " " << p.y << " " << p.z << " " << p.yaw;
+        out << " " << p.id << " " << p.name << " " << p.x << " " << p.y << " " << p.z << " " << p.yaw
+            << " " << (p.moving ? 1 : 0) << " " << (p.sprinting ? 1 : 0) << " " << (p.jumping ? 1 : 0) << " " << p.attackProgress;
     }
     return out.str();
 }
@@ -183,7 +186,11 @@ bool processCommand(const std::shared_ptr<Player>& player,const std::string& mes
         }
     } else if(command=="MOVE") {
         float x,y,z,yaw;
-        if(input>>x>>y>>z>>yaw && std::isfinite(x)&&std::isfinite(y)&&std::isfinite(z)&&std::isfinite(yaw)) {
+        int moving=0, sprinting=0, jumping=0;
+        float attack=0.0f;
+        input>>x>>y>>z>>yaw;
+        input>>moving>>sprinting>>jumping>>attack;
+        if(input && std::isfinite(x)&&std::isfinite(y)&&std::isfinite(z)&&std::isfinite(yaw)&&std::isfinite(attack)) {
             std::lock_guard<std::mutex> lock(playersMutex);
             /* Server-side player separation prevents clients from occupying the same spot. */
             constexpr float minPlayerDistance = 1.05f;
@@ -196,7 +203,13 @@ bool processCommand(const std::shared_ptr<Player>& player,const std::string& mes
                 const float dz = z - other.z;
                 if (dx*dx + dz*dz < minPlayerDistance*minPlayerDistance) { collision = true; break; }
             }
-            if (!collision) { player->x=x;player->y=y;player->z=z;player->yaw=yaw; }
+            if (!collision) {
+                player->x=x; player->y=y; player->z=z; player->yaw=yaw;
+                player->moving = moving != 0;
+                player->sprinting = sprinting != 0;
+                player->jumping = jumping != 0;
+                player->attackProgress = std::clamp(attack, 0.0f, 1.0f);
+            }
         }
     } else if(command=="PING") sendText(player,"PONG");
     return true;
@@ -215,8 +228,9 @@ void clientLoop(int socket) {
         player->z = std::sin(spawnAngle) * spawnRadius;
         players.emplace(player->id,player);
         std::cout<<"[JOIN] player-"<<player->id<<" ("<<players.size()<<"/"<<kMaxPlayers<<")\n";
+        for (const auto& entry : players) sendText(entry.second, "NOTICE " + player->name);
     }
-    sendText(player,"WELCOME "+std::to_string(player->id)+" "+std::to_string(kMaxPlayers)+" "+
+    sendText(player,"WELCOME "+std::to_string(player->id)+" "+std::to_string(kMaxPlayers)+" 
              std::to_string(player->x)+" "+std::to_string(player->y)+" "+std::to_string(player->z));
 
     std::vector<std::uint8_t> pending;
