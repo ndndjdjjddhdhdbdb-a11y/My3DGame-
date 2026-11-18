@@ -1312,7 +1312,7 @@ static void DrawRotatedCubeY(Vector3 center, float width, float height, float de
 }
 static void DrawHeldAxe(Vector3 grip, Vector3 head, float yaw, float scale)
 {
-    // Тонкая деревянная рукоятка.
+    // Рукоятка идёт прямо от кисти к месту крепления лезвия.
     DrawCylinderEx(grip,head,0.034f*scale,0.029f*scale,10,C(126,82,47,255));
     Vector3 gripMid={grip.x+(head.x-grip.x)*0.30f,
                      grip.y+(head.y-grip.y)*0.30f,
@@ -1323,36 +1323,48 @@ static void DrawHeldAxe(Vector3 grip, Vector3 head, float yaw, float scale)
                   gripMid.z+(head.z-grip.z)*0.10f},
         0.038f*scale,0.036f*scale,10,C(91,57,34,255));
 
-    // Лезвие — объёмная, но тонкая металлическая трапеция.
-    rlPushMatrix();
-    rlTranslatef(head.x,head.y,head.z);
-    rlRotatef(-yaw*RAD2DEG,0.0f,1.0f,0.0f);
-    const float x0=-0.045f*scale, x1=-0.34f*scale;
-    const float y0=0.105f*scale, y1=0.175f*scale;
-    const float z=0.028f*scale;
+    // Ориентируем лезвие по камере: его широкая плоскость смотрит на игрока.
+    Vector3 right={cosf(yaw),0.0f,sinf(yaw)};
+    Vector3 forward={sinf(yaw),0.0f,-cosf(yaw)};
+    const float root=0.045f*scale;
+    const float edge=0.36f*scale;
+    const float halfRoot=0.105f*scale;
+    const float halfEdge=0.18f*scale;
+    const float thick=0.025f*scale;
+    Vector3 p[8];
+    // Трапеция начинается у конца рукоятки и расширяется к режущей кромке.
+    float xx[4]={root,root,-edge,-edge};
+    float yy[4]={-halfRoot,halfRoot,halfEdge,-halfEdge};
+    for(int side=0;side<2;side++)
+        for(int i=0;i<4;i++) {
+            float depth=(side==0)?thick:-thick;
+            p[side*4+i]=(Vector3){
+                head.x+right.x*xx[i]-forward.x*depth,
+                head.y+yy[i],
+                head.z+right.z*xx[i]-forward.z*depth
+            };
+        }
     rlBegin(RL_TRIANGLES);
-    rlColor4ub(139,151,158,255);
-    // Передняя и задняя плоскости трапеции.
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x0,y0,-z); rlVertex3f(x1,y1,-z);
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x1,y1,-z); rlVertex3f(x1,-y1,-z);
-    rlVertex3f(x0,-y0,z); rlVertex3f(x1,y1,z); rlVertex3f(x0,y0,z);
-    rlVertex3f(x0,-y0,z); rlVertex3f(x1,-y1,z); rlVertex3f(x1,y1,z);
-    // Тонкие боковые грани придают лезвию настоящий 3D-объём.
+    // Лицевая сторона — обращена к камере.
+    rlColor4ub(155,169,177,255);
+    rlVertex3f(p[0].x,p[0].y,p[0].z); rlVertex3f(p[2].x,p[2].y,p[2].z); rlVertex3f(p[1].x,p[1].y,p[1].z);
+    rlVertex3f(p[0].x,p[0].y,p[0].z); rlVertex3f(p[3].x,p[3].y,p[3].z); rlVertex3f(p[2].x,p[2].y,p[2].z);
+    // Обратная сторона.
+    rlColor4ub(105,119,127,255);
+    rlVertex3f(p[4].x,p[4].y,p[4].z); rlVertex3f(p[5].x,p[5].y,p[5].z); rlVertex3f(p[6].x,p[6].y,p[6].z);
+    rlVertex3f(p[4].x,p[4].y,p[4].z); rlVertex3f(p[6].x,p[6].y,p[6].z); rlVertex3f(p[7].x,p[7].y,p[7].z);
+    // Боковые грани тонкого металла.
     rlColor4ub(75,87,94,255);
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x1,-y1,-z); rlVertex3f(x1,-y1,z);
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x1,-y1,z); rlVertex3f(x0,-y0,z);
-    rlVertex3f(x0,y0,-z); rlVertex3f(x0,y0,z); rlVertex3f(x1,y1,z);
-    rlVertex3f(x0,y0,-z); rlVertex3f(x1,y1,z); rlVertex3f(x1,y1,-z);
-    rlVertex3f(x1,-y1,-z); rlVertex3f(x1,y1,-z); rlVertex3f(x1,y1,z);
-    rlVertex3f(x1,-y1,-z); rlVertex3f(x1,y1,z); rlVertex3f(x1,-y1,z);
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x0,y0,-z); rlVertex3f(x0,y0,z);
-    rlVertex3f(x0,-y0,-z); rlVertex3f(x0,y0,z); rlVertex3f(x0,-y0,z);
-    // Светлая режущая кромка подчёркивает форму трапеции.
-    rlColor4ub(205,214,218,255);
-    rlVertex3f(x1,-y1,-z); rlVertex3f(x1,y1,-z); rlVertex3f(x1,y1,z);
-    rlVertex3f(x1,-y1,-z); rlVertex3f(x1,y1,z); rlVertex3f(x1,-y1,z);
+    for(int i=0;i<4;i++) {
+        int j=(i+1)%4;
+        rlVertex3f(p[i].x,p[i].y,p[i].z); rlVertex3f(p[j].x,p[j].y,p[j].z); rlVertex3f(p[4+j].x,p[4+j].y,p[4+j].z);
+        rlVertex3f(p[i].x,p[i].y,p[i].z); rlVertex3f(p[4+j].x,p[4+j].y,p[4+j].z); rlVertex3f(p[4+i].x,p[4+i].y,p[4+i].z);
+    }
+    // Светлая режущая кромка.
+    rlColor4ub(215,222,225,255);
+    rlVertex3f(p[2].x,p[2].y,p[2].z); rlVertex3f(p[3].x,p[3].y,p[3].z); rlVertex3f(p[7].x,p[7].y,p[7].z);
+    rlVertex3f(p[2].x,p[2].y,p[2].z); rlVertex3f(p[7].x,p[7].y,p[7].z); rlVertex3f(p[6].x,p[6].y,p[6].z);
     rlEnd();
-    rlPopMatrix();
 }
 static void DrawHeldWaterBottle(Vector3 center, float scale)
 {
