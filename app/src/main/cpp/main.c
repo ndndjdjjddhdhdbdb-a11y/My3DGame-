@@ -1055,11 +1055,16 @@ static bool IsVillageClear(float x, float z)
 
 static void DrawRock(float x, float y, float z, float size)
 {
-    DrawSphere((Vector3){x, y, z},
-               size, C(112, 121, 119, 255));
-
-    DrawSphere((Vector3){x-size*0.42f, y+size*0.2f, z-size*0.1f},
-               size*0.52f, C(145, 151, 145, 255));
+    // Неровная скала из нескольких округлых каменных граней.
+    DrawSphere((Vector3){x, y, z}, size, C(103, 112, 111, 255));
+    DrawSphere((Vector3){x-size*0.40f, y+size*0.20f, z-size*0.12f},
+               size*0.57f, C(137, 145, 141, 255));
+    DrawSphere((Vector3){x+size*0.34f, y+size*0.12f, z+size*0.18f},
+               size*0.61f, C(87, 96, 97, 255));
+    DrawSphere((Vector3){x-size*0.08f, y+size*0.52f, z+size*0.12f},
+               size*0.43f, C(157, 163, 158, 255));
+    DrawSphere((Vector3){x+size*0.18f, y+size*0.45f, z-size*0.30f},
+               size*0.36f, C(119, 128, 125, 255));
 }
 
 // Невысокие холмы с пологими склонами и небольшими каменными уступами.
@@ -1128,6 +1133,26 @@ static void DrawMountainHole(float x, float z, float scale, bool snowy)
     DrawSphere((Vector3){x+8.0f*scale, 2.0f*scale, z-2.0f*scale}, 5.0f*scale, edge);
     DrawSphere((Vector3){x-8.0f*scale, 2.0f*scale, z+9.0f*scale}, 5.0f*scale, stone);
     DrawSphere((Vector3){x+8.0f*scale, 2.0f*scale, z+9.0f*scale}, 5.0f*scale, stone);
+}
+
+// Естественные горные массивы из округлых каменных выступов.
+// Формы намеренно без кубических уступов, с небольшим количеством примитивов для мобильных.
+static void DrawNaturalMountain(float x, float z, float scale, bool snowy)
+{
+    Color base = snowy ? C(116, 127, 128, 255) : C(91, 105, 93, 255);
+    Color light = snowy ? C(184, 194, 194, 255) : C(126, 137, 122, 255);
+    Color dark = snowy ? C(91, 102, 105, 255) : C(67, 82, 73, 255);
+    DrawSphere((Vector3){x, 5.0f*scale, z}, 12.0f*scale, base);
+    DrawSphere((Vector3){x-8.0f*scale, 4.0f*scale, z+5.0f*scale}, 8.0f*scale, dark);
+    DrawSphere((Vector3){x+8.0f*scale, 5.2f*scale, z-4.0f*scale}, 9.0f*scale, light);
+    DrawSphere((Vector3){x-3.0f*scale, 10.0f*scale, z-3.0f*scale}, 7.0f*scale, light);
+    DrawSphere((Vector3){x+4.0f*scale, 11.0f*scale, z+4.0f*scale}, 6.5f*scale, base);
+    DrawSphere((Vector3){x+1.0f*scale, 14.0f*scale, z}, 4.8f*scale, snowy ? C(211, 220, 220, 255) : light);
+    if (snowy)
+    {
+        DrawSphere((Vector3){x-2.0f*scale, 10.8f*scale, z-3.5f*scale}, 4.5f*scale, C(218, 227, 229, 255));
+        DrawSphere((Vector3){x+4.0f*scale, 14.0f*scale, z+0.8f*scale}, 3.0f*scale, C(226, 232, 234, 255));
+    }
 }
 
 // Более крупные залежи с хорошо заметными цветными вкраплениями.
@@ -4886,6 +4911,17 @@ int main(void)
             if (dx*dx+dz*dz < chunkView2)
                 DrawMountainHole(holeMountains[mi].x, holeMountains[mi].z,
                                  1.0f, mi==0);
+        }
+
+        // Декоративные естественные горы в снежной зоне и на границе леса.
+        const Vector3 naturalMountains[3] = {{-250,0,-210}, {-305,0,-115}, {-190,0,-285}};
+        for (int nm=0; nm<3; nm++)
+        {
+            float ndx=naturalMountains[nm].x-player.x;
+            float ndz=naturalMountains[nm].z-player.z;
+            if (ndx*ndx+ndz*ndz < chunkView2)
+                DrawNaturalMountain(naturalMountains[nm].x, naturalMountains[nm].z,
+                                  nm==1 ? 1.15f : 1.0f, true);
         }
 
         float stationDx=player.x,stationDz=-22.0f-player.z;
