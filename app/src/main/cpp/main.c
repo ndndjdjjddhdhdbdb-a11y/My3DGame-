@@ -1606,9 +1606,10 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
             eye.z + right.z*s*0.48f + forward.z*(0.48f+armSwing*0.65f)
         };
 
-        float swingPhase = 1.0f - attackProgress;
-        float swing = sinf(swingPhase*3.1415926f);
-        float punch = (side == 1) ? swing*(heldItemId == 7 ? 0.48f : 0.34f) : 0.0f;
+        // Единая плавная фаза удара: рука и предмет движутся вместе.
+        float attackMove = sinf(attackProgress*3.1415926f);
+        float punch = (side == 1) ? attackMove*0.42f :
+                      (heldItemId == 7 ? attackMove*0.16f : 0.0f);
         Vector3 wrist = {
             eye.x + right.x*s*0.34f + forward.x*(0.78f+armSwing+punch),
             eye.y - 0.48f + armLift + punch*0.10f + useLift,
@@ -1633,10 +1634,14 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     float armLift = moving ? cosf(walkPhase*2.0f)*0.025f : sinf(time*1.6f)*0.012f;
     float useLift = (useItem == 2 || useItem == 3) ?
         sinf(useProgress*3.1415926f)*0.34f : 0.0f;
-    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*(0.88f+armSwing),
-                        eye.y-0.45f+armLift+useLift,
-                        eye.z+right.z*0.30f+forward.z*(0.88f+armSwing)};
-    float toolSwing = sinf((1.0f-attackProgress)*3.1415926f);
+    float attackMove = sinf(attackProgress*3.1415926f);
+    // Замах, удар и возврат: вся конструкция руки/предмета смещается как единое целое.
+    float attackForward = attackMove*0.34f;
+    float attackDown = attackMove*0.28f;
+    Vector3 toolBase = {eye.x+right.x*0.30f+forward.x*(0.88f+armSwing+attackForward),
+                        eye.y-0.45f+armLift+useLift-attackDown,
+                        eye.z+right.z*0.30f+forward.z*(0.88f+armSwing+attackForward)};
+    float toolSwing = attackMove;
     float swingStrength = heldItemId == 7 ? 0.62f : 0.48f;
     Vector3 toolTip = {toolBase.x+forward.x*(0.20f+toolSwing*swingStrength*0.35f),
                        toolBase.y+0.27f-toolSwing*swingStrength*0.52f,
