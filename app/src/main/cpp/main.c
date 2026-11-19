@@ -1645,8 +1645,33 @@ static void DrawFirstPersonArms(Vector3 eye, float yaw,
     if(heldItemId==0) DrawHeldAxe(toolBase,toolTip,yaw,1.0f);
     else if(heldItemId==7)
     {
-        DrawCylinderEx(toolBase,toolTip,0.045f,0.035f,8,C(111,75,45,255));
-        DrawCylinderEx(toolTip,(Vector3){toolTip.x+forward.x*0.22f,toolTip.y+0.02f,toolTip.z+forward.z*0.22f},0.075f,0.055f,8,C(65,72,78,255));
+        // Кирка: длинная деревянная рукоять и поперечная металлическая головка.
+        DrawCylinderEx(toolBase,toolTip,0.045f,0.035f,10,C(111,75,45,255));
+        Vector3 shaftMid={toolBase.x+(toolTip.x-toolBase.x)*0.45f,
+                          toolBase.y+(toolTip.y-toolBase.y)*0.45f,
+                          toolBase.z+(toolTip.z-toolBase.z)*0.45f};
+        DrawCylinderEx(shaftMid,
+            (Vector3){shaftMid.x+(toolTip.x-toolBase.x)*0.10f,
+                      shaftMid.y+(toolTip.y-toolBase.y)*0.10f,
+                      shaftMid.z+(toolTip.z-toolBase.z)*0.10f},
+            0.052f,0.045f,10,C(91,57,34,255));
+        Vector3 headCenter={toolTip.x+forward.x*0.05f,
+                            toolTip.y+0.02f,
+                            toolTip.z+forward.z*0.05f};
+        Vector3 headLeft={headCenter.x-right.x*0.30f,headCenter.y,headCenter.z-right.z*0.30f};
+        Vector3 headRight={headCenter.x+right.x*0.30f,headCenter.y,headCenter.z+right.z*0.30f};
+        DrawCylinderEx(headLeft,headRight,0.075f,0.075f,8,C(65,72,78,255));
+        DrawCylinderEx(headLeft,
+            (Vector3){headLeft.x-right.x*0.12f,headLeft.y,headLeft.z-right.z*0.12f},
+            0.075f,0.018f,8,C(157,170,178,255));
+        DrawCylinderEx(headRight,
+            (Vector3){headRight.x+right.x*0.12f,headRight.y,headRight.z+right.z*0.12f},
+            0.075f,0.018f,8,C(157,170,178,255));
+        // Вторая кисть придерживает рукоять ближе к середине.
+        DrawSphere(shaftMid,0.092f,C(225,183,143,255));
+        DrawCylinderEx(shaftMid,
+            (Vector3){shaftMid.x+forward.x*0.06f,shaftMid.y-0.03f,shaftMid.z+forward.z*0.06f},
+            0.060f,0.052f,8,C(225,183,143,255));
     }
     else if(heldItemId==1)
     {
