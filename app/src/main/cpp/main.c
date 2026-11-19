@@ -773,6 +773,20 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
              w+0.22f*scale, 0.28f*scale,
              d+0.22f*scale, roof);
 
+    // Тонкая фасция и металлические крепления подчёркивают край крыши.
+    DrawCube((Vector3){x, h+0.18f*scale, z-d*0.53f},
+             w+0.18f*scale, 0.10f*scale, 0.075f*scale,
+             C(64, 58, 52, 255));
+    DrawCube((Vector3){x, h+0.225f*scale, z-d*0.53f},
+             w*0.92f, 0.025f*scale, 0.075f*scale,
+             C(153, 144, 128, 255));
+    for (int bolt=0; bolt<4; bolt++)
+    {
+        float bx=x-w*0.43f+bolt*(w*0.286f);
+        DrawSphere((Vector3){bx, h+0.19f*scale, z-d*0.53f-0.04f*scale},
+                  0.03f*scale, C(173, 185, 190, 255));
+    }
+
     DrawCube((Vector3){x, h+0.48f*scale, z},
              w*0.58f, 0.18f*scale,
              d+0.12f*scale, C(76, 72, 66, 255));
@@ -1194,13 +1208,18 @@ static void DrawGrassPatch(float x, float z, float size, int seed)
 {
     Color grassA = C(55, 125, 62, 235);
     Color grassB = C(76, 151, 72, 230);
+    // Разная высота и наклон травинок создают более естественный силуэт.
     for (int i = 0; i < 3; i++)
     {
         float offset = ((seed*(i+3))%7 - 3)*0.035f*size;
+        float lean = 0.035f + (float)((seed+i)%3)*0.018f;
+        float bladeHeight = (0.17f + (float)((seed+i*2)%3)*0.035f)*size;
+        float depth = (i-1)*0.10f*size;
+        float bladeRadius = (0.016f + (i%2)*0.003f)*size;
         DrawCylinderEx(
-            (Vector3){x+offset, 0.02f, z+(i-1)*0.10f*size},
-            (Vector3){x+offset+0.07f*size, 0.22f*size, z+(i-1)*0.10f*size},
-            0.018f*size, 0.008f*size, 4,
+            (Vector3){x+offset, 0.02f, z+depth},
+            (Vector3){x+offset+lean*size, bladeHeight, z+depth},
+            bladeRadius, 0.007f*size, 4,
             (i == 1) ? grassB : grassA
         );
     }
@@ -5483,6 +5502,13 @@ int main(void)
                 {
                     Rectangle r = hotbarSlots[slot];
                     bool activeSlot = slot == selectedHotbarSlot;
+                    if (activeSlot)
+                    {
+                        DrawRectangleRounded((Rectangle){r.x-3, r.y-3, r.width+6, r.height+6},
+                            0.13f, 8, C(58, 145, 205, 75));
+                        DrawRectangleRoundedLinesEx((Rectangle){r.x-2, r.y-2, r.width+4, r.height+4},
+                            0.13f, 8, 1.4f, C(120, 205, 245, 135));
+                    }
                     DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.13f, 8, C(0,0,0,125));
                     DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 252) : C(16, 31, 49, 245));
                     DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.0f,
