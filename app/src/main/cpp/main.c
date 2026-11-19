@@ -4914,7 +4914,7 @@ int main(void)
         }
 
         // Декоративные естественные горы в снежной зоне и на границе леса.
-        const Vector3 naturalMountains[3] = {{-250,0,-210}, {-305,0,-115}, {-190,0,-285}};
+        const Vector3 naturalMountains[3] = {{-150,0,-105}, {-210,0,-80}, {-115,0,-185}};
         for (int nm=0; nm<3; nm++)
         {
             float ndx=naturalMountains[nm].x-player.x;
