@@ -1246,7 +1246,7 @@ static void DrawLootBarrel(Vector3 p)
     }
 }
 
-// Коллизия гор: внутри коридора можно пройти и строить, каменные боковины непроходимы.
+// Коллизии гор совпадают с их видимыми объёмами; новые массивы имеют круглую зону препятствия.
 static bool IsMountainBlockedAt(float x, float z, float radius)
 {
     const Vector3 passage[2] = {{-118,0,-112}, {132,0,94}};
@@ -1257,6 +1257,14 @@ static bool IsMountainBlockedAt(float x, float z, float radius)
         if (fabsf(dz) < 12.4f && fabsf(dx) > 2.55f-radius) return true;
         dx=x-holes[i].x; dz=z-holes[i].z;
         if (fabsf(dz) < 10.4f && fabsf(dx) > 4.05f-radius) return true;
+    }
+    const Vector3 natural[3]={{-230,0,-220},{-245,0,-155},{-185,0,-250}};
+    const float naturalR[3]={19.0f,22.0f,19.0f};
+    for(int i=0;i<3;i++)
+    {
+        float dx=x-natural[i].x, dz=z-natural[i].z;
+        float r=naturalR[i]+radius;
+        if(dx*dx+dz*dz<r*r) return true;
     }
     return false;
 }
@@ -4914,7 +4922,7 @@ int main(void)
         }
 
         // Декоративные естественные горы в снежной зоне и на границе леса.
-        const Vector3 naturalMountains[3] = {{-150,0,-105}, {-210,0,-80}, {-115,0,-185}};
+        const Vector3 naturalMountains[3] = {{-230,0,-220}, {-245,0,-155}, {-185,0,-250}};
         for (int nm=0; nm<3; nm++)
         {
             float ndx=naturalMountains[nm].x-player.x;
