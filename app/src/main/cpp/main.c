@@ -719,6 +719,20 @@ static void DrawTree(float x, float z, float scale, int quality, int biome)
     DrawCylinder((Vector3){x,0.16f*scale,z},
                  0.28f*scale,0.18f*scale,0.32f*scale,7,C(83,55,36,255));
 
+    // Три тонкие борозды добавляют фактуру коры на высоком качестве.
+    if (quality >= 1)
+    {
+        for (int groove=0; groove<3; groove++)
+        {
+            float a=groove*2.0943951f+0.35f;
+            float bx=x+cosf(a)*0.17f*scale;
+            float bz=z+sinf(a)*0.17f*scale;
+            DrawLine3D((Vector3){bx,0.38f*scale,bz},
+                       (Vector3){bx+0.015f*scale,2.08f*scale,bz-0.012f*scale},
+                       C(62,42,28,220));
+        }
+    }
+
     bool snowy=(biome==1);
     Color deep=snowy?C(38,91,66,255):C(24,91,42,255);
     Color mid=snowy?C(52,119,78,255):C(35,119,48,255);
@@ -860,6 +874,18 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
     DrawCube((Vector3){x, 0.08f*scale, z-d*0.58f},
              1.25f*scale, 0.16f*scale, 0.42f*scale,
              C(91, 72, 52, 255));
+
+    // Передние углы укреплены деревянными стойками и небольшими скобами.
+    for (int post=0; post<2; post++)
+    {
+        float px=x+(post==0?-1.0f:1.0f)*w*0.47f;
+        DrawCube((Vector3){px,1.50f*scale,z-d*0.545f},
+                 0.14f*scale,3.0f*scale,0.12f*scale,
+                 C(76,57,40,255));
+        DrawCube((Vector3){px,2.78f*scale,z-d*0.57f},
+                 0.20f*scale,0.075f*scale,0.16f*scale,
+                 C(137,145,149,255));
+    }
 }
 
 static void DrawGasCrate(Vector3 p, bool weapon)
@@ -1783,6 +1809,17 @@ static void DrawPlayer(Vector3 player, float angle,
              0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
     DrawCube(PlayerPoint(player, angle, 0.25f, 1.14f, 0.45f),
              0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
+
+    // Компактная рация закреплена сбоку рюкзака, антенна видна сзади.
+    DrawCube(PlayerPoint(player, angle, 0.34f, 1.30f, 0.48f),
+             0.16f, 0.27f, 0.17f, C(31, 48, 55, 255));
+    DrawCube(PlayerPoint(player, angle, 0.34f, 1.28f, 0.39f),
+             0.10f, 0.13f, 0.025f, C(76, 112, 124, 255));
+    DrawCylinderEx(PlayerPoint(player, angle, 0.37f, 1.45f, 0.48f),
+                   PlayerPoint(player, angle, 0.37f, 1.67f, 0.48f),
+                   0.018f, 0.012f, 5, C(145, 164, 170, 255));
+    DrawSphere(PlayerPoint(player, angle, 0.34f, 1.38f, 0.38f),
+               0.022f, C(70, 210, 130, 255));
 
     // Торс от третьего лица: отдельная цельная геометрия от талии
     // до плеч, чтобы корпус не терялся из-за тонкого цилиндра.
@@ -5369,6 +5406,9 @@ int main(void)
                 (Rectangle){82, 88, 112*(foodLevel/100.0f), 9},
                 0.5f, 6, C(215, 160, 75, 255)
             );
+            DrawRectangleRoundedLinesEx((Rectangle){82,88,112,9},0.5f,6,1.0f,C(130,170,195,150));
+            for (int tick=1; tick<4; tick++)
+                DrawLineEx((Vector2){82+tick*28,89},(Vector2){82+tick*28,96},1.0f,C(8,20,34,185));
             DrawText(TextFormat("%d%%", (int)foodLevel),
                      203, 85, 12, C(245, 220, 170, 255));
 
@@ -5381,6 +5421,9 @@ int main(void)
                 (Rectangle){82, 126, 112*(waterLevel/100.0f), 9},
                 0.5f, 6, C(75, 170, 235, 255)
             );
+            DrawRectangleRoundedLinesEx((Rectangle){82,126,112,9},0.5f,6,1.0f,C(130,170,195,150));
+            for (int tick=1; tick<4; tick++)
+                DrawLineEx((Vector2){82+tick*28,127},(Vector2){82+tick*28,134},1.0f,C(8,20,34,185));
             DrawText(TextFormat("%d%%", (int)waterLevel),
                      203, 123, 12, C(170, 220, 250, 255));
 
