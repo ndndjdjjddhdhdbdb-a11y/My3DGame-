@@ -731,6 +731,16 @@ static void DrawTree(float x, float z, float scale, int quality, int biome)
                        (Vector3){bx+0.015f*scale,2.08f*scale,bz-0.012f*scale},
                        C(62,42,28,220));
         }
+        // Тонкие светлые волокна рядом с тёмными бороздами добавляют объём коре.
+        for (int ridge=0; ridge<2; ridge++)
+        {
+            float a=ridge*3.1415926f+0.92f;
+            float bx=x+cosf(a)*0.205f*scale;
+            float bz=z+sinf(a)*0.205f*scale;
+            DrawLine3D((Vector3){bx,0.52f*scale,bz},
+                       (Vector3){bx+0.008f*scale,1.92f*scale,bz-0.01f*scale},
+                       C(137,101,70,175));
+        }
     }
 
     bool snowy=(biome==1);
@@ -1844,6 +1854,11 @@ static void DrawPlayer(Vector3 player, float angle,
              0.22f, 0.17f, 0.045f, C(67, 75, 56, 255));
     DrawCube(PlayerPoint(player, angle, 0, 1.25f+bob, -0.326f),
              0.08f, 0.025f, 0.012f, C(190, 160, 101, 255));
+    // Небольшая тканевая нашивка на левом рукаве экипировки.
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.42f, 1.24f+bob, -0.108f),
+                      0.17f, 0.15f, 0.04f, angle, C(61, 76, 62, 255));
+    DrawRotatedCubeY(PlayerPoint(player, angle, -0.42f, 1.24f+bob, -0.132f),
+                      0.11f, 0.09f, 0.012f, angle, C(116, 145, 128, 255));
 
     DrawCylinderEx(
         PlayerPoint(player, angle, 0, 1.45f+bob, 0),
@@ -5556,6 +5571,9 @@ int main(void)
                     DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 252) : C(16, 31, 49, 245));
                     DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.0f,
                         activeSlot ? C(145, 216, 250, 255) : C(83, 132, 170, 225));
+                    if (activeSlot)
+                        DrawRectangleRounded((Rectangle){r.x+6, r.y+5, r.width-12, 2.0f},
+                            0.5f, 4, C(180, 235, 255, 210));
                     DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10,
                         activeSlot ? C(210, 240, 255, 255) : C(150, 184, 210, 255));
                     const char *slotName = itemNames[hotbarItemIds[slot]];
@@ -5842,6 +5860,9 @@ int main(void)
                 DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 255) : C(16, 31, 49, 250));
                 DrawRectangleRoundedLinesEx(r, 0.13f, 8, activeSlot ? 2.4f : 1.2f,
                     activeSlot ? C(155, 225, 255, 255) : C(100, 160, 200, 240));
+                if (activeSlot)
+                    DrawRectangleRounded((Rectangle){r.x+6, r.y+5, r.width-12, 2.0f},
+                        0.5f, 4, C(180, 235, 255, 210));
                 DrawText(TextFormat("%d", slot+1), (int)r.x+5, (int)r.y+4, 10, RAYWHITE);
                 const char *slotName = itemNames[hotbarItemIds[slot]];
                 DrawItemIcon(hotbarItemIds[slot], r);
