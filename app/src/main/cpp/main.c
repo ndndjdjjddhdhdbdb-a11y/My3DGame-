@@ -529,6 +529,8 @@ static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, boo
     DrawRectangleRounded(r, 0.14f, 10, fill);
     DrawRectangleRounded((Rectangle){r.x+4, r.y+4, r.width-8, 3}, 0.5f, 4, C(180, 224, 255, selected ? 115 : 55));
     DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
+    DrawRectangleRoundedLinesEx((Rectangle){r.x+5, r.y+5, r.width-10, r.height-10},
+        0.10f, 8, 1.0f, C(120, 190, 225, selected ? 72 : 38));
     DrawRectangle((int)(r.x+9), (int)(r.y+8), 4, (int)(r.height-16), edge);
     int tw = MeasureText(label, fontSize);
     DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, 255));
@@ -542,6 +544,8 @@ static void DrawSurvivalButtonAlpha(Rectangle r, const char *label, int fontSize
     DrawRectangleRounded((Rectangle){r.x+3, r.y+5, r.width, r.height}, 0.14f, 10, C(0, 0, 0, (unsigned char)(alpha*0.45f)));
     DrawRectangleRounded(r, 0.14f, 10, fill);
     DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
+    DrawRectangleRoundedLinesEx((Rectangle){r.x+5, r.y+5, r.width-10, r.height-10},
+        0.10f, 8, 1.0f, C(120, 190, 225, (unsigned char)(alpha*(selected ? 0.28f : 0.16f))));
     int tw = MeasureText(label, fontSize);
     DrawText(label, (int)(r.x+r.width/2-tw/2), (int)(r.y+r.height/2-fontSize/2), fontSize, C(231, 244, 255, alpha));
 }
@@ -1242,21 +1246,24 @@ static void DrawCave(float x, float z)
 
 static void DrawGrassPatch(float x, float z, float size, int seed)
 {
-    Color grassA = C(55, 125, 62, 235);
-    Color grassB = C(76, 151, 72, 230);
-    // Разная высота и наклон травинок создают более естественный силуэт.
+    Color grassA = C(52, 123, 59, 235);
+    Color grassB = C(83, 159, 73, 230);
+    Color grassC = C(111, 169, 83, 220);
+    // Высота, наклон и оттенок меняются по позиции, поэтому пятна травы не выглядят клонами.
     for (int i = 0; i < 3; i++)
     {
-        float offset = ((seed*(i+3))%7 - 3)*0.035f*size;
-        float lean = 0.035f + (float)((seed+i)%3)*0.018f;
-        float bladeHeight = (0.17f + (float)((seed+i*2)%3)*0.035f)*size;
+        int bladeSeed = (seed+i*17)%9;
+        float offset = (bladeSeed-4)*0.035f*size;
+        float lean = 0.022f + (float)((seed+i*5)%4)*0.018f;
+        float bladeHeight = (0.16f + (float)((seed+i*3)%5)*0.035f)*size;
         float depth = (i-1)*0.10f*size;
-        float bladeRadius = (0.016f + (i%2)*0.003f)*size;
+        float bladeRadius = (0.014f + (i%2)*0.004f)*size;
+        Color bladeColor = (i == 0) ? grassA : ((i == 1) ? grassB : grassC);
         DrawCylinderEx(
             (Vector3){x+offset, 0.02f, z+depth},
             (Vector3){x+offset+lean*size, bladeHeight, z+depth},
             bladeRadius, 0.007f*size, 4,
-            (i == 1) ? grassB : grassA
+            bladeColor
         );
     }
 }
@@ -1815,6 +1822,13 @@ static void DrawPlayer(Vector3 player, float angle,
              0.44f, 0.58f, 0.30f, C(57, 69, 54, 255));
     DrawCube(PlayerPoint(player, angle, 0, 1.16f, 0.63f),
              0.27f, 0.30f, 0.035f, C(78, 91, 67, 255));
+    // Простые швы и горизонтальная стяжка на задней панели рюкзака.
+    DrawLine3D(PlayerPoint(player, angle, -0.085f, 1.04f, 0.65f),
+                PlayerPoint(player, angle, -0.085f, 1.28f, 0.65f), C(35, 48, 39, 190));
+    DrawLine3D(PlayerPoint(player, angle, 0.085f, 1.04f, 0.65f),
+                PlayerPoint(player, angle, 0.085f, 1.28f, 0.65f), C(35, 48, 39, 190));
+    DrawLine3D(PlayerPoint(player, angle, -0.12f, 1.08f, 0.65f),
+                PlayerPoint(player, angle, 0.12f, 1.08f, 0.65f), C(132, 145, 112, 190));
     DrawCube(PlayerPoint(player, angle, -0.25f, 1.14f, 0.45f),
              0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
     DrawCube(PlayerPoint(player, angle, 0.25f, 1.14f, 0.45f),
