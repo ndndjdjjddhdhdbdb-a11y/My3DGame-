@@ -528,6 +528,8 @@ static void DrawSurvivalButton(Rectangle r, const char *label, int fontSize, boo
     DrawRectangleRounded((Rectangle){r.x+3, r.y+5, r.width, r.height}, 0.14f, 10, C(0, 0, 0, 115));
     DrawRectangleRounded(r, 0.14f, 10, fill);
     DrawRectangleRounded((Rectangle){r.x+4, r.y+4, r.width-8, 3}, 0.5f, 4, C(180, 224, 255, selected ? 115 : 55));
+    DrawRectangleRounded((Rectangle){r.x+6, r.y+r.height-6, r.width-12, 2}, 0.5f, 4,
+        C(100, 175, 220, selected ? 85 : 35));
     DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
     DrawRectangleRoundedLinesEx((Rectangle){r.x+5, r.y+5, r.width-10, r.height-10},
         0.10f, 8, 1.0f, C(120, 190, 225, selected ? 72 : 38));
@@ -543,6 +545,8 @@ static void DrawSurvivalButtonAlpha(Rectangle r, const char *label, int fontSize
     Color edge = selected ? C(157, 225, 255, alpha) : C(105, 157, 202, alpha);
     DrawRectangleRounded((Rectangle){r.x+3, r.y+5, r.width, r.height}, 0.14f, 10, C(0, 0, 0, (unsigned char)(alpha*0.45f)));
     DrawRectangleRounded(r, 0.14f, 10, fill);
+    DrawRectangleRounded((Rectangle){r.x+6, r.y+r.height-6, r.width-12, 2}, 0.5f, 4,
+        C(100, 175, 220, (unsigned char)(alpha*(selected ? 0.30f : 0.14f))));
     DrawRectangleRoundedLinesEx(r, 0.14f, 10, selected ? 2.6f : 1.7f, edge);
     DrawRectangleRoundedLinesEx((Rectangle){r.x+5, r.y+5, r.width-10, r.height-10},
         0.10f, 8, 1.0f, C(120, 190, 225, (unsigned char)(alpha*(selected ? 0.28f : 0.16f))));
@@ -1259,6 +1263,11 @@ static void DrawGrassPatch(float x, float z, float size, int seed)
         float depth = (i-1)*0.10f*size;
         float bladeRadius = (0.014f + (i%2)*0.004f)*size;
         Color bladeColor = (i == 0) ? grassA : ((i == 1) ? grassB : grassC);
+        // Лёгкая вариация оттенка делает траву менее повторяющейся без новых полигонов.
+        int shade = (abs(seed+i*13)%7)-3;
+        bladeColor.r = (unsigned char)((int)bladeColor.r+shade);
+        bladeColor.g = (unsigned char)((int)bladeColor.g+shade*2);
+        bladeColor.b = (unsigned char)((int)bladeColor.b+shade);
         DrawCylinderEx(
             (Vector3){x+offset, 0.02f, z+depth},
             (Vector3){x+offset+lean*size, bladeHeight, z+depth},
@@ -1873,6 +1882,11 @@ static void DrawPlayer(Vector3 player, float angle,
                       0.17f, 0.15f, 0.04f, angle, C(61, 76, 62, 255));
     DrawRotatedCubeY(PlayerPoint(player, angle, -0.42f, 1.24f+bob, -0.132f),
                       0.11f, 0.09f, 0.012f, angle, C(116, 145, 128, 255));
+    // Два коротких шва на нашивке добавляют тканевую детализацию.
+    DrawLine3D(PlayerPoint(player, angle, -0.46f, 1.205f+bob, -0.145f),
+                PlayerPoint(player, angle, -0.38f, 1.205f+bob, -0.145f), C(171, 145, 99, 210));
+    DrawLine3D(PlayerPoint(player, angle, -0.46f, 1.275f+bob, -0.145f),
+                PlayerPoint(player, angle, -0.38f, 1.275f+bob, -0.145f), C(171, 145, 99, 210));
 
     DrawCylinderEx(
         PlayerPoint(player, angle, 0, 1.45f+bob, 0),
