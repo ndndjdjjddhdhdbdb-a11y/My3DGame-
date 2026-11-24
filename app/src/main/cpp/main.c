@@ -1275,6 +1275,17 @@ static void DrawGrassPatch(float x, float z, float size, int seed)
             bladeColor
         );
     }
+
+    // Редкие мелкие камешки разбивают однообразие травяных пятен.
+    // Деталь создаётся только для части пятен и не меняет геометрию растений.
+    if (abs(seed)%6 == 0)
+    {
+        float stoneRadius = (0.035f+(float)(abs(seed/13)%3)*0.012f)*size;
+        float stoneX = x+(float)((abs(seed/7)%5)-2)*0.12f*size;
+        float stoneZ = z+(float)((abs(seed/11)%5)-2)*0.12f*size;
+        DrawSphere((Vector3){stoneX,-0.035f,stoneZ},stoneRadius,
+                   C(112, 112, 101, 235));
+    }
 }
 
 static void DrawPlayerShadow(Vector3 player)
