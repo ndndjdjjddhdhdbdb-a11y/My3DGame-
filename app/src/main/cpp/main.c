@@ -1288,6 +1288,9 @@ static void DrawPlayerShadow(Vector3 player)
 
 static void DrawLootBarrel(Vector3 p)
 {
+    // Контактная тень помогает бочке визуально стоять на земле.
+    DrawCylinder((Vector3){p.x, 0.020f, p.z},
+                 0.47f, 0.47f, 0.018f, 16, C(22, 31, 27, 78));
     DrawCylinder((Vector3){p.x, 0.48f, p.z},
                  0.39f, 0.39f, 0.88f, 12, C(126, 78, 42, 255));
     DrawCylinder((Vector3){p.x, 0.48f, p.z},
@@ -1298,6 +1301,13 @@ static void DrawLootBarrel(Vector3 p)
                  0.415f, 0.415f, 0.075f, 12, C(85, 91, 98, 255));
     DrawCylinder((Vector3){p.x, 0.94f, p.z},
                  0.38f, 0.38f, 0.08f, 12, C(105, 67, 39, 255));
+    // Небольшая металлическая пробка и шлиц делают верх бочки читаемее.
+    DrawCylinder((Vector3){p.x, 0.993f, p.z},
+                 0.052f, 0.052f, 0.020f, 8, C(58, 69, 74, 255));
+    DrawCylinder((Vector3){p.x, 1.004f, p.z},
+                 0.032f, 0.032f, 0.006f, 8, C(151, 164, 168, 255));
+    DrawLine3D((Vector3){p.x-0.018f, 1.008f, p.z},
+               (Vector3){p.x+0.018f, 1.008f, p.z}, C(45, 54, 58, 255));
 
     // Тонкие швы между деревянными клёпками и заклёпки на металлических обручах.
     for (int seam = 0; seam < 8; seam++)
@@ -1914,6 +1924,29 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(elbowR, 0.09f, jacketDark);
     DrawCylinderEx(elbowL, wristL, 0.085f, 0.068f, 10, jacket);
     DrawCylinderEx(elbowR, wristR, 0.085f, 0.068f, 10, jacket);
+    // Манжеты повторяют положение рук при ходьбе и ударе.
+    Vector3 cuffLStart = {
+        elbowL.x+(wristL.x-elbowL.x)*0.78f,
+        elbowL.y+(wristL.y-elbowL.y)*0.78f,
+        elbowL.z+(wristL.z-elbowL.z)*0.78f
+    };
+    Vector3 cuffLEnd = {
+        elbowL.x+(wristL.x-elbowL.x)*0.96f,
+        elbowL.y+(wristL.y-elbowL.y)*0.96f,
+        elbowL.z+(wristL.z-elbowL.z)*0.96f
+    };
+    Vector3 cuffRStart = {
+        elbowR.x+(wristR.x-elbowR.x)*0.78f,
+        elbowR.y+(wristR.y-elbowR.y)*0.78f,
+        elbowR.z+(wristR.z-elbowR.z)*0.78f
+    };
+    Vector3 cuffREnd = {
+        elbowR.x+(wristR.x-elbowR.x)*0.96f,
+        elbowR.y+(wristR.y-elbowR.y)*0.96f,
+        elbowR.z+(wristR.z-elbowR.z)*0.96f
+    };
+    DrawCylinderEx(cuffLStart, cuffLEnd, 0.074f, 0.074f, 8, C(65, 76, 59, 255));
+    DrawCylinderEx(cuffRStart, cuffREnd, 0.074f, 0.074f, 8, C(65, 76, 59, 255));
     DrawSphere(wristL, 0.075f, skinLight);
     DrawSphere(wristR, 0.075f, skinLight);
 
@@ -5584,6 +5617,7 @@ int main(void)
                     hotbarSlots[3].x+hotbarSlots[3].width-hotbarSlots[0].x+18, 80};
                 DrawRectangleRounded(hotbarPanel, 0.12f, 10, C(6, 14, 28, 218));
                 DrawRectangleRoundedLinesEx(hotbarPanel, 0.12f, 10, 1.2f, C(100, 165, 211, 215));
+                float hotbarPulse = 0.5f + 0.5f*sinf((float)GetTime()*2.4f);
                 for (int slot = 0; slot < 4; slot++)
                 {
                     Rectangle r = hotbarSlots[slot];
@@ -5591,9 +5625,11 @@ int main(void)
                     if (activeSlot)
                     {
                         DrawRectangleRounded((Rectangle){r.x-3, r.y-3, r.width+6, r.height+6},
-                            0.13f, 8, C(58, 145, 205, 75));
+                            0.13f, 8,
+                            C(58, 145, 205, (unsigned char)(48.0f+30.0f*hotbarPulse)));
                         DrawRectangleRoundedLinesEx((Rectangle){r.x-2, r.y-2, r.width+4, r.height+4},
-                            0.13f, 8, 1.4f, C(120, 205, 245, 135));
+                            0.13f, 8, 1.4f,
+                            C(120, 205, 245, (unsigned char)(105.0f+45.0f*hotbarPulse)));
                     }
                     DrawRectangleRounded((Rectangle){r.x+2, r.y+3, r.width, r.height}, 0.13f, 8, C(0,0,0,125));
                     DrawRectangleRounded(r, 0.13f, 8, activeSlot ? C(29, 76, 113, 252) : C(16, 31, 49, 245));
