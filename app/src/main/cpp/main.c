@@ -1859,6 +1859,11 @@ static void DrawPlayer(Vector3 player, float angle,
                 PlayerPoint(player, angle, 0.085f, 1.28f, 0.65f), C(35, 48, 39, 190));
     DrawLine3D(PlayerPoint(player, angle, -0.12f, 1.08f, 0.65f),
                 PlayerPoint(player, angle, 0.12f, 1.08f, 0.65f), C(132, 145, 112, 190));
+    // Верхняя стяжка с металлической пряжкой подчёркивает форму походного рюкзака.
+    DrawLine3D(PlayerPoint(player, angle, -0.13f, 1.20f, 0.65f),
+                PlayerPoint(player, angle, 0.13f, 1.20f, 0.65f), C(158, 143, 105, 220));
+    DrawCube(PlayerPoint(player, angle, 0.0f, 1.20f, 0.665f),
+             0.075f, 0.065f, 0.025f, C(190, 166, 112, 255));
     DrawCube(PlayerPoint(player, angle, -0.25f, 1.14f, 0.45f),
              0.10f, 0.31f, 0.22f, C(67, 80, 61, 255));
     DrawCube(PlayerPoint(player, angle, 0.25f, 1.14f, 0.45f),
@@ -2640,6 +2645,60 @@ int main(void)
             placed=true;
         }
         if (!placed) oreRespawnAt[ore]=GetTime()+5.0;
+    }
+
+    // Возвращаем лутовые бочки в игровой мир: их здоровье и выдача припасов
+    // используют уже существующую систему ударов и инвентаря.
+    for (int b = 0; b < MAX_BARRELS; ++b)
+    {
+        bool placed = false;
+        for (int attempt = 0; attempt < 800 && !placed; ++attempt)
+        {
+            float angle = ((float)rand()/(float)RAND_MAX)*6.2831853f;
+            float radius = 42.0f + ((float)rand()/(float)RAND_MAX)*150.0f;
+            float x = cosf(angle)*radius;
+            float z = sinf(angle)*radius;
+
+            if (!IsVillageClear(x, z) ||
+                IsGasStationBlocked(x, z, 0.55f, 0.0f) ||
+                IsMountainBlockedAt(x, z, 0.55f))
+                continue;
+
+            bool clear = true;
+            for (int t = 0; t < treeCount && clear; ++t)
+            {
+                float dx = x-treePositions[t].x;
+                float dz = z-treePositions[t].z;
+                if (dx*dx+dz*dz < 25.0f) clear = false;
+            }
+            for (int o = 0; o < MAX_ORE_NODES && clear; ++o)
+            {
+                if (!gOreActive[o]) continue;
+                float dx = x-gOrePositions[o].x;
+                float dz = z-gOrePositions[o].z;
+                if (dx*dx+dz*dz < 36.0f) clear = false;
+            }
+            for (int a = 0; a < MAX_WILD_ANIMALS && clear; ++a)
+            {
+                if (wildAnimalHealth[a] <= 0) continue;
+                float dx = x-wildAnimals[a].x;
+                float dz = z-wildAnimals[a].z;
+                if (dx*dx+dz*dz < 16.0f) clear = false;
+            }
+            for (int other = 0; other < b && clear; ++other)
+            {
+                if (barrelDestroyed[other]) continue;
+                float dx = x-barrelPositions[other].x;
+                float dz = z-barrelPositions[other].z;
+                if (dx*dx+dz*dz < 64.0f) clear = false;
+            }
+
+            if (!clear) continue;
+            barrelPositions[b] = (Vector3){x, 0.0f, z};
+            barrelHealth[b] = 50;
+            barrelDestroyed[b] = false;
+            placed = true;
+        }
     }
 
     while (!WindowShouldClose())
@@ -5005,6 +5064,11 @@ int main(void)
         // Clear both color and depth on the render texture every frame.
         rlClearScreenBuffers();
 
+        // Мягкий градиент неба добавляет глубину горизонту без тяжёлого skybox.
+        DrawRectangleGradientV(0, 0, renderWidth, renderHeight,
+                               C(104, 163, 207, 255),
+                               C(205, 224, 235, 255));
+
         BeginMode3D(camera);
 
         // Большой остров с тремя климатическими поясами: снег, лес и песок.
@@ -5166,7 +5230,15 @@ int main(void)
             }
         }
 
-        // Старые бочки удалены из мира.
+        // Отрисовываем только целые бочки в пределах текущей дальности мира.
+        for (int b = 0; b < MAX_BARRELS; ++b)
+        {
+            if (barrelDestroyed[b]) continue;
+            float dx = barrelPositions[b].x-player.x;
+            float dz = barrelPositions[b].z-player.z;
+            if (dx*dx+dz*dz > chunkView2) continue;
+            DrawLootBarrel(barrelPositions[b]);
+        }
 
         // Дополнительные скалы и пещерные конструкции убраны по просьбе игрока.
 
@@ -5478,6 +5550,11 @@ int main(void)
                 (Rectangle){14, 72, 244, 88},
                 0.16f, 14, 1.5f, C(105, 176, 220, 220)
             );
+            // Небольшой статусный акцент завершает верхнюю линию панели.
+            DrawRectangleRounded((Rectangle){28, 73, 62, 2}, 0.5f, 4,
+                                 C(132, 210, 248, 210));
+            DrawCircle(241, 86, 3.0f, C(92, 220, 150, 245));
+            DrawCircleLines(241, 86, 5.0f, C(92, 220, 150, 150));
             DrawRectangleRounded((Rectangle){20, 83, 3, 65},
                                  0.5f, 4, C(105, 195, 235, 220));
             DrawLineEx((Vector2){27, 94}, (Vector2){244, 94},
