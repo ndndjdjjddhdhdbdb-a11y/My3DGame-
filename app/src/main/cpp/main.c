@@ -805,6 +805,15 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
              w+0.22f*scale, 0.28f*scale,
              d+0.22f*scale, roof);
 
+    // Тонкие продольные швы разбивают плоскую поверхность крыши.
+    for (int seam = 0; seam < 5; seam++)
+    {
+        float sx = x-w*0.40f+seam*(w*0.20f);
+        DrawLine3D((Vector3){sx,h+0.326f*scale,z-d*0.43f},
+                   (Vector3){sx,h+0.326f*scale,z+d*0.43f},
+                   C(55,52,48,145));
+    }
+
     // Тонкая фасция и металлические крепления подчёркивают край крыши.
     DrawCube((Vector3){x, h+0.18f*scale, z-d*0.53f},
              w+0.18f*scale, 0.10f*scale, 0.075f*scale,
@@ -1903,6 +1912,11 @@ static void DrawPlayer(Vector3 player, float angle,
              0.22f, 0.17f, 0.045f, C(67, 75, 56, 255));
     DrawCube(PlayerPoint(player, angle, 0, 1.25f+bob, -0.326f),
              0.08f, 0.025f, 0.012f, C(190, 160, 101, 255));
+    // Металлическая застёжка фиксирует нагрудную стропу рюкзака.
+    DrawCube(PlayerPoint(player, angle, 0, 1.32f+bob, -0.302f),
+             0.105f, 0.075f, 0.035f, C(177, 151, 105, 255));
+    DrawCube(PlayerPoint(player, angle, 0, 1.32f+bob, -0.323f),
+             0.036f, 0.045f, 0.012f, C(62, 59, 48, 255));
     // Небольшая тканевая нашивка на левом рукаве экипировки.
     DrawRotatedCubeY(PlayerPoint(player, angle, -0.42f, 1.24f+bob, -0.108f),
                       0.17f, 0.15f, 0.04f, angle, C(61, 76, 62, 255));
@@ -5553,8 +5567,16 @@ int main(void)
             // Небольшой статусный акцент завершает верхнюю линию панели.
             DrawRectangleRounded((Rectangle){28, 73, 62, 2}, 0.5f, 4,
                                  C(132, 210, 248, 210));
-            DrawCircle(241, 86, 3.0f, C(92, 220, 150, 245));
-            DrawCircleLines(241, 86, 5.0f, C(92, 220, 150, 150));
+            float lowestSupply = fminf(foodLevel, waterLevel);
+            Color supplyStatusColor = lowestSupply < 10.0f ? C(235, 82, 72, 245) :
+                                      (lowestSupply < 25.0f ? C(235, 174, 76, 245) :
+                                                               C(92, 220, 150, 245));
+            float supplyPulse = lowestSupply < 25.0f ?
+                (0.5f+0.5f*sinf((float)GetTime()*4.0f)) : 1.0f;
+            DrawCircle(241, 86, 3.0f, supplyStatusColor);
+            DrawCircleLines(241, 86, 5.0f,
+                C(supplyStatusColor.r, supplyStatusColor.g, supplyStatusColor.b,
+                  (int)(65.0f+90.0f*supplyPulse)));
             DrawRectangleRounded((Rectangle){20, 83, 3, 65},
                                  0.5f, 4, C(105, 195, 235, 220));
             DrawLineEx((Vector2){27, 94}, (Vector2){244, 94},
