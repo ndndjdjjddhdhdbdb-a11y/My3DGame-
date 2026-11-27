@@ -913,6 +913,22 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
                  0.20f*scale,0.075f*scale,0.16f*scale,
                  C(137,145,149,255));
     }
+
+    // Узкие стыки деревянных панелей добавляют фасаду фактуру,
+    // не меняя форму стен и расположение окон или двери.
+    for (int seam=0; seam<4; seam++)
+    {
+        float side = seam < 2 ? -1.0f : 1.0f;
+        float offset = (seam & 1) == 0 ? 0.70f : 0.94f;
+        float sx = x + side*offset*scale;
+        DrawLine3D((Vector3){sx,0.42f*scale,z-d*0.509f},
+                   (Vector3){sx,2.72f*scale,z-d*0.509f},
+                   C(63,51,40,165));
+        DrawSphere((Vector3){sx,0.48f*scale,z-d*0.518f},
+                   0.018f*scale,C(174,145,104,210));
+        DrawSphere((Vector3){sx,2.66f*scale,z-d*0.518f},
+                   0.018f*scale,C(174,145,104,210));
+    }
 }
 
 static void DrawGasCrate(Vector3 p, bool weapon)
@@ -1977,6 +1993,11 @@ static void DrawPlayer(Vector3 player, float angle,
     };
     DrawCylinderEx(cuffLStart, cuffLEnd, 0.074f, 0.074f, 8, C(65, 76, 59, 255));
     DrawCylinderEx(cuffRStart, cuffREnd, 0.074f, 0.074f, 8, C(65, 76, 59, 255));
+    // Небольшая застёжка на правой манжете следует за рукой при замахе.
+    DrawRotatedCubeY(
+        PlayerPoint(player, angle, 0.445f, 0.86f+bob+useLift*0.86f,
+                    0.865f*swing-0.653f*attackProgress-0.065f),
+        0.075f, 0.055f, 0.022f, angle, C(166, 157, 125, 255));
     DrawSphere(wristL, 0.075f, skinLight);
     DrawSphere(wristR, 0.075f, skinLight);
 
@@ -5592,6 +5613,10 @@ int main(void)
                 (Rectangle){82, 88, 112*(foodLevel/100.0f), 9},
                 0.5f, 6, C(215, 160, 75, 255)
             );
+            float foodHighlightWidth = 112.0f*fmaxf(0.0f,fminf(1.0f,foodLevel/100.0f));
+            if (foodHighlightWidth > 0.0f)
+                DrawRectangleRounded((Rectangle){83,89,foodHighlightWidth-1.0f,2},
+                                     0.5f,4,C(255,224,166,145));
             DrawRectangleRoundedLinesEx((Rectangle){82,88,112,9},0.5f,6,1.0f,C(130,170,195,150));
             for (int tick=1; tick<4; tick++)
                 DrawLineEx((Vector2){82+tick*28,89},(Vector2){82+tick*28,96},1.0f,C(8,20,34,185));
@@ -5607,6 +5632,10 @@ int main(void)
                 (Rectangle){82, 126, 112*(waterLevel/100.0f), 9},
                 0.5f, 6, C(75, 170, 235, 255)
             );
+            float waterHighlightWidth = 112.0f*fmaxf(0.0f,fminf(1.0f,waterLevel/100.0f));
+            if (waterHighlightWidth > 0.0f)
+                DrawRectangleRounded((Rectangle){83,127,waterHighlightWidth-1.0f,2},
+                                     0.5f,4,C(190,232,255,150));
             DrawRectangleRoundedLinesEx((Rectangle){82,126,112,9},0.5f,6,1.0f,C(130,170,195,150));
             for (int tick=1; tick<4; tick++)
                 DrawLineEx((Vector2){82+tick*28,127},(Vector2){82+tick*28,134},1.0f,C(8,20,34,185));
@@ -6379,6 +6408,17 @@ int main(void)
                         (int)serverCard.y+75, 18,
                         C(190, 215, 235, 255)
                     );
+                    // Тонкая шкала показывает заполнение единственного сервера.
+                    float serverCapacityWidth = serverCard.width-36.0f;
+                    float serverCapacityRatio = fmaxf(0.0f,fminf(1.0f,serverPlayers/20.0f));
+                    DrawRectangleRounded(
+                        (Rectangle){serverCard.x+18,serverCard.y+98,serverCapacityWidth,3.0f},
+                        0.5f,6,C(12,25,38,235));
+                    if (serverCapacityRatio > 0.0f)
+                        DrawRectangleRounded(
+                            (Rectangle){serverCard.x+18,serverCard.y+98,
+                                        serverCapacityWidth*serverCapacityRatio,3.0f},
+                            0.5f,6,C(91,205,151,245));
                 }
                 else
                 {
