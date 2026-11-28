@@ -929,6 +929,25 @@ static void DrawRustHouse(float x, float z, float scale, int variant)
         DrawSphere((Vector3){sx,2.66f*scale,z-d*0.518f},
                    0.018f*scale,C(174,145,104,210));
     }
+
+    // Боковые стены разбиты на горизонтальные доски, чтобы дом выглядел
+    // цельным деревянным строением с любого ракурса.
+    for (int side = 0; side < 2; side++)
+    {
+        float sideX = x + (side == 0 ? -1.0f : 1.0f)*(w*0.5f + 0.004f*scale);
+        for (int plank = 1; plank <= 3; plank++)
+        {
+            float seamY = plank*0.75f*scale;
+            DrawLine3D((Vector3){sideX,seamY,z-d*0.43f},
+                       (Vector3){sideX,seamY,z+d*0.43f},
+                       C(63,51,40,145));
+            DrawLine3D((Vector3){sideX+(side == 0 ? -0.002f : 0.002f)*scale,
+                                 seamY+0.025f*scale,z-d*0.40f},
+                       (Vector3){sideX+(side == 0 ? -0.002f : 0.002f)*scale,
+                                 seamY+0.025f*scale,z+d*0.40f},
+                       C(158,128,91,90));
+        }
+    }
 }
 
 static void DrawGasCrate(Vector3 p, bool weapon)
@@ -1966,6 +1985,31 @@ static void DrawPlayer(Vector3 player, float angle,
     DrawSphere(shoulderR, 0.145f, jacket);
     DrawCylinderEx(shoulderL, elbowL, 0.115f, 0.09f, 10, jacket);
     DrawCylinderEx(shoulderR, elbowR, 0.115f, 0.09f, 10, jacket);
+
+    // Усиленные тканевые накладки на локтях повторяют движение рук.
+    Vector3 elbowPatchLStart = {
+        shoulderL.x+(elbowL.x-shoulderL.x)*0.70f,
+        shoulderL.y+(elbowL.y-shoulderL.y)*0.70f,
+        shoulderL.z+(elbowL.z-shoulderL.z)*0.70f
+    };
+    Vector3 elbowPatchLEnd = {
+        shoulderL.x+(elbowL.x-shoulderL.x)*0.88f,
+        shoulderL.y+(elbowL.y-shoulderL.y)*0.88f,
+        shoulderL.z+(elbowL.z-shoulderL.z)*0.88f
+    };
+    Vector3 elbowPatchRStart = {
+        shoulderR.x+(elbowR.x-shoulderR.x)*0.70f,
+        shoulderR.y+(elbowR.y-shoulderR.y)*0.70f,
+        shoulderR.z+(elbowR.z-shoulderR.z)*0.70f
+    };
+    Vector3 elbowPatchREnd = {
+        shoulderR.x+(elbowR.x-shoulderR.x)*0.88f,
+        shoulderR.y+(elbowR.y-shoulderR.y)*0.88f,
+        shoulderR.z+(elbowR.z-shoulderR.z)*0.88f
+    };
+    DrawCylinderEx(elbowPatchLStart,elbowPatchLEnd,0.098f,0.098f,8,C(69,78,61,255));
+    DrawCylinderEx(elbowPatchRStart,elbowPatchREnd,0.098f,0.098f,8,C(69,78,61,255));
+
     DrawSphere(elbowL, 0.09f, jacketDark);
     DrawSphere(elbowR, 0.09f, jacketDark);
     DrawCylinderEx(elbowL, wristL, 0.085f, 0.068f, 10, jacket);
@@ -6383,17 +6427,20 @@ int main(void)
                         (int)serverCard.x+18,
                         (int)serverCard.y+14, 20, RAYWHITE
                     );
-                    DrawCircle(
-                        (int)(serverCard.x+serverCard.width-26),
-                        (int)serverCard.y+25, 6,
-                        C(80, 220, 135, 255)
-                    );
                     pthread_mutex_lock(&gNetMutex);
                     int serverPlayers = gNetPlayerCount;
                     char serverStatus[48];
                     snprintf(serverStatus, sizeof(serverStatus), "%s", gNetStatus);
                     pthread_mutex_unlock(&gNetMutex);
                     bool serverOnline = gNetOnlineSession && strcmp(serverStatus, "ONLINE") == 0;
+                    Color serverDotColor = serverOnline ? C(80,220,135,255) : C(220,169,91,255);
+                    float serverPulse = serverOnline ? (0.5f+0.5f*sinf((float)GetTime()*3.2f)) : 0.25f;
+                    DrawCircle((int)(serverCard.x+serverCard.width-26),
+                               (int)serverCard.y+25,5.5f,serverDotColor);
+                    DrawCircleLines((int)(serverCard.x+serverCard.width-26),
+                                    (int)serverCard.y+25,9.0f,
+                                    C(serverDotColor.r,serverDotColor.g,serverDotColor.b,
+                                      (unsigned char)(65.0f+105.0f*serverPulse)));
                     const char *serverLabel = !gNetOnlineSession ? "НАЖМИТЕ ДЛЯ ВХОДА" :
                                               (serverOnline ? "В СЕТИ" : serverStatus);
                     DrawText(
@@ -6419,6 +6466,13 @@ int main(void)
                             (Rectangle){serverCard.x+18,serverCard.y+98,
                                         serverCapacityWidth*serverCapacityRatio,3.0f},
                             0.5f,6,C(91,205,151,245));
+                    for (int tick = 1; tick < 4; tick++)
+                    {
+                        float tickX = serverCard.x+18.0f+serverCapacityWidth*(tick*0.25f);
+                        DrawLineEx((Vector2){tickX,serverCard.y+97.0f},
+                                   (Vector2){tickX,serverCard.y+102.0f},
+                                   1.0f,C(8,20,34,210));
+                    }
                 }
                 else
                 {
